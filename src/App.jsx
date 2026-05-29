@@ -164,10 +164,10 @@ function OrkutLogo({ size=32 }){
       <defs>
         <linearGradient id="okFade" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%"   stopColor="#f0059a" stopOpacity="1"/>
-          <stop offset="18%"  stopColor="#f0059a" stopOpacity="1"/>
-          <stop offset="42%"  stopColor="#f0059a" stopOpacity="0.55"/>
-          <stop offset="66%"  stopColor="#f0059a" stopOpacity="0.2"/>
-          <stop offset="85%"  stopColor="#f0059a" stopOpacity="0.06"/>
+          <stop offset="22%"  stopColor="#f0059a" stopOpacity="0.85"/>
+          <stop offset="50%"  stopColor="#f0059a" stopOpacity="0.38"/>
+          <stop offset="72%"  stopColor="#f0059a" stopOpacity="0.12"/>
+          <stop offset="88%"  stopColor="#f0059a" stopOpacity="0.03"/>
           <stop offset="100%" stopColor="#f0059a" stopOpacity="0"/>
         </linearGradient>
         <mask id="okMask">
