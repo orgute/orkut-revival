@@ -5,18 +5,15 @@ on:
     branches: [main]
   workflow_dispatch:
 
-env:
-  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    outputs:
+      deployment-url: ${{ steps.deploy.outputs.url }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
@@ -28,12 +25,21 @@ jobs:
         run: npm run build
 
       - name: Install Vercel CLI
-        run: npm install -g vercel@latest
+        run: npm i -g vercel@latest
 
-      - name: Pull Vercel env & project info
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy to Vercel (production)
+      - name: Link or create Vercel project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          URL=$(vercel deploy --prod --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
-          echo "✅ Deployed to: $URL"
+          # vercel link creates .vercel/project.json with org+project IDs
+          vercel link --yes --token=$VERCEL_TOKEN || true
+          cat .vercel/project.json 2>/dev/null || echo "no project file yet"
+
+      - name: Deploy to production
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          URL=$(vercel deploy --prod --token=$VERCEL_TOKEN --yes 2>&1 | grep -oE 'https://[^ ]+\.vercel\.app' | tail -1)
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "✅ Live at: $URL"
