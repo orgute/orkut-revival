@@ -8,8 +8,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    outputs:
-      deployment-url: ${{ steps.deploy.outputs.url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -27,19 +25,22 @@ jobs:
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
 
-      - name: Link or create Vercel project
+      - name: Link Vercel project
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          # vercel link creates .vercel/project.json with org+project IDs
-          vercel link --yes --token=$VERCEL_TOKEN || true
-          cat .vercel/project.json 2>/dev/null || echo "no project file yet"
+          vercel link --yes --token=$VERCEL_TOKEN
+          echo "--- .vercel/project.json ---"
+          cat .vercel/project.json
 
       - name: Deploy to production
         id: deploy
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          URL=$(vercel deploy --prod --token=$VERCEL_TOKEN --yes 2>&1 | grep -oE 'https://[^ ]+\.vercel\.app' | tail -1)
+          OUTPUT=$(vercel deploy --prod --token=$VERCEL_TOKEN --yes 2>&1)
+          echo "$OUTPUT"
+          URL=$(echo "$OUTPUT" | grep -oE 'https://[a-z0-9_-]+\.vercel\.app' | tail -1)
           echo "url=$URL" >> $GITHUB_OUTPUT
-          echo "✅ Live at: $URL"
+          echo ""
+          echo "✅ Deployed: $URL"

@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Vercel — keep project.json for CI
+.vercel
+!.vercel/project.json
