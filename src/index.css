@@ -1,7 +1,8 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #eef0f5; }
+body { background: #eef0f5; font-family: 'Trebuchet MS','Lucida Grande',sans-serif; }
 img { display: block; }
 button { font-family: inherit; }
+input, textarea, select { font-family: inherit; }
 a { color: inherit; text-decoration: none; }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #f0f0f5; }

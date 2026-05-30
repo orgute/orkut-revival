@@ -26,3 +26,4 @@ dist-ssr
 # Vercel — keep project.json for CI
 .vercel
 !.vercel/project.json
+.env.local
