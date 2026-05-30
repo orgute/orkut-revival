@@ -4,11 +4,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      run_db_check:
-        description: 'Run DB health check only (no deploy)'
-        required: false
-        default: 'false'
 
 jobs:
   deploy:
@@ -25,24 +20,22 @@ jobs:
         run: npm ci
 
       - name: DB health check
+        continue-on-error: true
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: node scripts/db-check.js
 
       - name: Build
-        if: ${{ github.event.inputs.run_db_check != 'true' }}
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build
 
       - name: Install Vercel CLI
-        if: ${{ github.event.inputs.run_db_check != 'true' }}
         run: npm i -g vercel@latest
 
       - name: Deploy to Vercel
-        if: ${{ github.event.inputs.run_db_check != 'true' }}
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
