@@ -1,15 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
 
-const SUPA_URL = import.meta.env.VITE_SUPABASE_URL || ''
-const SUPA_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+// Use env vars if available, otherwise fall back to build-time constants
+const SUPA_URL = import.meta.env.VITE_SUPABASE_URL || __SUPA_URL__
+const SUPA_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || __SUPA_KEY__
 
-if (!SUPA_URL || !SUPA_KEY) {
-  console.error('⚠️ Supabase env vars missing — check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY')
+if (!SUPA_URL || SUPA_URL.includes('placeholder')) {
+  console.warn('⚠️ Supabase env vars missing — using build-time fallback')
 }
 
 export const supabase = createClient(
-  SUPA_URL || 'https://placeholder.supabase.co',
-  SUPA_KEY || 'placeholder-key',
+  SUPA_URL,
+  SUPA_KEY,
   {
     auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true },
     realtime: { params: { eventsPerSecond: 10 } },
