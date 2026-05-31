@@ -35,22 +35,14 @@ jobs:
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
 
-      - name: Deploy to Vercel + pin stable alias
+      - name: Deploy to Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          # Deploy and grab the unique preview URL
-          DEPLOY_URL=$(vercel deploy --prod --token=$VERCEL_TOKEN --yes 2>&1 \
-            | grep -oE 'https://orkut-revival-[a-z0-9]+-[a-z0-9-]+\.vercel\.app' | head -1)
-
-          echo "Preview URL: $DEPLOY_URL"
-
-          # Pin stable alias — overwrite whatever was there before
-          vercel alias set "$DEPLOY_URL" orkut-revival.vercel.app \
-            --token=$VERCEL_TOKEN --yes
-
+          OUTPUT=$(vercel deploy --prod --token=$VERCEL_TOKEN --yes 2>&1)
+          echo "$OUTPUT"
+          URL=$(echo "$OUTPUT" | grep -oE 'https://[a-z0-9_-]+\.vercel\.app' | tail -1)
           echo ""
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "🌐 https://orkut-revival.vercel.app"
-          echo "   (aliased to $DEPLOY_URL)"
+          echo "🌐 LIVE: $URL"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
