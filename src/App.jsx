@@ -31,26 +31,28 @@ const inp     = { width:'100%', border:`1px solid ${C.border}`, borderRadius:6, 
 const tarea   = { ...inp, resize:'vertical', minHeight:72 }
 
 /* ── Orkut Logo ─────────────────────────────────────────────── */
-function OrkutLogo({ size=32 }){
-  const w=size*4.6, h=size
+function OrkutLogo({ size=32, id='ol' }){
+  // Giant O in full pink — rkut crashes to invisible.
+  // People complete the word in their memory.
+  const h=size, w=size*4.4, gid=`${id}g`, mid=`${id}m`
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{display:'block',overflow:'visible'}}>
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{display:'block',overflow:'visible'}} aria-label="">
       <defs>
-        <linearGradient id="okFade" x1="0%" y1="0%" x2="100%" y2="0%">
+        <linearGradient id={gid} x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%"   stopColor="#f0059a" stopOpacity="1"/>
-          <stop offset="22%"  stopColor="#f0059a" stopOpacity="0.85"/>
-          <stop offset="50%"  stopColor="#f0059a" stopOpacity="0.38"/>
-          <stop offset="72%"  stopColor="#f0059a" stopOpacity="0.12"/>
-          <stop offset="88%"  stopColor="#f0059a" stopOpacity="0.03"/>
+          <stop offset="20%"  stopColor="#f0059a" stopOpacity="1"/>
+          <stop offset="25%"  stopColor="#f0059a" stopOpacity="0.14"/>
+          <stop offset="36%"  stopColor="#f0059a" stopOpacity="0.04"/>
+          <stop offset="50%"  stopColor="#f0059a" stopOpacity="0.01"/>
           <stop offset="100%" stopColor="#f0059a" stopOpacity="0"/>
         </linearGradient>
-        <mask id="okMask">
-          <rect x="0" y="0" width={w} height={h} fill="url(#okFade)"/>
+        <mask id={mid}>
+          <rect x="0" y="0" width={w} height={h*1.2} fill={`url(#${gid})`}/>
         </mask>
       </defs>
       <text x="0" y={h*0.88}
         fontFamily="'Nunito Black','Nunito','Montserrat','Arial Rounded MT Bold',Arial,sans-serif"
-        fontSize={h} fontWeight="900" fill="#f0059a" mask="url(#okMask)" letterSpacing="-1">
+        fontSize={h} fontWeight="900" fill="#f0059a" mask={`url(#${mid})`} letterSpacing="-1">
         orkut
       </text>
     </svg>
@@ -107,52 +109,115 @@ function AuthScreen({ onAuth }){
 
   const f=(k,v)=>setForm(p=>({...p,[k]:v}))
 
+  const bullets = [
+    ['Conecte-se', 'aos seus amigos e familiares usando recados e mensagens'],
+    ['Conheça', 'novas pessoas através de amigos de seus amigos e comunidades'],
+    ['Compartilhe', 'seus momentos, fotos, paixões e interesses em um só lugar'],
+  ]
+
   return (
-    <div style={{minHeight:'100vh',background:C.bg,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:16}}>
-      <div style={{marginBottom:24}}><OrkutLogo size={40}/></div>
-      <div style={{...card,width:'100%',maxWidth:380,padding:28}}>
-        <div style={{fontWeight:700,fontSize:18,color:C.text,marginBottom:6}}>
-          {mode==='login'?'Entrar no Orkut':'Criar conta'}
-        </div>
-        <div style={{fontSize:12,color:C.textLight,marginBottom:20}}>
-          {mode==='login'?'Bem-vindo(a) de volta!':'Junte-se à comunidade que nunca morreu :)'}
-        </div>
+    <div style={{minHeight:'100vh', background:C.bg, display:'flex', flexDirection:'column'}}>
+      {/* Aviso top bar */}
+      <div style={{background:'#f8f0ff', borderBottom:`1px solid #e0d0f0`, padding:'8px 0',
+        textAlign:'center', fontSize:12}}>
+        <span style={{color:C.pink, fontWeight:700}}>Aviso:</span>
+        <span style={{color:C.textMid}}> Versão nostálgica do nosso amado site.</span>
+      </div>
 
-        {mode==='signup'&&(
-          <div style={{marginBottom:12}}>
-            <div style={{fontSize:11,color:C.textLight,marginBottom:4}}>seu nome</div>
-            <input style={inp} placeholder="Como você quer ser chamado(a)?"
-              value={form.name} onChange={e=>f('name',e.target.value)}/>
+      {/* Main two-column layout */}
+      <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center',
+        padding:'32px 20px', gap:32, maxWidth:960, margin:'0 auto', width:'100%', flexWrap:'wrap'}}>
+
+        {/* LEFT — logo + bullets */}
+        <div style={{flex:'1 1 380px', minWidth:280, display:'flex', flexDirection:'column',
+          alignItems:'center', justifyContent:'center', padding:'20px 0'}}>
+          <div style={{marginBottom:36}}>
+            <OrkutLogo size={90} id="auth"/>
           </div>
-        )}
-        <div style={{marginBottom:12}}>
-          <div style={{fontSize:11,color:C.textLight,marginBottom:4}}>email</div>
-          <input style={inp} type="email" placeholder="seu@email.com"
-            value={form.email} onChange={e=>f('email',e.target.value)}
-            onKeyDown={e=>e.key==='Enter'&&submit()}/>
-        </div>
-        <div style={{marginBottom:20}}>
-          <div style={{fontSize:11,color:C.textLight,marginBottom:4}}>senha</div>
-          <input style={inp} type="password" placeholder="mínimo 6 caracteres"
-            value={form.password} onChange={e=>f('password',e.target.value)}
-            onKeyDown={e=>e.key==='Enter'&&submit()}/>
+          <div style={{display:'flex', flexDirection:'column', gap:14}}>
+            {bullets.map(([verb, rest]) => (
+              <div key={verb} style={{fontSize:14, color:C.textMid, textAlign:'center'}}>
+                <span style={{color:C.pink, fontWeight:700}}>{verb}</span>
+                {' '}{rest}
+              </div>
+            ))}
+          </div>
         </div>
 
-        {err&&<div style={{fontSize:12,color:'#ef4444',marginBottom:12,padding:'8px 12px',background:'#fef2f2',borderRadius:6}}>{err}</div>}
+        {/* RIGHT — form */}
+        <div style={{flex:'0 1 320px', minWidth:260}}>
+          <div style={{...card, padding:24, marginBottom:12}}>
+            <div style={{fontSize:13, color:C.textMid, marginBottom:16, textAlign:'center'}}>
+              {mode==='login'
+                ? 'Acesse com a sua conta'
+                : 'Crie sua conta gratuitamente'}
+            </div>
 
-        <button style={{...btnPink,width:'100%',padding:'10px',fontSize:14}} onClick={submit} disabled={loading}>
-          {loading?'Aguarde…':mode==='login'?'Entrar':'Criar conta'}
-        </button>
+            {mode==='signup'&&(
+              <div style={{marginBottom:12}}>
+                <div style={{fontSize:11, color:C.textLight, marginBottom:4}}>Seu nome:</div>
+                <input style={inp} placeholder="Como quer ser chamado(a)?"
+                  value={form.name} onChange={e=>f('name',e.target.value)}/>
+              </div>
+            )}
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:11, color:C.textLight, marginBottom:4}}>E-mail:</div>
+              <input style={inp} type="email" placeholder="seu@email.com"
+                value={form.email} onChange={e=>f('email',e.target.value)}
+                onKeyDown={e=>e.key==='Enter'&&submit()}/>
+            </div>
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11, color:C.textLight, marginBottom:4}}>Senha:</div>
+              <input style={inp} type="password" placeholder="mínimo 6 caracteres"
+                value={form.password} onChange={e=>f('password',e.target.value)}
+                onKeyDown={e=>e.key==='Enter'&&submit()}/>
+            </div>
 
-        <div style={{textAlign:'center',marginTop:16,fontSize:12,color:C.textLight}}>
-          {mode==='login'?(<>Não tem conta?{' '}
-            <span style={{color:C.pink,cursor:'pointer',fontWeight:600}} onClick={()=>setMode('signup')}>Criar agora</span>
-          </>):(<>Já tem conta?{' '}
-            <span style={{color:C.pink,cursor:'pointer',fontWeight:600}} onClick={()=>setMode('login')}>Entrar</span>
-          </>)}
+            {err&&<div style={{fontSize:12,color:'#ef4444',marginBottom:12,padding:'7px 10px',
+              background:'#fef2f2',borderRadius:6}}>{err}</div>}
+
+            <button style={{...btnBlue,width:'100%',padding:'9px',fontSize:13,borderRadius:4}}
+              onClick={submit} disabled={loading}>
+              {loading?'Aguarde…':mode==='login'?'Entrar':'Criar conta'}
+            </button>
+
+            {mode==='login'&&(
+              <div style={{textAlign:'center',marginTop:12,fontSize:12,color:C.pink,cursor:'pointer'}}>
+                Esqueceu sua senha?
+              </div>
+            )}
+          </div>
+
+          {/* Sign-up / Login toggle card */}
+          <div style={{...card, padding:18, textAlign:'center'}}>
+            {mode==='login' ? (
+              <>
+                <div style={{fontSize:13, color:C.textMid, marginBottom:10}}>Ainda não é membro?</div>
+                <button style={{...btnPink, padding:'8px 24px', fontSize:13, fontWeight:700,
+                  letterSpacing:0.5, borderRadius:4}}
+                  onClick={()=>setMode('signup')}>
+                  ENTRAR JÁ
+                </button>
+              </>
+            ) : (
+              <>
+                <div style={{fontSize:13, color:C.textMid, marginBottom:10}}>Já tem uma conta?</div>
+                <button style={{...btnBlue, padding:'8px 24px', fontSize:13, fontWeight:700,
+                  letterSpacing:0.5, borderRadius:4}}
+                  onClick={()=>setMode('login')}>
+                  ENTRAR
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
-      <div style={{marginTop:20,fontSize:11,color:C.textLight}}>© 2026 Orkut Revival · Feito com ❤️ e saudade</div>
+
+      {/* Footer */}
+      <div style={{textAlign:'center', padding:'14px 0', fontSize:11, color:C.textLight,
+        borderTop:`1px solid ${C.border}`}}>
+        © Recriado com ❤️ · Reviva a nostalgia
+      </div>
     </div>
   )
 }
@@ -306,7 +371,7 @@ function HomePage({ setPage, profile, friendCount, communityCount, recadoCount }
         <div style={{fontWeight:700,fontSize:16,color:C.blue,marginBottom:3}}>
           Bem-vindo(a) de volta, {profile?.name?.split(' ')[0]}! 👋
         </div>
-        <div style={{fontSize:12,color:C.textMid}}>Seu Orkut está de volta. Reconecte-se com seus amigos.</div>
+        <div style={{fontSize:12,color:C.textMid}}>Reconecte-se. Tudo começa aqui.</div>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:9,marginBottom:10}}>
         {[['👥','Amigos',friendCount,'amigos'],['✉️','Recados',recadoCount,'recados'],['🌍','Comunidades',communityCount,'comunidades']].map(([icon,l,v,pg])=>(
@@ -946,6 +1011,34 @@ function ComunidadesPage({ myId, toast }){
 }
 
 /* ── RIGHT COLUMN ─────────────────────────────────────────────── */
+// Placeholder avatars for friend suggestions — single bold letter
+function LetterAvatar({ letter, size=42 }){
+  const colors=['#e91e8c','#3b72b8','#e8650a','#22a06b']
+  const i = letter.charCodeAt(0) % colors.length
+  return (
+    <div style={{width:size,height:size,borderRadius:'50%',background:colors[i],
+      display:'flex',alignItems:'center',justifyContent:'center',
+      fontWeight:900,fontSize:size*0.48,color:'#fff',flexShrink:0,
+      border:`1px solid ${C.border}`}}>
+      {letter}
+    </div>
+  )
+}
+
+const FRIEND_SUGGESTIONS = [
+  { letter:'A', label:'A.' },
+  { letter:'B', label:'B.' },
+  { letter:'C', label:'C.' },
+  { letter:'D', label:'D.' },
+]
+
+const COMMUNITY_SUGGESTIONS = [
+  { name:'♥ Eu odeio acordar cedo', seed:'acordar', members:'10,2M' },
+  { name:'Orkut para sempre ♥',     seed:'forever', members:'4,8M'  },
+  { name:'Comunidade X',            seed:'comx',    members:'—'     },
+  { name:'Comunidade Y',            seed:'comy',    members:'—'     },
+]
+
 function RightColumn({ myId, setPage }){
   const [friends,setFriends]=useState([])
   const [mine,setMine]=useState([])
@@ -953,39 +1046,102 @@ function RightColumn({ myId, setPage }){
 
   return (
     <aside style={{width:192,flexShrink:0}}>
+
+      {/* ── Meus amigos ── */}
       <div style={{...card,padding:13,marginBottom:10}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
-          <div style={{fontWeight:700,fontSize:12,color:C.text}}>Amigos ({friends.length})</div>
-          <span style={{fontSize:11,color:C.blue,cursor:'pointer'}} onClick={()=>setPage('amigos')}>Ver todos</span>
+          <div style={{fontWeight:700,fontSize:12,color:C.text}}>
+            meus amigos ({friends.length})
+          </div>
+          <span style={{fontSize:11,color:C.blue,cursor:'pointer'}} onClick={()=>setPage('amigos')}>ver todos</span>
         </div>
         {friends.length===0
-          ?<div style={{fontSize:11,color:C.textLight,textAlign:'center',padding:'8px 0'}}>Busque amigos ↑</div>
-          :<div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
-            {friends.slice(0,9).map(f=>(
-              <div key={f.id} style={{textAlign:'center',cursor:'pointer'}} onClick={()=>setPage({name:'profile',userId:f.id})}>
-                <Av src={f.avatar_url} size={42} name={f.name}/>
-                <div style={{fontSize:9,color:C.textLight,marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name.split(' ')[0]}</div>
-              </div>
-            ))}
-          </div>
+          ? <div style={{fontSize:11,color:C.textLight,textAlign:'center',padding:'4px 0'}}>Sem amigos ainda.</div>
+          : <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
+              {friends.slice(0,9).map(f=>(
+                <div key={f.id} style={{textAlign:'center',cursor:'pointer'}}
+                  onClick={()=>setPage({name:'profile',userId:f.id})}>
+                  <Av src={f.avatar_url} size={42} name={f.name}/>
+                  <div style={{fontSize:9,color:C.textLight,marginTop:2,overflow:'hidden',
+                    textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name.split(' ')[0]}</div>
+                </div>
+              ))}
+            </div>
         }
       </div>
+
+      {/* ── Sugestões de amigos ── */}
+      <div style={{...card,padding:13,marginBottom:10}}>
+        <div style={{fontWeight:700,fontSize:12,color:C.text,marginBottom:10}}>
+          sugestões de amigos
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
+          {FRIEND_SUGGESTIONS.map(({letter,label})=>(
+            <div key={letter} style={{textAlign:'center',cursor:'pointer',opacity:0.7}}
+              title="Em breve">
+              <div style={{display:'flex',justifyContent:'center'}}>
+                <LetterAvatar letter={letter} size={38}/>
+              </div>
+              <div style={{fontSize:9,color:C.textLight,marginTop:3}}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Minhas comunidades + sugestões ── */}
       <div style={{...card,padding:13}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
-          <div style={{fontWeight:700,fontSize:12,color:C.text}}>Comunidades ({mine.length})</div>
-          <span style={{fontSize:11,color:C.blue,cursor:'pointer'}} onClick={()=>setPage('comunidades')}>Ver todas</span>
+          <div style={{fontWeight:700,fontSize:12,color:C.text}}>
+            minhas comunidades ({mine.length})
+          </div>
+          <span style={{fontSize:11,color:C.blue,cursor:'pointer'}}
+            onClick={()=>setPage('comunidades')}>ver todas</span>
         </div>
-        {mine.length===0
-          ?<div style={{fontSize:11,color:C.textLight,textAlign:'center',padding:'8px 0',cursor:'pointer'}} onClick={()=>setPage('comunidades')}>Explorar →</div>
-          :<div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
-            {mine.slice(0,9).map(c=>(
+
+        {/* Real joined communities */}
+        {mine.length>0&&(
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,marginBottom:12}}>
+            {mine.slice(0,6).map(c=>(
               <div key={c.id} style={{textAlign:'center'}}>
-                <img src={`https://picsum.photos/seed/${c.seed}/60/60`} alt="" style={{width:42,height:42,borderRadius:6,objectFit:'cover',border:`1px solid ${C.border}`,display:'block'}}/>
-                <div style={{fontSize:9,color:C.textLight,marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.name.replace(/[♥❤★]/g,'').trim()}</div>
+                <img src={`https://picsum.photos/seed/${c.seed}/60/60`} alt=""
+                  style={{width:42,height:42,borderRadius:6,objectFit:'cover',
+                    border:`1px solid ${C.border}`,display:'block'}}/>
+                <div style={{fontSize:9,color:C.textLight,marginTop:2,overflow:'hidden',
+                  textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                  {c.name.replace(/[♥❤★]/g,'').trim()}
+                </div>
               </div>
             ))}
           </div>
-        }
+        )}
+
+        {/* Suggested communities */}
+        <div style={{borderTop:`1px solid ${C.border}`,paddingTop:10}}>
+          <div style={{fontSize:10,color:C.textLight,marginBottom:8,fontWeight:600}}>
+            comunidades sugeridas
+          </div>
+          {COMMUNITY_SUGGESTIONS.map((c,i)=>(
+            <div key={i} style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,
+              cursor:'pointer'}} onClick={()=>setPage('comunidades')}>
+              <img src={`https://picsum.photos/seed/${c.seed}/40/40`} alt=""
+                style={{width:32,height:32,borderRadius:5,objectFit:'cover',
+                  border:`1px solid ${C.border}`,flexShrink:0,display:'block'}}/>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:10,fontWeight:600,color:C.text,overflow:'hidden',
+                  textOverflow:'ellipsis',whiteSpace:'nowrap',lineHeight:1.3}}>
+                  {c.name.replace(/[♥❤★]/g,'').trim()}
+                </div>
+                <div style={{fontSize:9,color:C.textLight}}>{c.members} membros</div>
+              </div>
+            </div>
+          ))}
+          <div style={{textAlign:'center',marginTop:4}}>
+            <span style={{fontSize:11,color:C.blue,cursor:'pointer'}}
+              onClick={()=>setPage('comunidades')}>
+              ver todas as comunidades →
+            </span>
+          </div>
+        </div>
       </div>
     </aside>
   )
@@ -1091,7 +1247,7 @@ export default function App(){
         {showRight&&<RightColumn myId={myId} setPage={setPage}/>}
       </div>
       <div style={{textAlign:'center',padding:'18px 0 28px',fontSize:11,color:C.textLight}}>
-        © 2026 Orkut Revival · Feito com ❤️ e saudade · Não afiliado ao Google
+        © Recriado com ❤️ · Reviva a nostalgia
       </div>
       <Toast msg={toast} onDone={()=>setToast('')}/>
     </div>
