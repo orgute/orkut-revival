@@ -126,7 +126,7 @@ function AuthScreen({ onAuth }){
       <div style={{background:'#f0eeff', borderBottom:'1px solid #d8ccf0',
         padding:'7px 0', textAlign:'center', fontSize:12}}>
         <span style={{color:C.pink, fontWeight:700}}>Aviso:</span>
-        <span style={{color:C.textMid}}> Versão nostálgica do nosso amado site.</span>
+        <span style={{color:C.textMid}}> Reviva a nostalgia com conexões verdadeiras.</span>
       </div>
 
       {/* Two-column layout */}
@@ -255,7 +255,7 @@ function AuthScreen({ onAuth }){
       {/* Footer */}
       <div style={{textAlign:'center', padding:'12px 0', fontSize:11, color:C.textLight,
         borderTop:`1px solid ${C.border}`}}>
-        © Recriado com ❤️ · Reviva a nostalgia
+        © Recriado com ❤️ · Zero Monetização
       </div>
     </div>
   )
@@ -1286,7 +1286,7 @@ export default function App(){
         {showRight&&<RightColumn myId={myId} setPage={setPage}/>}
       </div>
       <div style={{textAlign:'center',padding:'18px 0 28px',fontSize:11,color:C.textLight}}>
-        © Recriado com ❤️ · Reviva a nostalgia
+        © Recriado com ❤️ · Zero Monetização
       </div>
       <Toast msg={toast} onDone={()=>setToast('')}/>
     </div>
