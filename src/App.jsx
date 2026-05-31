@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getFriends, getFriendRequests, sendFriendRequest, respondFriendRequest,
   getFriendshipStatus, getRecados, sendRecado, deleteRecado,
@@ -7,406 +7,476 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getMessages, sendMessage, recordVisit, getVisitors, uploadAvatar,
   searchUsers } from './lib/supabase.js'
 
-/* ── Design tokens ─────────────────────────────────────────── */
-const C = {
-  pink:'#f0059a', pinkLight:'#fce4f1', blue:'#3b72b8',
-  bg:'#eef0f5', white:'#ffffff', border:'#e2e5ec',
-  text:'#1a1a2e', textMid:'#4a4a6a', textLight:'#8890a8',
-  tagBg:'#f4f5f8', tagBorder:'#dde0ea', star:'#f59e0b',
-}
+/* ── Tokens ── */
+const NAV_BG   = '#2a4b8d'
+const NAV_TEXT = '#ffffff'
+const PINK     = '#e8197d'
+const BLUE     = '#2a4b8d'
+const BG       = '#dce3f0'
+const WHITE    = '#ffffff'
+const BORDER   = '#c8d0e0'
+const TEXT     = '#1a1a2e'
+const MUTED    = '#6b7a99'
+const PANEL_H  = 'linear-gradient(180deg,#e8edf8 0%,#d0d8ef 100%)'
 
-const card    = { background:C.white, border:`1px solid ${C.border}`, borderRadius:10, overflow:'hidden' }
-const lbl     = { fontSize:11, color:C.textLight, textTransform:'lowercase', minWidth:120 }
-const tag     = { display:'inline-flex', alignItems:'center', padding:'3px 11px', borderRadius:20,
-                  border:`1px solid ${C.tagBorder}`, background:C.tagBg, fontSize:12, color:C.textMid,
-                  marginRight:5, marginBottom:5, whiteSpace:'nowrap' }
-const btn     = { cursor:'pointer', border:'none', borderRadius:6, padding:'7px 16px',
-                  fontFamily:'inherit', fontSize:12, fontWeight:600 }
-const btnPink = { ...btn, background:C.pink, color:'#fff' }
-const btnBlue = { ...btn, background:C.blue, color:'#fff' }
-const btnGhost= { ...btn, background:'transparent', border:`1px solid ${C.border}`, color:C.textMid }
-const inp     = { width:'100%', border:`1px solid ${C.border}`, borderRadius:6, padding:'8px 12px',
-                  fontSize:13, fontFamily:'inherit', color:C.text, background:C.white,
-                  outline:'none', boxSizing:'border-box' }
-const tarea   = { ...inp, resize:'vertical', minHeight:72 }
+/* ── Shared styles ── */
+const card  = { background:WHITE, border:`1px solid ${BORDER}`, borderRadius:3 }
+const inp   = { width:'100%', border:`1px solid ${BORDER}`, borderRadius:2,
+                padding:'5px 8px', fontSize:12, fontFamily:'inherit',
+                color:TEXT, background:WHITE, outline:'none', boxSizing:'border-box' }
+const tarea = { ...inp, resize:'vertical', minHeight:70 }
+const btn   = { cursor:'pointer', border:'none', fontFamily:'inherit', borderRadius:2, fontWeight:600 }
+const btnBlue = { ...btn, background:BLUE,  color:WHITE, padding:'5px 14px', fontSize:12 }
+const btnPink = { ...btn, background:PINK,  color:WHITE, padding:'5px 14px', fontSize:12 }
+const btnGhost= { ...btn, background:'transparent', border:`1px solid ${BORDER}`, color:MUTED, padding:'4px 10px', fontSize:11 }
 
-/* ── Orkut Logo ─────────────────────────────────────────────── */
-function OrkutLogo({ size=32, id='ol' }){
-  // Giant O in full pink — rkut crashes to invisible.
-  // People complete the word in their memory.
-  const h=size, w=size*4.4, gid=`${id}g`, mid=`${id}m`
+const panelHead = (extra={}) => ({
+  background: PANEL_H, borderBottom:`1px solid ${BORDER}`,
+  padding:'3px 8px', fontSize:11, fontWeight:700, color:BLUE,
+  display:'flex', justifyContent:'space-between', alignItems:'center', ...extra
+})
+
+/* ── O Logo ── */
+function OrkutLogo({ size, id }){
+  size = size||32; id = id||'ol'
+  const h=size, w=size*4.4, gid=id+'g', mid=id+'m'
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{display:'block',overflow:'visible'}} aria-label="">
+    <svg width={w} height={h} viewBox={"0 0 "+w+" "+h} style={{display:"block",overflow:"visible"}} aria-label="">
       <defs>
         <linearGradient id={gid} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%"   stopColor="#f0059a" stopOpacity="1"/>
-          <stop offset="20%"  stopColor="#f0059a" stopOpacity="1"/>
-          <stop offset="25%"  stopColor="#f0059a" stopOpacity="0.14"/>
-          <stop offset="36%"  stopColor="#f0059a" stopOpacity="0.04"/>
-          <stop offset="50%"  stopColor="#f0059a" stopOpacity="0.01"/>
-          <stop offset="100%" stopColor="#f0059a" stopOpacity="0"/>
+          <stop offset="0%"   stopColor="#ff0099" stopOpacity="1"/>
+          <stop offset="21%"  stopColor="#ff0099" stopOpacity="1"/>
+          <stop offset="24%"  stopColor="#ff0099" stopOpacity="0.10"/>
+          <stop offset="32%"  stopColor="#ff0099" stopOpacity="0.03"/>
+          <stop offset="45%"  stopColor="#ff0099" stopOpacity="0"/>
         </linearGradient>
-        <mask id={mid}>
-          <rect x="0" y="0" width={w} height={h*1.2} fill={`url(#${gid})`}/>
-        </mask>
+        <mask id={mid}><rect x="0" y="0" width={w} height={h*1.2} fill={"url(#"+gid+")"}/></mask>
       </defs>
       <text x="0" y={h*0.88}
         fontFamily="'Nunito Black','Nunito','Montserrat','Arial Rounded MT Bold',Arial,sans-serif"
-        fontSize={h} fontWeight="900" fill="#f0059a" mask={`url(#${mid})`} letterSpacing="-1">
-        orkut
-      </text>
+        fontSize={h} fontWeight="900" fill="#ff0099" mask={"url(#"+mid+")"} letterSpacing="-1">Orkut</text>
     </svg>
   )
 }
 
-/* ── Avatar ─────────────────────────────────────────────────── */
-function Av({ src, size=36, ring=false, name='' }){
-  const fallback = `https://api.dicebear.com/9.x/personas/svg?seed=${encodeURIComponent(name||'user')}`
-  return (
-    <img src={src||fallback} alt={name} width={size} height={size}
-      onError={e=>{ e.target.src=fallback }}
-      style={{ borderRadius:'50%', objectFit:'cover', flexShrink:0, display:'block',
-               border: ring ? `2px solid ${C.pink}` : `1px solid ${C.border}` }}/>
-  )
+/* ── Avatar ── */
+function Av({ src, size, ring, name }){
+  size = size||36
+  const fb = "https://api.dicebear.com/9.x/personas/svg?seed="+encodeURIComponent(name||'u')
+  return <img src={src||fb} alt={name||''} width={size} height={size}
+    onError={e=>{ e.target.src=fb }}
+    style={{ borderRadius:'50%', objectFit:'cover', flexShrink:0, display:'block',
+             border: ring ? `2px solid ${PINK}` : `1px solid ${BORDER}` }}/>
 }
 
-/* ── Divider ─────────────────────────────────────────────────── */
-const Divider = () => <div style={{height:1,background:C.border,margin:'10px 0'}}/>
-
-/* ── Toast ──────────────────────────────────────────────────── */
+/* ── Toast ── */
 function Toast({ msg, onDone }){
-  useEffect(()=>{ const t=setTimeout(onDone,3000); return()=>clearTimeout(t) },[])
+  useEffect(()=>{ if(msg){ const t=setTimeout(onDone,3000); return()=>clearTimeout(t) } },[msg])
   if(!msg) return null
-  return (
-    <div style={{position:'fixed',bottom:24,left:'50%',transform:'translateX(-50%)',
-      background:C.blue,color:'#fff',padding:'10px 20px',borderRadius:8,
-      fontSize:13,fontWeight:600,zIndex:9999,boxShadow:'0 4px 12px rgba(0,0,0,.2)'}}>
-      {msg}
-    </div>
-  )
+  return <div style={{position:'fixed',bottom:20,left:'50%',transform:'translateX(-50%)',
+    background:BLUE,color:WHITE,padding:'9px 20px',borderRadius:4,fontSize:13,
+    fontWeight:600,zIndex:9999,boxShadow:'0 3px 12px rgba(0,0,0,.2)'}}>{msg}</div>
 }
 
-/* ── AUTH SCREENS ────────────────────────────────────────────── */
+/* ── AUTH SCREEN ── */
 function AuthScreen({ onAuth }){
   const [mode,setMode]=useState('login')
   const [form,setForm]=useState({email:'',password:'',name:''})
   const [err,setErr]=useState('')
   const [loading,setLoading]=useState(false)
+  const f=(k,v)=>setForm(p=>({...p,[k]:v}))
 
   const submit=async()=>{
     setErr(''); setLoading(true)
     try{
-      if(mode==='login'){
-        await signIn({ email:form.email, password:form.password })
-      } else {
+      if(mode==='login') await signIn({email:form.email,password:form.password})
+      else {
         if(!form.name.trim()) throw new Error('Digite seu nome')
-        await signUp({ email:form.email, password:form.password, name:form.name })
+        await signUp({email:form.email,password:form.password,name:form.name})
       }
       onAuth()
-    } catch(e){ setErr(e.message) }
+    }catch(e){
+      setErr(e.message==='Failed to fetch'?'Erro de conexão. Tente novamente.':e.message)
+    }
     setLoading(false)
   }
 
-  const f=(k,v)=>setForm(p=>({...p,[k]:v}))
-
-  const bullets = [
-    ['Conecte-se', 'aos seus amigos e familiares usando recados e mensagens'],
-    ['Conheça', 'novas pessoas através de amigos de seus amigos e comunidades'],
-    ['Compartilhe', 'seus momentos, fotos, paixões e interesses em um só lugar'],
-  ]
+  const retroInp = { width:'100%', border:'1px solid #a0a8c0', borderRadius:1,
+    padding:'3px 5px', fontSize:12, fontFamily:'inherit', color:TEXT,
+    background:WHITE, outline:'none', boxSizing:'border-box' }
 
   return (
-    <div style={{minHeight:'100vh', background:C.bg, display:'flex', flexDirection:'column'}}>
-      {/* Aviso top bar */}
-      <div style={{background:'#f8f0ff', borderBottom:`1px solid #e0d0f0`, padding:'8px 0',
-        textAlign:'center', fontSize:12}}>
-        <span style={{color:C.pink, fontWeight:700}}>Aviso:</span>
-        <span style={{color:C.textMid}}> Versão nostálgica do nosso amado site.</span>
+    <div style={{minHeight:'100vh',background:BG,display:'flex',flexDirection:'column'}}>
+      {/* Aviso */}
+      <div style={{background:'#f0eeff',borderBottom:'1px solid #d8ccf0',
+        padding:'7px 0',textAlign:'center',fontSize:12}}>
+        <span style={{color:PINK,fontWeight:700}}>Aviso:</span>
+        <span style={{color:MUTED}}> Reviva a nostalgia com conexões verdadeiras.</span>
       </div>
 
-      {/* Main two-column layout */}
-      <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center',
-        padding:'32px 20px', gap:32, maxWidth:960, margin:'0 auto', width:'100%', flexWrap:'wrap'}}>
+      <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',
+        padding:'32px 20px',gap:40,maxWidth:960,margin:'0 auto',width:'100%',flexWrap:'wrap'}}>
 
-        {/* LEFT — logo + bullets */}
-        <div style={{flex:'1 1 380px', minWidth:280, display:'flex', flexDirection:'column',
-          alignItems:'center', justifyContent:'center', padding:'20px 0'}}>
-          <div style={{marginBottom:36}}>
-            <OrkutLogo size={90} id="auth"/>
-          </div>
-          <div style={{display:'flex', flexDirection:'column', gap:14}}>
-            {bullets.map(([verb, rest]) => (
-              <div key={verb} style={{fontSize:14, color:C.textMid, textAlign:'center'}}>
-                <span style={{color:C.pink, fontWeight:700}}>{verb}</span>
-                {' '}{rest}
+        {/* Left */}
+        <div style={{flex:'1 1 360px',minWidth:260,display:'flex',flexDirection:'column',
+          alignItems:'center',justifyContent:'center',padding:'20px 0'}}>
+          <div style={{marginBottom:40}}><OrkutLogo size={100} id="auth"/></div>
+          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+            {[['Conecte-se','aos seus amigos e familiares usando recados e mensagens'],
+              ['Conheça','novas pessoas através de amigos de seus amigos e comunidades'],
+              ['Compartilhe','seus momentos, fotos, paixões e interesses em um só lugar']
+            ].map(([v,r])=>(
+              <div key={v} style={{fontSize:14,color:MUTED,textAlign:'center',lineHeight:1.4}}>
+                <span style={{color:PINK,fontWeight:700}}>{v}</span>{' '}{r}
               </div>
             ))}
           </div>
         </div>
 
-        {/* RIGHT — form */}
-        <div style={{flex:'0 1 320px', minWidth:260}}>
-          <div style={{...card, padding:24, marginBottom:12}}>
-            <div style={{fontSize:13, color:C.textMid, marginBottom:16, textAlign:'center'}}>
+        {/* Right — retro form */}
+        <div style={{flex:'0 1 290px',minWidth:240}}>
+          <div style={{background:WHITE,border:`1px solid ${BORDER}`,borderRadius:3,
+            padding:'14px 16px',marginBottom:10,boxShadow:'0 1px 3px rgba(0,0,0,.08)'}}>
+            <div style={{fontSize:12,color:TEXT,marginBottom:12,textAlign:'center',
+              display:'flex',alignItems:'center',justifyContent:'center',gap:5,flexWrap:'wrap'}}>
               {mode==='login'
-                ? 'Acesse com a sua conta'
-                : 'Crie sua conta gratuitamente'}
+                ?<><span>Acesse o</span><OrkutLogo size={14} id="form"/><span>com a sua conta</span></>
+                :<span style={{fontWeight:600}}>Cadastre-se gratuitamente</span>}
             </div>
 
-            {mode==='signup'&&(
-              <div style={{marginBottom:12}}>
-                <div style={{fontSize:11, color:C.textLight, marginBottom:4}}>Seu nome:</div>
-                <input style={inp} placeholder="Como quer ser chamado(a)?"
-                  value={form.name} onChange={e=>f('name',e.target.value)}/>
-              </div>
-            )}
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:11, color:C.textLight, marginBottom:4}}>E-mail:</div>
-              <input style={inp} type="email" placeholder="seu@email.com"
-                value={form.email} onChange={e=>f('email',e.target.value)}
-                onKeyDown={e=>e.key==='Enter'&&submit()}/>
+            {mode==='signup'&&<div style={{marginBottom:8}}>
+              <div style={{fontSize:11,color:TEXT,marginBottom:2}}>Seu nome:</div>
+              <input style={retroInp} value={form.name} onChange={e=>f('name',e.target.value)}/>
+            </div>}
+
+            <div style={{marginBottom:8}}>
+              <div style={{fontSize:11,color:TEXT,marginBottom:2}}>E-mail:</div>
+              <input style={retroInp} type="email" value={form.email}
+                onChange={e=>f('email',e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()}/>
             </div>
-            <div style={{marginBottom:16}}>
-              <div style={{fontSize:11, color:C.textLight, marginBottom:4}}>Senha:</div>
-              <input style={inp} type="password" placeholder="mínimo 6 caracteres"
-                value={form.password} onChange={e=>f('password',e.target.value)}
-                onKeyDown={e=>e.key==='Enter'&&submit()}/>
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:11,color:TEXT,marginBottom:2}}>Senha:</div>
+              <input style={retroInp} type="password" value={form.password}
+                onChange={e=>f('password',e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()}/>
             </div>
 
-            {err&&<div style={{fontSize:12,color:'#ef4444',marginBottom:12,padding:'7px 10px',
-              background:'#fef2f2',borderRadius:6}}>{err}</div>}
+            {err&&<div style={{fontSize:11,color:'#cc0000',marginBottom:8,padding:'4px 6px',
+              background:'#fff0f0',border:'1px solid #ffcccc',borderRadius:2}}>{err}</div>}
 
-            <button style={{...btnBlue,width:'100%',padding:'9px',fontSize:13,borderRadius:4}}
+            <button style={{background:'linear-gradient(180deg,#5577bb,#2244aa)',
+              border:'1px solid #1a3a8a',borderRadius:2,color:WHITE,padding:'4px 16px',
+              fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}
               onClick={submit} disabled={loading}>
-              {loading?'Aguarde…':mode==='login'?'Entrar':'Criar conta'}
+              {loading?'Aguarde…':mode==='login'?'Login':'Criar conta'}
             </button>
-
-            {mode==='login'&&(
-              <div style={{textAlign:'center',marginTop:12,fontSize:12,color:C.pink,cursor:'pointer'}}>
-                Esqueceu sua senha?
-              </div>
-            )}
+            {mode==='login'&&<div style={{fontSize:11,color:PINK,cursor:'pointer',marginTop:8}}>
+              Esqueceu sua senha?</div>}
           </div>
 
-          {/* Sign-up / Login toggle card */}
-          <div style={{...card, padding:18, textAlign:'center'}}>
-            {mode==='login' ? (
-              <>
-                <div style={{fontSize:13, color:C.textMid, marginBottom:10}}>Ainda não é membro?</div>
-                <button style={{...btnPink, padding:'8px 24px', fontSize:13, fontWeight:700,
-                  letterSpacing:0.5, borderRadius:4}}
-                  onClick={()=>setMode('signup')}>
-                  ENTRAR JÁ
-                </button>
-              </>
-            ) : (
-              <>
-                <div style={{fontSize:13, color:C.textMid, marginBottom:10}}>Já tem uma conta?</div>
-                <button style={{...btnBlue, padding:'8px 24px', fontSize:13, fontWeight:700,
-                  letterSpacing:0.5, borderRadius:4}}
-                  onClick={()=>setMode('login')}>
-                  ENTRAR
-                </button>
-              </>
-            )}
+          <div style={{background:WHITE,border:`1px solid ${BORDER}`,borderRadius:3,
+            padding:'14px 16px',boxShadow:'0 1px 3px rgba(0,0,0,.08)',textAlign:'center'}}>
+            {mode==='login'
+              ?<><div style={{fontSize:12,color:TEXT,marginBottom:10}}>Ainda não é membro?</div>
+                <button style={{...btnPink,padding:'6px 20px',fontSize:13,letterSpacing:.5}}
+                  onClick={()=>setMode('signup')}>ENTRAR JÁ</button></>
+              :<><div style={{fontSize:12,color:TEXT,marginBottom:10}}>Já tem uma conta?</div>
+                <button style={{background:'linear-gradient(180deg,#5577bb,#2244aa)',
+                  border:'1px solid #1a3a8a',borderRadius:2,color:WHITE,padding:'6px 20px',
+                  fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}
+                  onClick={()=>setMode('login')}>ENTRAR</button></>}
           </div>
         </div>
       </div>
 
-      {/* Footer */}
-      <div style={{textAlign:'center', padding:'14px 0', fontSize:11, color:C.textLight,
-        borderTop:`1px solid ${C.border}`}}>
-        © Recriado com ❤️ · Reviva a nostalgia
+      <div style={{textAlign:'center',padding:'12px 0',fontSize:11,color:MUTED,
+        borderTop:`1px solid ${BORDER}`}}>
+        © Recriado com ❤️ · Zero Monetização
       </div>
     </div>
   )
 }
 
-/* ── TOP NAV ─────────────────────────────────────────────────── */
+/* ── TOP NAV — dark blue, Portuguese ── */
 function TopNav({ page, setPage, profile, pendingReqs }){
   const [search,setSearch]=useState('')
   const [results,setResults]=useState([])
-  const [showResults,setShowResults]=useState(false)
-  const searchRef=useRef()
+  const [show,setShow]=useState(false)
 
   const doSearch=useCallback(async(q)=>{
     if(q.length<2){setResults([]);return}
-    const data=await searchUsers(q)
-    setResults(data)
-    setShowResults(true)
+    setResults(await searchUsers(q)); setShow(true)
   },[])
+  useEffect(()=>{ const t=setTimeout(()=>doSearch(search),300); return()=>clearTimeout(t) },[search])
 
-  useEffect(()=>{
-    const t=setTimeout(()=>doSearch(search),300)
-    return()=>clearTimeout(t)
-  },[search])
-
-  const links=[['Início','home'],['Perfil','perfil'],['Recados','recados'],['Amigos','amigos'],['Comunidades','comunidades'],['Aplicativos','apps']]
+  const links=[['Início','home'],['Perfil','perfil'],['Recados','recados'],
+               ['Amigos','amigos'],['Comunidades','comunidades'],['Aplicativos','apps']]
+  const cur = typeof page==='string'?page:page?.name
 
   return (
-    <nav style={{background:C.white,borderBottom:`1px solid ${C.border}`,position:'sticky',top:0,zIndex:200,
-      display:'flex',alignItems:'center',padding:'0 18px',height:50,boxShadow:'0 1px 3px rgba(0,0,0,.06)'}}>
-      <div onClick={()=>setPage('home')} style={{cursor:'pointer',marginRight:20,flexShrink:0,paddingTop:4}}>
-        <OrkutLogo size={24}/>
+    <nav style={{background:NAV_BG,position:'sticky',top:0,zIndex:200,height:44,
+      display:'flex',alignItems:'center',padding:'0 10px',
+      boxShadow:'0 2px 4px rgba(0,0,0,.3)'}}>
+
+      {/* Logo */}
+      <div onClick={()=>setPage('home')} style={{cursor:'pointer',marginRight:4,flexShrink:0,
+        background:WHITE,borderRadius:3,padding:'2px 8px',display:'flex',alignItems:'center'}}>
+        <OrkutLogo size={20} id="nav"/>
       </div>
-      <div style={{display:'flex',flex:1,alignItems:'center',height:'100%',gap:0}}>
+
+      {/* Nav links */}
+      <div style={{display:'flex',flex:1,alignItems:'center',height:'100%',marginLeft:4}}>
         {links.map(([label,pg])=>(
           <div key={pg} onClick={()=>setPage(pg)} style={{
-            padding:'0 11px',height:'100%',display:'flex',alignItems:'center',
-            fontSize:13,fontWeight:page===pg?700:400,cursor:'pointer',
-            color:page===pg?C.blue:C.textMid,
-            borderBottom:page===pg?`2px solid ${C.blue}`:'2px solid transparent',
+            padding:'0 10px',height:'100%',display:'flex',alignItems:'center',
+            fontSize:13,fontWeight:cur===pg?700:400,cursor:'pointer',whiteSpace:'nowrap',
+            color:cur===pg?WHITE:'rgba(255,255,255,.82)',
+            borderBottom:cur===pg?'2px solid '+WHITE:'2px solid transparent',
             boxSizing:'border-box',position:'relative',
           }}>
             {label}
             {pg==='amigos'&&pendingReqs>0&&(
-              <span style={{position:'absolute',top:6,right:2,background:C.pink,color:'#fff',
-                borderRadius:10,padding:'0 5px',fontSize:9,fontWeight:700,lineHeight:'16px'}}>
-                {pendingReqs}
-              </span>
+              <span style={{position:'absolute',top:5,right:1,background:PINK,color:WHITE,
+                borderRadius:10,padding:'0 4px',fontSize:9,fontWeight:700,lineHeight:'15px'}}>
+                {pendingReqs}</span>
             )}
           </div>
         ))}
       </div>
 
       {/* Search */}
-      <div style={{position:'relative',marginRight:14}} ref={searchRef}>
-        <span style={{position:'absolute',left:9,top:'50%',transform:'translateY(-50%)',color:C.textLight,fontSize:12}}>🔍</span>
+      <div style={{position:'relative',marginRight:10}}>
         <input value={search} onChange={e=>setSearch(e.target.value)}
-          onFocus={()=>search.length>1&&setShowResults(true)}
-          onBlur={()=>setTimeout(()=>setShowResults(false),200)}
-          placeholder="Pesquisar pessoas…"
-          style={{...inp,width:180,paddingLeft:28,borderRadius:18,fontSize:12,background:C.bg}}/>
-        {showResults&&results.length>0&&(
-          <div style={{position:'absolute',top:'100%',left:0,right:0,background:C.white,
-            border:`1px solid ${C.border}`,borderRadius:8,boxShadow:'0 4px 16px rgba(0,0,0,.1)',
-            zIndex:999,maxHeight:240,overflowY:'auto',marginTop:4}}>
+          onFocus={()=>search.length>1&&setShow(true)}
+          onBlur={()=>setTimeout(()=>setShow(false),200)}
+          placeholder="Pesquisar no Orkut"
+          style={{border:'1px solid rgba(255,255,255,.4)',borderRadius:2,padding:'3px 8px',
+            fontSize:12,background:'rgba(255,255,255,.15)',color:WHITE,
+            outline:'none',width:160,fontFamily:'inherit'}}/>
+        {show&&results.length>0&&(
+          <div style={{position:'absolute',top:'100%',left:0,right:0,background:WHITE,
+            border:`1px solid ${BORDER}`,borderRadius:2,zIndex:999,maxHeight:200,
+            overflowY:'auto',marginTop:2,boxShadow:'0 3px 10px rgba(0,0,0,.2)'}}>
             {results.map(u=>(
-              <div key={u.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',cursor:'pointer',
-                borderBottom:`1px solid ${C.border}`}}
-                onMouseDown={()=>{ setPage({name:'profile',userId:u.id}); setSearch(''); setShowResults(false) }}>
-                <Av src={u.avatar_url} size={28} name={u.name}/>
-                <div>
-                  <div style={{fontSize:12,fontWeight:600,color:C.text}}>{u.name}</div>
-                  <div style={{fontSize:10,color:C.textLight}}>{u.city||u.country||''}</div>
-                </div>
+              <div key={u.id} style={{display:'flex',alignItems:'center',gap:8,
+                padding:'6px 10px',cursor:'pointer',borderBottom:`1px solid ${BORDER}`}}
+                onMouseDown={()=>{setPage({name:'profile',userId:u.id});setSearch('');setShow(false)}}>
+                <Av src={u.avatar_url} size={24} name={u.name}/>
+                <div style={{fontSize:12,color:TEXT}}>{u.name}</div>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* User menu */}
-      <div style={{display:'flex',alignItems:'center',gap:7,cursor:'pointer',
-        padding:'4px 8px',borderRadius:7,border:`1px solid ${C.border}`}}
-        onClick={()=>setPage('perfil')}>
-        <Av src={profile?.avatar_url} size={24} name={profile?.name}/>
-        <span style={{fontSize:12,fontWeight:600,color:C.text,maxWidth:90,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-          {profile?.name||'…'}
+      {/* User */}
+      <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,color:'rgba(255,255,255,.9)'}}>
+        <span style={{width:7,height:7,borderRadius:'50%',background:'#4caf50',display:'inline-block'}}/>
+        <span style={{cursor:'pointer',fontWeight:600}} onClick={()=>setPage('perfil')}>
+          {profile?.name?.split(' ')[0]||'…'}
         </span>
-        <span style={{fontSize:10,color:C.textLight}}>▾</span>
+        <span style={{color:'rgba(255,255,255,.4)'}}>|</span>
+        <span style={{cursor:'pointer',color:'rgba(255,255,255,.75)'}} onClick={()=>signOut()}>Sair</span>
       </div>
     </nav>
   )
 }
 
-/* ── LEFT SIDEBAR ────────────────────────────────────────────── */
-function LeftSidebar({ page, setPage, profile, visitors }){
+/* ── LEFT SIDEBAR ── */
+function LeftSidebar({ page, setPage, profile }){
+  const cur = typeof page==='string'?page:page?.name
+  const links=[['perfil','perfil'],['recados','Recados'],['galeria','Galeria'],
+               ['depoimentos','Depoimentos'],['comunidades','Comunidades'],['apps','Aplicativos']]
   return (
     <aside style={{width:200,flexShrink:0}}>
-      <div style={{...card,padding:14,marginBottom:10,textAlign:'center'}}>
-        <div style={{display:'inline-block',marginBottom:8,position:'relative'}}>
-          <Av src={profile?.avatar_url} size={76} ring name={profile?.name}/>
-        </div>
-        <div style={{fontWeight:700,fontSize:14,color:C.text}}>{profile?.name||'…'}</div>
-        <div style={{fontSize:11,color:C.textLight,marginTop:2}}>{profile?.gender}, {profile?.rel_status}</div>
-        <div style={{fontSize:11,color:C.textLight}}>{profile?.country}</div>
-        <Divider/>
-        <div style={{display:'flex',flexDirection:'column',gap:1,textAlign:'left'}}>
-          {[['👤','Perfil','perfil'],['✉','Recados','recados'],['🖼','Galeria','galeria'],
-            ['📝','Depoimentos','depoimentos'],['🎮','Aplicativos','apps']].map(([icon,label,pg])=>(
-            <div key={pg} onClick={()=>setPage(pg)} style={{
-              display:'flex',alignItems:'center',gap:8,
-              padding:'6px 8px',borderRadius:6,cursor:'pointer',
-              background:page===pg||page?.name===pg?'#eff4fb':'transparent',
-              color:page===pg||page?.name===pg?C.blue:C.textMid,
-              fontWeight:page===pg||page?.name===pg?700:400,fontSize:13,
-            }}>
-              <span style={{fontSize:13}}>{icon}</span>{label}
-            </div>
-          ))}
-          <Divider/>
-          <div onClick={()=>signOut()} style={{display:'flex',alignItems:'center',gap:8,
-            padding:'6px 8px',borderRadius:6,cursor:'pointer',color:'#ef4444',fontSize:13}}>
-            <span>🚪</span>Sair
+      <div style={{...card,overflow:'hidden',marginBottom:8}}>
+        {/* Photo */}
+        <div style={{background:'#e8edf8',borderBottom:`1px solid ${BORDER}`,
+          textAlign:'center',padding:'10px 0 8px',cursor:'pointer'}}
+          onClick={()=>setPage('perfil')}>
+          <Av src={profile?.avatar_url} size={80} ring name={profile?.name}/>
+          <div style={{fontWeight:700,fontSize:13,color:PINK,marginTop:6}}>
+            {profile?.name||'…'}
           </div>
+          <div style={{fontSize:11,color:'#4caf50',marginTop:1}}>● disponível</div>
+        </div>
+        {/* Nav */}
+        <div style={{padding:'6px 0'}}>
+          <div style={{display:'flex',justifyContent:'space-between',padding:'2px 10px 4px',
+            fontSize:10,color:MUTED,fontWeight:700,textTransform:'uppercase',letterSpacing:.5}}>
+            <span>perfil</span>
+            <span style={{color:PINK,cursor:'pointer',textTransform:'none',fontWeight:400,fontSize:11}}
+              onClick={()=>setPage('perfil')}>editar</span>
+          </div>
+          {links.map(([pg,label])=>(
+            <div key={pg} onClick={()=>setPage(pg)} style={{
+              padding:'4px 12px',cursor:'pointer',fontSize:13,
+              color: cur===pg ? '#cc0000' : BLUE,
+              fontWeight: cur===pg ? 700 : 400,
+              background: cur===pg ? '#dde3f0' : 'transparent',
+            }}>{label}</div>
+          ))}
         </div>
       </div>
-
-      {/* Visitors */}
-      {visitors.length>0&&(
-        <div style={{...card,padding:12}}>
-          <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:8}}>👁 Quem visitou</div>
-          {visitors.slice(0,5).map((v,i)=>(
-            <div key={i} style={{display:'flex',alignItems:'center',gap:7,marginBottom:6,cursor:'pointer'}}
-              onClick={()=>setPage({name:'profile',userId:v.visitor.id})}>
-              <Av src={v.visitor.avatar_url} size={28} name={v.visitor.name}/>
-              <div>
-                <div style={{fontSize:11,fontWeight:600,color:C.text}}>{v.visitor.name}</div>
-                <div style={{fontSize:9,color:C.textLight}}>{new Date(v.visited_at).toLocaleDateString('pt-BR')}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </aside>
   )
 }
 
-/* ── HOME PAGE ───────────────────────────────────────────────── */
+/* ── HOME PAGE — OG center layout ── */
 function HomePage({ setPage, profile, friendCount, communityCount, recadoCount }){
+  const ph = panelHead()
+  const panel = {...card, marginBottom:8, overflow:'hidden'}
+
   return (
     <div>
-      <div style={{...card,padding:16,marginBottom:10,background:'linear-gradient(135deg,#eef4ff,#f0f7ff)'}}>
-        <div style={{fontWeight:700,fontSize:16,color:C.blue,marginBottom:3}}>
-          Bem-vindo(a) de volta, {profile?.name?.split(' ')[0]}! 👋
+      {/* Welcome + status */}
+      <div style={panel}>
+        <div style={{padding:'12px 14px'}}>
+          <div style={{fontWeight:700,fontSize:16,color:TEXT,marginBottom:8}}>
+            Bem-vindo(a), {profile?.name?.split(' ')[0]}!
+          </div>
+          <div style={{display:'flex',alignItems:'center',border:`1px solid ${PINK}`,
+            borderRadius:2,padding:'5px 10px',background:WHITE}}>
+            <span style={{flex:1,fontSize:13,color:MUTED,fontStyle:'italic'}}>Tenha um ótimo dia!</span>
+            <span style={{fontSize:18}}>🙂</span>
+          </div>
         </div>
-        <div style={{fontSize:12,color:C.textMid}}>Reconecte-se. Tudo começa aqui.</div>
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:9,marginBottom:10}}>
-        {[['👥','Amigos',friendCount,'amigos'],['✉️','Recados',recadoCount,'recados'],['🌍','Comunidades',communityCount,'comunidades']].map(([icon,l,v,pg])=>(
-          <div key={l} style={{...card,padding:14,textAlign:'center',cursor:'pointer'}} onClick={()=>setPage(pg)}>
-            <div style={{fontSize:20,marginBottom:3}}>{icon}</div>
-            <div style={{fontSize:19,fontWeight:700,color:C.blue}}>{v}</div>
-            <div style={{fontSize:11,color:C.textLight}}>{l}</div>
-          </div>
-        ))}
+
+      {/* Icon row */}
+      <div style={panel}>
+        <div style={{display:'flex',justifyContent:'space-around',padding:'14px 8px',
+          borderBottom:`1px solid ${BORDER}`}}>
+          {[['✏️','recados',recadoCount,'recados'],
+            ['🖼️','fotos',0,'galeria'],
+            ['🌍','comunidades',communityCount,'comunidades'],
+            ['⭐','fãs',0,null],
+            ['✉️','mensagens',0,'recados'],
+          ].map(([icon,label,count,pg])=>(
+            <div key={label} style={{textAlign:'center',cursor:pg?'pointer':'default'}}
+              onClick={()=>pg&&setPage(pg)}>
+              <div style={{fontSize:24,marginBottom:2}}>{icon}</div>
+              <div style={{fontSize:11,fontWeight:700,color:BLUE}}>{count}</div>
+              <div style={{fontSize:10,color:MUTED}}>{label}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{padding:'7px 12px',fontSize:11,color:MUTED,lineHeight:1.7}}>
+          <span style={{fontWeight:700,color:TEXT}}>Visitas ao perfil:</span> desde hoje: 0 &nbsp;·&nbsp;
+          <span style={{fontWeight:700,color:TEXT}}>Visitantes recentes:</span> — &nbsp;·&nbsp;
+          <span style={{fontWeight:700,color:TEXT}}>Fortuna do dia:</span> Tenha um ótimo dia!
+        </div>
       </div>
-      <div style={{...card,padding:16}}>
-        <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:8}}>💡 Por onde começar</div>
-        {[
-          ['🔍','Pesquise seus amigos antigos pelo nome','search'],
-          ['🌍','Entre nas comunidades clássicas que você amava','comunidades'],
-          ['✏️','Complete seu perfil com músicas e filmes favoritos','perfil'],
-          ['✉️','Deixe um recado na página de alguém','amigos'],
-        ].map(([icon,text,pg],i)=>(
-          <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 0',
-            borderBottom:i<3?`1px solid ${C.border}`:'none',cursor:'pointer'}}
-            onClick={()=>setPage(pg)}>
-            <span style={{fontSize:18}}>{icon}</span>
-            <span style={{fontSize:13,color:C.textMid}}>{text}</span>
-            <span style={{marginLeft:'auto',fontSize:12,color:C.blue}}>→</span>
-          </div>
-        ))}
+
+      {/* Friend suggestions */}
+      <div style={panel}>
+        <div style={ph}><span>sugestões de amigos</span></div>
+        <div style={{display:'flex',gap:16,padding:'12px 14px',flexWrap:'wrap'}}>
+          {['A','B','C','D'].map((letter,i)=>{
+            const colors=['#2a4b8d','#e8197d','#2e7d32','#c62828']
+            return (
+              <div key={letter} style={{textAlign:'center',cursor:'pointer',opacity:.8}} title="Em breve">
+                <div style={{width:60,height:60,borderRadius:3,border:`1px solid ${BORDER}`,
+                  background:colors[i],display:'flex',alignItems:'center',justifyContent:'center',
+                  fontSize:24,fontWeight:900,color:WHITE,margin:'0 auto 4px'}}>{letter}</div>
+                <div style={{fontSize:11,color:BLUE}}>{letter}.</div>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
 }
 
-/* ── PROFILE PAGE ────────────────────────────────────────────── */
+/* ── RIGHT COLUMN ── */
+const COMMUNITY_SUGGESTIONS = [
+  { name:'Eu odeio acordar cedo', seed:'acordar', members:'10,2M' },
+  { name:'Orkut para sempre',     seed:'forever', members:'4,8M'  },
+  { name:'Comunidade X',          seed:'comx',    members:'—'     },
+  { name:'Comunidade Y',          seed:'comy',    members:'—'     },
+]
+function RightColumn({ myId, setPage }){
+  const [friends,setFriends]=useState([])
+  const [mine,setMine]=useState([])
+  useEffect(()=>{ getFriends(myId).then(setFriends); getMyCommunities(myId).then(setMine) },[myId])
+  const ph = panelHead()
+  const panel = {...card, marginBottom:8, overflow:'hidden'}
+
+  return (
+    <aside style={{width:185,flexShrink:0}}>
+      {/* meus amigos */}
+      <div style={panel}>
+        <div style={ph}>
+          <span>meus amigos ({friends.length})</span>
+          <span style={{color:PINK,cursor:'pointer',fontWeight:400}} onClick={()=>setPage('amigos')}>ver todos</span>
+        </div>
+        <div style={{padding:8}}>
+          {friends.length===0
+            ?<div style={{fontSize:11,color:MUTED,marginBottom:6}}>Sem amigos ainda.</div>
+            :<div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:4,marginBottom:6}}>
+              {friends.slice(0,9).map(f=>(
+                <div key={f.id} style={{textAlign:'center',cursor:'pointer'}}
+                  onClick={()=>setPage({name:'profile',userId:f.id})}>
+                  <Av src={f.avatar_url} size={38} name={f.name}/>
+                  <div style={{fontSize:9,color:MUTED,marginTop:2,overflow:'hidden',
+                    textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name.split(' ')[0]}</div>
+                </div>
+              ))}
+            </div>
+          }
+          <input placeholder="buscar amigos" style={{...inp,fontSize:11}}/>
+        </div>
+      </div>
+
+      {/* minhas comunidades */}
+      <div style={panel}>
+        <div style={ph}>
+          <span>minhas comunidades ({mine.length})</span>
+          <span style={{color:PINK,cursor:'pointer',fontWeight:400}} onClick={()=>setPage('comunidades')}>ver todas</span>
+        </div>
+        <div style={{padding:8}}>
+          {mine.length===0
+            ?<div style={{fontSize:11,color:MUTED,marginBottom:6}}>Sem comunidades.</div>
+            :<div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:4,marginBottom:8}}>
+              {mine.slice(0,6).map(c=>(
+                <div key={c.id} style={{textAlign:'center'}}>
+                  <img src={"https://picsum.photos/seed/"+c.seed+"/40/40"} alt=""
+                    style={{width:38,height:38,borderRadius:2,objectFit:'cover',
+                      border:`1px solid ${BORDER}`,display:'block'}}/>
+                  <div style={{fontSize:9,color:MUTED,marginTop:2,overflow:'hidden',
+                    textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{(c.name||'').replace(/[♥❤★]/g,'').trim()}</div>
+                </div>
+              ))}
+            </div>
+          }
+          <div style={{borderTop:mine.length?`1px solid ${BORDER}`:'none',
+            paddingTop:mine.length?7:0}}>
+            <div style={{fontSize:10,color:MUTED,fontWeight:700,marginBottom:5,
+              textTransform:'uppercase',letterSpacing:.3}}>sugeridas</div>
+            {COMMUNITY_SUGGESTIONS.map((c,i)=>(
+              <div key={i} style={{display:'flex',gap:6,alignItems:'center',marginBottom:5,
+                cursor:'pointer'}} onClick={()=>setPage('comunidades')}>
+                <img src={"https://picsum.photos/seed/"+c.seed+"/40/40"} alt=""
+                  style={{width:26,height:26,borderRadius:2,objectFit:'cover',
+                    border:`1px solid ${BORDER}`,display:'block',flexShrink:0}}/>
+                <div style={{minWidth:0}}>
+                  <div style={{fontSize:10,color:BLUE,lineHeight:1.2,overflow:'hidden',
+                    textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.name.replace(/[♥❤★]/g,'').trim()}</div>
+                  <div style={{fontSize:9,color:MUTED}}>{c.members} membros</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </aside>
+  )
+}
+
+/* ── PERFIL ── */
 function PerfilPage({ myId, userId, setPage, toast }){
-  const isOwn = !userId || userId===myId
-  const targetId = userId||myId
+  const isOwn=!userId||userId===myId
+  const targetId=userId||myId
   const [profile,setProfile]=useState(null)
   const [editing,setEditing]=useState(false)
   const [draft,setDraft]=useState({})
@@ -415,521 +485,421 @@ function PerfilPage({ myId, userId, setPage, toast }){
   const [tWrite,setTWrite]=useState(false)
   const [tDraft,setTDraft]=useState('')
   const [fStatus,setFStatus]=useState(null)
-  const [loading,setLoading]=useState(false)
-  const [avatarUploading,setAvatarUploading]=useState(false)
+  const [uploading,setUploading]=useState(false)
 
   useEffect(()=>{
     if(!targetId) return
-    getProfile(targetId).then(p=>{ setProfile(p); setDraft(p||{}) })
+    getProfile(targetId).then(p=>{setProfile(p);setDraft(p||{})})
     getDepoimentos(targetId).then(setDeps)
-    if(!isOwn) { recordVisit(myId, targetId) }
-    if(!isOwn) getFriendshipStatus(myId, targetId).then(setFStatus)
+    if(!isOwn){ recordVisit(myId,targetId); getFriendshipStatus(myId,targetId).then(setFStatus) }
   },[targetId])
 
   const save=async()=>{
-    setLoading(true)
-    await updateProfile(myId,{
-      name:draft.name, bio:draft.bio, city:draft.city,
-      country:draft.country, gender:draft.gender, rel_status:draft.rel_status,
-      musica:draft.musica||[], filmes:draft.filmes||[], livros:draft.livros||[],
-    })
-    setProfile(draft); setEditing(false); setLoading(false); toast('Perfil atualizado!')
+    await updateProfile(myId,{name:draft.name,bio:draft.bio,city:draft.city,
+      country:draft.country,gender:draft.gender,rel_status:draft.rel_status,
+      musica:draft.musica||[],filmes:draft.filmes||[],livros:draft.livros||[]})
+    setProfile(draft);setEditing(false);toast('Perfil atualizado!')
   }
-
   const handleAvatar=async(e)=>{
-    const file=e.target.files[0]; if(!file) return
-    setAvatarUploading(true)
-    try{
-      const url=await uploadAvatar(myId,file)
-      await updateProfile(myId,{avatar_url:url})
-      setProfile(p=>({...p,avatar_url:url}))
-      toast('Foto atualizada!')
-    }catch(err){ toast('Erro ao enviar foto') }
-    setAvatarUploading(false)
+    const file=e.target.files[0];if(!file)return
+    setUploading(true)
+    try{ const url=await uploadAvatar(myId,file); await updateProfile(myId,{avatar_url:url})
+      setProfile(p=>({...p,avatar_url:url}));toast('Foto atualizada!') }
+    catch(err){ toast('Erro ao enviar foto') }
+    setUploading(false)
   }
-
   const handleFriend=async()=>{
-    if(!fStatus){ await sendFriendRequest(myId,targetId); setFStatus({status:'pending',requester_id:myId}); toast('Pedido enviado!') }
-    else if(fStatus.status==='pending'&&fStatus.requester_id!==myId){ await respondFriendRequest(fStatus.id,true); setFStatus({...fStatus,status:'accepted'}); toast('Amizade aceita!') }
+    if(!fStatus){await sendFriendRequest(myId,targetId);setFStatus({status:'pending',requester_id:myId});toast('Pedido enviado!')}
   }
-
   const submitDep=async()=>{
-    if(!tDraft.trim()) return
+    if(!tDraft.trim())return
     await sendDepoimento(myId,targetId,tDraft)
-    const d=await getDepoimentos(targetId); setDeps(d)
-    setTDraft(''); setTWrite(false); toast('Depoimento enviado!')
+    getDepoimentos(targetId).then(setDeps)
+    setTDraft('');setTWrite(false);toast('Depoimento enviado!')
   }
+  const arrayField=(k,v)=>setDraft(p=>({...p,[k]:v.split(',').map(s=>s.trim()).filter(Boolean)}))
 
-  const arrayField=(key,value)=>{
-    const arr=value.split(',').map(s=>s.trim()).filter(Boolean)
-    setDraft(p=>({...p,[key]:arr}))
-  }
+  if(!profile) return <div style={{padding:20,color:MUTED,textAlign:'center'}}>Carregando…</div>
 
-  if(!profile) return <div style={{padding:20,color:C.textLight,textAlign:'center'}}>Carregando perfil…</div>
-
-  const Field=({l,children})=>(
-    <div style={{display:'flex',alignItems:'flex-start',padding:'8px 0',borderBottom:`1px solid ${C.border}`}}>
-      <div style={{...lbl,paddingTop:1}}>{l}</div>
-      <div style={{flex:1}}>{children}</div>
-    </div>
-  )
+  const tag={display:'inline-flex',alignItems:'center',padding:'2px 10px',borderRadius:12,
+    border:`1px solid ${BORDER}`,background:'#f0f4ff',fontSize:12,color:MUTED,
+    marginRight:5,marginBottom:4}
 
   return (
     <div>
-      <div style={{fontSize:12,color:C.textLight,marginBottom:10}}>
-        <span style={{color:C.blue,cursor:'pointer'}} onClick={()=>setPage('home')}>Início</span> ›{' '}
-        <span style={{color:C.blue,fontWeight:600}}>{isOwn?'Meu Perfil':profile.name}</span>
-      </div>
-
-      <div style={{...card,padding:18,marginBottom:10}}>
+      <div style={{...card,padding:16,marginBottom:8,overflow:'hidden'}}>
         <div style={{display:'flex',gap:14,alignItems:'flex-start',marginBottom:12}}>
           <div style={{textAlign:'center',flexShrink:0}}>
             <Av src={profile.avatar_url} size={80} ring name={profile.name}/>
-            {isOwn&&(
-              <label style={{fontSize:10,color:C.blue,cursor:'pointer',marginTop:4,display:'block'}}>
-                {avatarUploading?'Enviando…':'trocar foto'}
-                <input type="file" accept="image/*" style={{display:'none'}} onChange={handleAvatar}/>
-              </label>
-            )}
+            {isOwn&&<label style={{fontSize:10,color:BLUE,cursor:'pointer',marginTop:3,display:'block'}}>
+              {uploading?'…':'trocar foto'}
+              <input type="file" accept="image/*" style={{display:'none'}} onChange={handleAvatar}/>
+            </label>}
           </div>
           <div style={{flex:1}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
-              <h1 style={{fontSize:21,fontWeight:700,color:C.text,margin:0}}>{profile.name}</h1>
-              <div style={{display:'flex',gap:8}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
+              <h1 style={{fontSize:20,fontWeight:700,color:TEXT,margin:0}}>{profile.name}</h1>
+              <div style={{display:'flex',gap:7}}>
                 {isOwn&&<button style={btnBlue} onClick={()=>setEditing(!editing)}>{editing?'Cancelar':'Editar perfil'}</button>}
-                {!isOwn&&(
-                  <button style={fStatus?.status==='accepted'?btnGhost:btnBlue} onClick={handleFriend}>
-                    {!fStatus?'+ Adicionar amigo':
-                     fStatus.status==='pending'&&fStatus.requester_id===myId?'Pedido enviado':
-                     fStatus.status==='pending'?'Aceitar pedido':'✓ Amigos'}
-                  </button>
-                )}
+                {!isOwn&&<button style={fStatus?.status==='accepted'?btnGhost:btnBlue} onClick={handleFriend}>
+                  {!fStatus?'+ Adicionar':fStatus.status==='pending'&&fStatus.requester_id===myId?'Pedido enviado':'Aceitar'}
+                </button>}
                 {!isOwn&&<button style={btnPink} onClick={()=>setPage({name:'recados',userId:targetId})}>✉ Recado</button>}
               </div>
             </div>
             {!editing
-              ?<div style={{background:C.bg,borderRadius:7,padding:'7px 13px',fontSize:13,color:C.textMid,fontStyle:'italic'}}>{profile.bio}</div>
-              :<textarea style={{...tarea,marginBottom:8}} value={draft.bio||''} onChange={e=>setDraft({...draft,bio:e.target.value})}/>
-            }
+              ?<div style={{background:'#f5f7fc',borderRadius:2,padding:'6px 10px',
+                  fontSize:13,color:MUTED,fontStyle:'italic'}}>{profile.bio||'…'}</div>
+              :<textarea style={{...tarea,marginBottom:8}} value={draft.bio||''}
+                  onChange={e=>setDraft({...draft,bio:e.target.value})}/>}
           </div>
-        </div>
-
-        {/* Ratings */}
-        <div style={{display:'flex',gap:20,padding:'10px 0',borderTop:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`,marginBottom:10}}>
-          {[['fãs',`⭐ ${profile.karma||10}`],['confiável','😊 😊 😊'],['legal','👍 👍 👍'],['sexy','❤ ❤ ❤']].map(([l,v])=>(
-            <div key={l} style={{textAlign:'center'}}>
-              <div style={{fontSize:10,color:C.textLight,marginBottom:2}}>{l}</div>
-              <div style={{fontSize:13,fontWeight:600}}>{v}</div>
-            </div>
-          ))}
         </div>
 
         {editing?(
-          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+          <div style={{display:'flex',flexDirection:'column',gap:7}}>
             {[['nome','name'],['cidade','city'],['país','country'],['gênero','gender'],['relacionamento','rel_status']].map(([l,k])=>(
-              <div key={k} style={{display:'flex',alignItems:'center',gap:12}}>
-                <div style={{...lbl}}>{l}</div>
+              <div key={k} style={{display:'flex',alignItems:'center',gap:10}}>
+                <div style={{fontSize:11,color:MUTED,minWidth:100}}>{l}</div>
                 <input style={{...inp,flex:1}} value={draft[k]||''} onChange={e=>setDraft({...draft,[k]:e.target.value})}/>
               </div>
             ))}
-            {[['música (separada por vírgulas)','musica'],['filmes','filmes'],['livros','livros']].map(([l,k])=>(
-              <div key={k} style={{display:'flex',alignItems:'center',gap:12}}>
-                <div style={{...lbl}}>{l}</div>
-                <input style={{...inp,flex:1}}
-                  value={(draft[k]||[]).join(', ')}
-                  onChange={e=>arrayField(k,e.target.value)}/>
+            {[['música','musica'],['filmes','filmes'],['livros','livros']].map(([l,k])=>(
+              <div key={k} style={{display:'flex',alignItems:'center',gap:10}}>
+                <div style={{fontSize:11,color:MUTED,minWidth:100}}>{l} (vírgula)</div>
+                <input style={{...inp,flex:1}} value={(draft[k]||[]).join(', ')} onChange={e=>arrayField(k,e.target.value)}/>
               </div>
             ))}
-            <button style={{...btnBlue,alignSelf:'flex-start',marginTop:4}} onClick={save} disabled={loading}>
-              {loading?'Salvando…':'Salvar'}
-            </button>
+            <button style={{...btnBlue,alignSelf:'flex-start',marginTop:4}} onClick={save}>Salvar</button>
           </div>
         ):(
-          <>
-            <Field l="relacionamento"><span style={{fontSize:13}}>{profile.rel_status}</span></Field>
-            <Field l="quem sou eu"><span style={{fontSize:13,lineHeight:1.6}}>{profile.bio}</span></Field>
-            <Field l="cidade/país"><span style={{fontSize:13}}>{[profile.city,profile.country].filter(Boolean).join(', ')}</span></Field>
-            {profile.musica?.length>0&&<Field l="música"><div style={{display:'flex',flexWrap:'wrap',marginTop:3}}>{profile.musica.map(t=><span key={t} style={tag}>{t}</span>)}</div></Field>}
-            {profile.filmes?.length>0&&<Field l="filmes"><div style={{display:'flex',flexWrap:'wrap',marginTop:3}}>{profile.filmes.map(t=><span key={t} style={tag}>{t}</span>)}</div></Field>}
-            {profile.livros?.length>0&&<Field l="livros"><div style={{display:'flex',flexWrap:'wrap',marginTop:3}}>{profile.livros.map(t=><span key={t} style={tag}>{t}</span>)}</div></Field>}
-          </>
+          <div>
+            {[['relacionamento',profile.rel_status],['país',profile.country],['cidade',profile.city]].map(([l,v])=>v&&(
+              <div key={l} style={{display:'flex',padding:'6px 0',borderTop:`1px solid ${BORDER}`}}>
+                <div style={{fontSize:11,color:MUTED,minWidth:120}}>{l}</div>
+                <div style={{fontSize:13,color:TEXT}}>{v}</div>
+              </div>
+            ))}
+            {profile.musica?.length>0&&<div style={{display:'flex',flexWrap:'wrap',padding:'6px 0',borderTop:`1px solid ${BORDER}`}}>
+              <div style={{fontSize:11,color:MUTED,minWidth:120,paddingTop:2}}>música</div>
+              <div>{profile.musica.map(t=><span key={t} style={tag}>{t}</span>)}</div>
+            </div>}
+            {profile.filmes?.length>0&&<div style={{display:'flex',flexWrap:'wrap',padding:'6px 0',borderTop:`1px solid ${BORDER}`}}>
+              <div style={{fontSize:11,color:MUTED,minWidth:120,paddingTop:2}}>filmes</div>
+              <div>{profile.filmes.map(t=><span key={t} style={tag}>{t}</span>)}</div>
+            </div>}
+          </div>
         )}
       </div>
 
       {/* Tabs */}
-      <div style={{...card}}>
-        <div style={{display:'flex',borderBottom:`1px solid ${C.border}`,background:'#f8f9fc'}}>
+      <div style={{...card,overflow:'hidden'}}>
+        <div style={{display:'flex',borderBottom:`1px solid ${BORDER}`,background:'#f0f4ff'}}>
           {['depoimentos','sobre'].map(t=>(
-            <div key={t} onClick={()=>setTab(t)} style={{
-              padding:'9px 16px',cursor:'pointer',fontSize:12,fontWeight:tab===t?700:400,
-              borderBottom:tab===t?`2px solid ${C.blue}`:'2px solid transparent',
-              color:tab===t?C.blue:C.textMid,boxSizing:'border-box'}}>
+            <div key={t} onClick={()=>setTab(t)} style={{padding:'7px 14px',cursor:'pointer',
+              fontSize:12,fontWeight:tab===t?700:400,color:tab===t?BLUE:MUTED,
+              borderBottom:tab===t?`2px solid ${BLUE}`:'2px solid transparent',boxSizing:'border-box'}}>
               {t.charAt(0).toUpperCase()+t.slice(1)}{t==='depoimentos'&&` (${deps.length})`}
             </div>
           ))}
         </div>
-        <div style={{padding:16}}>
-          {tab==='sobre'&&(
-            <div style={{fontSize:12,color:C.textMid,lineHeight:2}}>
-              <p>👤 Membro desde {new Date(profile.created_at||Date.now()).toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}</p>
-              <p>⭐ Karma: {profile.karma||10}</p>
-            </div>
-          )}
-          {tab==='depoimentos'&&(
-            <div>
-              {deps.map(d=>(
-                <div key={d.id} style={{display:'flex',gap:11,padding:'11px 0',borderBottom:`1px solid ${C.border}`}}>
-                  <div style={{cursor:'pointer'}} onClick={()=>setPage({name:'profile',userId:d.from.id})}>
-                    <Av src={d.from.avatar_url} size={36} name={d.from.name}/>
-                  </div>
-                  <div>
-                    <div style={{fontWeight:700,fontSize:13,color:C.blue,marginBottom:2,cursor:'pointer'}}
-                      onClick={()=>setPage({name:'profile',userId:d.from.id})}>{d.from.name}:</div>
-                    <div style={{fontSize:13,color:C.text,lineHeight:1.6}}>{d.text}</div>
-                    <div style={{fontSize:11,color:C.textLight,marginTop:3}}>
-                      {new Date(d.created_at).toLocaleDateString('pt-BR')}
-                    </div>
-                  </div>
+        <div style={{padding:14}}>
+          {tab==='sobre'&&<div style={{fontSize:12,color:MUTED,lineHeight:2}}>
+            <p>Membro desde {new Date(profile.created_at||Date.now()).toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}</p>
+          </div>}
+          {tab==='depoimentos'&&<div>
+            {deps.map(d=>(
+              <div key={d.id} style={{display:'flex',gap:10,padding:'10px 0',borderBottom:`1px solid ${BORDER}`}}>
+                <div style={{cursor:'pointer'}} onClick={()=>setPage({name:'profile',userId:d.from.id})}>
+                  <Av src={d.from.avatar_url} size={34} name={d.from.name}/>
                 </div>
-              ))}
-              {deps.length===0&&<div style={{color:C.textLight,fontSize:12,padding:'16px 0'}}>Nenhum depoimento ainda.</div>}
-              {!tWrite&&!isOwn&&myId&&(
-                <button style={{...btnBlue,marginTop:8}} onClick={()=>setTWrite(true)}>Escrever depoimento</button>
-              )}
-              {tWrite&&(
-                <div style={{marginTop:8,background:C.bg,borderRadius:7,padding:12}}>
-                  <textarea style={tarea} value={tDraft} onChange={e=>setTDraft(e.target.value)} placeholder="Escreva algo bonito…"/>
-                  <div style={{display:'flex',gap:8,marginTop:8}}>
-                    <button style={btnBlue} onClick={submitDep}>Postar</button>
-                    <button style={btnGhost} onClick={()=>setTWrite(false)}>Cancelar</button>
-                  </div>
+                <div>
+                  <div style={{fontWeight:700,fontSize:12,color:BLUE,marginBottom:2,cursor:'pointer'}}
+                    onClick={()=>setPage({name:'profile',userId:d.from.id})}>{d.from.name}:</div>
+                  <div style={{fontSize:13,color:TEXT,lineHeight:1.5}}>{d.text}</div>
+                  <div style={{fontSize:10,color:MUTED,marginTop:3}}>{new Date(d.created_at).toLocaleDateString('pt-BR')}</div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            ))}
+            {deps.length===0&&<div style={{color:MUTED,fontSize:12,padding:'12px 0'}}>Nenhum depoimento ainda.</div>}
+            {!tWrite&&!isOwn&&<button style={{...btnBlue,marginTop:8}} onClick={()=>setTWrite(true)}>Escrever depoimento</button>}
+            {tWrite&&<div style={{marginTop:8,background:'#f5f7fc',borderRadius:3,padding:10}}>
+              <textarea style={tarea} value={tDraft} onChange={e=>setTDraft(e.target.value)} placeholder="Escreva algo bonito…"/>
+              <div style={{display:'flex',gap:8,marginTop:8}}>
+                <button style={btnBlue} onClick={submitDep}>Postar</button>
+                <button style={btnGhost} onClick={()=>setTWrite(false)}>Cancelar</button>
+              </div>
+            </div>}
+          </div>}
         </div>
       </div>
     </div>
   )
 }
 
-/* ── RECADOS ─────────────────────────────────────────────────── */
+/* ── RECADOS ── */
 function RecadosPage({ myId, targetUserId, setPage, toast }){
-  const targetId = targetUserId||myId
-  const isOwn    = targetId===myId
+  const targetId=targetUserId||myId
+  const isOwn=targetId===myId
   const [recados,setRecados]=useState([])
   const [text,setText]=useState('')
   const [targetProfile,setTargetProfile]=useState(null)
-  const [loading,setLoading]=useState(false)
   const [replyId,setReplyId]=useState(null)
+  const [replyTxt,setReplyTxt]=useState('')
+  const [replies,setReplies]=useState({})
 
   useEffect(()=>{
     getRecados(targetId).then(setRecados)
     if(!isOwn) getProfile(targetId).then(setTargetProfile)
   },[targetId])
-
-  // Realtime
   useEffect(()=>{
-    const ch=supabase.channel('recados-'+targetId)
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'recados',filter:`to_id=eq.${targetId}`},
+    const ch=supabase.channel('rec-'+targetId)
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'recados',filter:'to_id=eq.'+targetId},
         ()=>getRecados(targetId).then(setRecados))
       .subscribe()
     return()=>supabase.removeChannel(ch)
   },[targetId])
 
   const post=async()=>{
-    if(!text.trim()) return
-    setLoading(true)
+    if(!text.trim())return
     await sendRecado(myId,targetId,text)
-    const data=await getRecados(targetId); setRecados(data)
-    setText(''); setLoading(false); toast('Recado enviado!')
+    getRecados(targetId).then(setRecados);setText('');toast('Recado enviado!')
   }
-
-  const del=async(id)=>{ await deleteRecado(id,myId); setRecados(p=>p.filter(r=>r.id!==id)) }
+  const del=async(id)=>{ await deleteRecado(id,myId);setRecados(p=>p.filter(r=>r.id!==id)) }
+  const sendReply=(id)=>{
+    if(!replyTxt.trim())return
+    setReplies(p=>({...p,[id]:[...(p[id]||[]),{from:'Você',text:replyTxt,date:'agora'}]}))
+    setReplyTxt('');setReplyId(null)
+  }
 
   return (
     <div>
-      <div style={{fontSize:12,color:C.textLight,marginBottom:10}}>
-        <span style={{color:C.blue,cursor:'pointer'}} onClick={()=>setPage('home')}>Início</span> ›{' '}
-        {!isOwn&&<><span style={{color:C.blue,cursor:'pointer'}} onClick={()=>setPage({name:'profile',userId:targetId})}>{targetProfile?.name}</span> › </>}
-        <span style={{color:C.blue,fontWeight:600}}>Recados</span>
-      </div>
-
-      <div style={{...card,padding:16,marginBottom:10}}>
-        <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:8}}>
-          {isOwn?'Deixar recado no meu mural':`Deixar recado para ${targetProfile?.name||'…'}`}
+      <div style={{...card,padding:14,marginBottom:8,overflow:'hidden'}}>
+        <div style={{fontWeight:700,fontSize:13,color:TEXT,marginBottom:8}}>
+          {isOwn?'Deixar recado no meu mural':`Recado para ${targetProfile?.name||'…'}`}
         </div>
         <textarea style={tarea} value={text} onChange={e=>setText(e.target.value)} placeholder="Escreva um recado…"/>
-        <div style={{display:'flex',gap:8,marginTop:8}}>
-          <button style={{...btnBlue,opacity:loading?.6:1}} onClick={post} disabled={loading}>
-            {loading?'Enviando…':'Enviar recado'}
-          </button>
-        </div>
+        <button style={{...btnBlue,marginTop:8}} onClick={post}>Enviar recado</button>
       </div>
-
-      <div style={{...card,padding:16}}>
-        <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:12}}>Recados ({recados.length})</div>
+      <div style={{...card,padding:14,overflow:'hidden'}}>
+        <div style={{fontWeight:700,fontSize:13,color:TEXT,marginBottom:10}}>Recados ({recados.length})</div>
         {recados.map(r=>(
-          <div key={r.id} style={{display:'flex',gap:11,padding:'11px 0',borderBottom:`1px solid ${C.border}`}}>
+          <div key={r.id} style={{display:'flex',gap:10,padding:'10px 0',borderBottom:`1px solid ${BORDER}`}}>
             <div style={{cursor:'pointer'}} onClick={()=>setPage({name:'profile',userId:r.from.id})}>
-              <Av src={r.from.avatar_url} size={38} name={r.from.name}/>
+              <Av src={r.from.avatar_url} size={36} name={r.from.name}/>
             </div>
             <div style={{flex:1}}>
               <div style={{display:'flex',justifyContent:'space-between'}}>
-                <span style={{fontWeight:700,fontSize:13,color:C.blue,cursor:'pointer'}}
+                <span style={{fontWeight:700,fontSize:12,color:BLUE,cursor:'pointer'}}
                   onClick={()=>setPage({name:'profile',userId:r.from.id})}>{r.from.name}</span>
-                <span style={{fontSize:11,color:C.textLight}}>{new Date(r.created_at).toLocaleDateString('pt-BR')}</span>
+                <span style={{fontSize:10,color:MUTED}}>{new Date(r.created_at).toLocaleDateString('pt-BR')}</span>
               </div>
-              <div style={{fontSize:13,color:C.text,marginTop:3,lineHeight:1.5}}>{r.text}</div>
-              <div style={{display:'flex',gap:12,marginTop:5}}>
-                <span style={{fontSize:11,color:C.blue,cursor:'pointer'}}
-                  onClick={()=>setPage({name:'recados',userId:r.from.id})}>↩ Responder</span>
-                {(isOwn||r.from.id===myId)&&(
-                  <span style={{fontSize:11,color:'#ef4444',cursor:'pointer'}} onClick={()=>del(r.id)}>Apagar</span>
-                )}
+              <div style={{fontSize:13,color:TEXT,marginTop:3,lineHeight:1.5}}>{r.text}</div>
+              <div style={{display:'flex',gap:10,marginTop:4}}>
+                <span style={{fontSize:11,color:BLUE,cursor:'pointer'}} onClick={()=>setReplyId(replyId===r.id?null:r.id)}>↩ Responder</span>
+                {(isOwn||r.from.id===myId)&&<span style={{fontSize:11,color:'#cc0000',cursor:'pointer'}} onClick={()=>del(r.id)}>Apagar</span>}
               </div>
+              {(replies[r.id]||[]).map((rep,i)=>(
+                <div key={i} style={{marginTop:6,paddingLeft:10,borderLeft:`2px solid #dde4f0`,fontSize:12,color:MUTED}}>
+                  <b style={{color:TEXT}}>Você:</b> {rep.text}
+                </div>
+              ))}
+              {replyId===r.id&&<div style={{marginTop:6,display:'flex',gap:7}}>
+                <input style={{...inp,flex:1}} placeholder="Responder…" value={replyTxt}
+                  onChange={e=>setReplyTxt(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendReply(r.id)}/>
+                <button style={btnBlue} onClick={()=>sendReply(r.id)}>Enviar</button>
+              </div>}
             </div>
           </div>
         ))}
-        {recados.length===0&&<div style={{color:C.textLight,fontSize:12,padding:'16px 0'}}>Nenhum recado ainda.</div>}
+        {recados.length===0&&<div style={{color:MUTED,fontSize:12,padding:'14px 0'}}>Nenhum recado ainda.</div>}
       </div>
     </div>
   )
 }
 
-/* ── AMIGOS ──────────────────────────────────────────────────── */
+/* ── AMIGOS ── */
 function AmigosPage({ myId, setPage, toast }){
   const [friends,setFriends]=useState([])
   const [requests,setRequests]=useState([])
-  const [chatFriend,setChatFriend]=useState(null)
+  const [chatF,setChatF]=useState(null)
   const [messages,setMessages]=useState([])
   const [chatInput,setChatInput]=useState('')
   const chatRef=useRef()
 
   const load=()=>{ getFriends(myId).then(setFriends); getFriendRequests(myId).then(setRequests) }
   useEffect(()=>{ load() },[myId])
-
-  // Realtime friend requests
   useEffect(()=>{
-    const ch=supabase.channel('friends-'+myId)
+    const ch=supabase.channel('fr-'+myId)
       .on('postgres_changes',{event:'*',schema:'public',table:'friendships'},()=>load())
       .subscribe()
     return()=>supabase.removeChannel(ch)
   },[myId])
 
-  const respond=async(id,accept)=>{
-    await respondFriendRequest(id,accept); load()
-    toast(accept?'Amizade aceita!':'Pedido recusado')
-  }
+  const respond=async(id,accept)=>{ await respondFriendRequest(id,accept); load(); toast(accept?'Amizade aceita!':'Recusado') }
+  const openChat=async(f)=>{ setChatF(f); getMessages(myId,f.id).then(setMessages) }
 
-  const openChat=async(f)=>{
-    setChatFriend(f)
-    const msgs=await getMessages(myId,f.id); setMessages(msgs)
-    setTimeout(()=>chatRef.current?.scrollTo(0,9999),50)
-  }
-
-  // Realtime chat
   useEffect(()=>{
-    if(!chatFriend) return
-    const ch=supabase.channel('chat-'+[myId,chatFriend.id].sort().join('-'))
+    if(!chatF)return
+    const ch=supabase.channel('chat-'+[myId,chatF.id].sort().join('-'))
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},
-        ()=>getMessages(myId,chatFriend.id).then(msgs=>{ setMessages(msgs); setTimeout(()=>chatRef.current?.scrollTo(0,9999),50) }))
+        ()=>getMessages(myId,chatF.id).then(msgs=>{ setMessages(msgs); setTimeout(()=>chatRef.current?.scrollTo(0,9999),50) }))
       .subscribe()
     return()=>supabase.removeChannel(ch)
-  },[chatFriend])
+  },[chatF])
 
-  const sendMsg=async()=>{
-    if(!chatInput.trim()) return
-    await sendMessage(myId,chatFriend.id,chatInput); setChatInput('')
-  }
+  const sendMsg=async()=>{ if(!chatInput.trim())return; await sendMessage(myId,chatF.id,chatInput); setChatInput('') }
 
   return (
     <div>
-      <div style={{fontSize:12,color:C.textLight,marginBottom:10}}>
-        <span style={{color:C.blue}}>Início</span> › <span style={{color:C.blue,fontWeight:600}}>Amigos</span>
+      {requests.length>0&&<div style={{...card,padding:14,marginBottom:8,overflow:'hidden'}}>
+        <div style={{fontWeight:700,fontSize:13,color:TEXT,marginBottom:8}}>📬 Pedidos de amizade ({requests.length})</div>
+        {requests.map(r=>(
+          <div key={r.id} style={{display:'flex',alignItems:'center',gap:10,padding:'7px 0',borderBottom:`1px solid ${BORDER}`}}>
+            <Av src={r.requester.avatar_url} size={36} name={r.requester.name}/>
+            <div style={{flex:1,fontWeight:600,fontSize:13,color:TEXT,cursor:'pointer'}}
+              onClick={()=>setPage({name:'profile',userId:r.requester.id})}>{r.requester.name}</div>
+            <button style={{...btnBlue,padding:'3px 10px',fontSize:11}} onClick={()=>respond(r.id,true)}>Aceitar</button>
+            <button style={{...btnGhost,padding:'3px 10px',fontSize:11}} onClick={()=>respond(r.id,false)}>Recusar</button>
+          </div>
+        ))}
+      </div>}
+
+      <div style={{...card,padding:14,overflow:'hidden'}}>
+        <div style={{fontWeight:700,fontSize:13,color:TEXT,marginBottom:12}}>Amigos ({friends.length})</div>
+        {friends.length===0
+          ?<div style={{textAlign:'center',padding:'24px 0',color:MUTED,fontSize:13}}>
+            Use a busca para encontrar pessoas!</div>
+          :<div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
+            {friends.map(f=>(
+              <div key={f.id} style={{textAlign:'center',padding:10,borderRadius:3,
+                border:`1px solid ${BORDER}`,background:'#f5f7fc'}}>
+                <div style={{cursor:'pointer'}} onClick={()=>setPage({name:'profile',userId:f.id})}>
+                  <Av src={f.avatar_url} size={50} name={f.name}/>
+                </div>
+                <div style={{fontSize:12,fontWeight:600,color:TEXT,margin:'5px 0',cursor:'pointer',
+                  overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
+                  onClick={()=>setPage({name:'profile',userId:f.id})}>{f.name}</div>
+                <div style={{display:'flex',gap:4,justifyContent:'center'}}>
+                  <button style={{...btnBlue,padding:'2px 8px',fontSize:10}} onClick={()=>openChat(f)}>💬</button>
+                  <button style={{...btnGhost,padding:'2px 8px',fontSize:10}} onClick={()=>setPage({name:'recados',userId:f.id})}>✉</button>
+                </div>
+              </div>
+            ))}
+          </div>}
       </div>
 
-      {requests.length>0&&(
-        <div style={{...card,padding:16,marginBottom:10}}>
-          <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:10}}>
-            📬 Pedidos de amizade ({requests.length})
+      {chatF&&<div style={{position:'fixed',bottom:20,right:20,width:290,background:WHITE,
+        border:`1.5px solid ${BORDER}`,borderRadius:4,boxShadow:'0 6px 24px rgba(0,0,0,.15)',zIndex:999,overflow:'hidden'}}>
+        <div style={{background:BLUE,padding:'8px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div style={{display:'flex',alignItems:'center',gap:7}}>
+            <Av src={chatF.avatar_url} size={22} name={chatF.name}/>
+            <span style={{color:WHITE,fontWeight:700,fontSize:12}}>{chatF.name}</span>
           </div>
-          {requests.map(r=>(
-            <div key={r.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:`1px solid ${C.border}`}}>
-              <Av src={r.requester.avatar_url} size={38} name={r.requester.name}/>
-              <div style={{flex:1}}>
-                <div style={{fontWeight:600,fontSize:13,color:C.text,cursor:'pointer'}}
-                  onClick={()=>setPage({name:'profile',userId:r.requester.id})}>{r.requester.name}</div>
-              </div>
-              <button style={{...btnBlue,padding:'4px 12px',fontSize:11}} onClick={()=>respond(r.id,true)}>Aceitar</button>
-              <button style={{...btnGhost,padding:'4px 12px',fontSize:11}} onClick={()=>respond(r.id,false)}>Recusar</button>
+          <span style={{color:WHITE,cursor:'pointer'}} onClick={()=>setChatF(null)}>✕</span>
+        </div>
+        <div ref={chatRef} style={{height:200,overflowY:'auto',padding:8,background:'#f5f7fc',
+          display:'flex',flexDirection:'column',gap:5}}>
+          {messages.length===0&&<div style={{color:MUTED,fontSize:11,textAlign:'center',marginTop:60}}>Diga olá!</div>}
+          {messages.map(m=>(
+            <div key={m.id} style={{alignSelf:m.from_id===myId?'flex-end':'flex-start',
+              maxWidth:'80%',background:m.from_id===myId?BLUE:WHITE,
+              color:m.from_id===myId?WHITE:TEXT,padding:'5px 9px',borderRadius:8,fontSize:12}}>
+              {m.text}
             </div>
           ))}
         </div>
-      )}
-
-      <div style={{...card,padding:16}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-          <h2 style={{fontSize:14,fontWeight:700,margin:0}}>Meus Amigos ({friends.length})</h2>
-          {friends.length===0&&<span style={{fontSize:12,color:C.textLight}}>Pesquise pessoas na barra de busca ↑</span>}
+        <div style={{padding:6,borderTop:`1px solid ${BORDER}`,display:'flex',gap:6}}>
+          <input style={{...inp,flex:1,fontSize:12}} value={chatInput}
+            onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendMsg()}
+            placeholder="Mensagem…"/>
+          <button style={{...btnBlue,padding:'5px 10px'}} onClick={sendMsg}>→</button>
         </div>
-        {friends.length===0?(
-          <div style={{textAlign:'center',padding:'30px 0',color:C.textLight,fontSize:13}}>
-            Você ainda não tem amigos aqui. Use a busca para encontrar pessoas!
-          </div>
-        ):(
-          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
-            {friends.map(f=>(
-              <div key={f.id} style={{textAlign:'center',padding:11,borderRadius:8,border:`1px solid ${C.border}`,background:C.bg}}>
-                <div style={{cursor:'pointer'}} onClick={()=>setPage({name:'profile',userId:f.id})}>
-                  <Av src={f.avatar_url} size={52} name={f.name}/>
-                </div>
-                <div style={{fontSize:12,fontWeight:600,color:C.text,margin:'6px 0',cursor:'pointer',
-                  overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
-                  onClick={()=>setPage({name:'profile',userId:f.id})}>{f.name}</div>
-                <div style={{fontSize:10,color:C.textLight,marginBottom:8}}>{f.city||f.country||''}</div>
-                <div style={{display:'flex',gap:4,justifyContent:'center'}}>
-                  <button style={{...btnBlue,padding:'3px 9px',fontSize:11}} onClick={()=>openChat(f)}>💬 Chat</button>
-                  <button style={{...btnGhost,padding:'3px 9px',fontSize:11}}
-                    onClick={()=>setPage({name:'recados',userId:f.id})}>✉</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Chat modal */}
-      {chatFriend&&(
-        <div style={{position:'fixed',bottom:20,right:20,width:295,background:C.white,
-          border:`1.5px solid ${C.border}`,borderRadius:12,
-          boxShadow:'0 8px 30px rgba(0,0,0,.13)',zIndex:999,overflow:'hidden'}}>
-          <div style={{background:C.blue,padding:'9px 13px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-            <div style={{display:'flex',alignItems:'center',gap:8}}>
-              <Av src={chatFriend.avatar_url} size={24} name={chatFriend.name}/>
-              <span style={{color:'#fff',fontWeight:700,fontSize:13}}>{chatFriend.name}</span>
-            </div>
-            <span style={{color:'#fff',cursor:'pointer'}} onClick={()=>setChatFriend(null)}>✕</span>
-          </div>
-          <div ref={chatRef} style={{height:220,overflowY:'auto',padding:10,background:C.bg,
-            display:'flex',flexDirection:'column',gap:6}}>
-            {messages.length===0&&<div style={{color:C.textLight,fontSize:11,textAlign:'center',marginTop:70}}>
-              Comece a conversa!</div>}
-            {messages.map(m=>(
-              <div key={m.id} style={{alignSelf:m.from_id===myId?'flex-end':'flex-start',maxWidth:'82%',
-                background:m.from_id===myId?C.blue:'#fff',color:m.from_id===myId?'#fff':C.text,
-                padding:'6px 10px',borderRadius:10,fontSize:12,
-                boxShadow:'0 1px 3px rgba(0,0,0,.06)'}}>
-                {m.text}
-              </div>
-            ))}
-          </div>
-          <div style={{padding:7,borderTop:`1px solid ${C.border}`,display:'flex',gap:6}}>
-            <input style={{...inp,flex:1,fontSize:12}} value={chatInput}
-              onChange={e=>setChatInput(e.target.value)}
-              onKeyDown={e=>e.key==='Enter'&&sendMsg()}
-              placeholder="Mensagem…"/>
-            <button style={{...btnBlue,padding:'6px 11px'}} onClick={sendMsg}>→</button>
-          </div>
-        </div>
-      )}
+      </div>}
     </div>
   )
 }
 
-/* ── COMUNIDADES ─────────────────────────────────────────────── */
+/* ── COMUNIDADES ── */
 function ComunidadesPage({ myId, toast }){
   const [all,setAll]=useState([])
   const [mine,setMine]=useState([])
-  const [tab,setTab]=useState('todas')
   const [cat,setCat]=useState('Todos')
   const [search,setSearch]=useState('')
+  const [tab,setTab]=useState('todas')
   const [active,setActive]=useState(null)
   const [posts,setPosts]=useState([])
   const [newPost,setNewPost]=useState('')
 
   useEffect(()=>{ getCommunities().then(setAll); getMyCommunities(myId).then(setMine) },[myId])
-
   const cats=['Todos',...[...new Set(all.map(c=>c.category))].sort()]
   const myIds=new Set(mine.map(c=>c.id))
-
   const filtered=all.filter(c=>{
     const mc=cat==='Todos'||c.category===cat
     const ms=c.name.toLowerCase().includes(search.toLowerCase())
     const mt=tab==='todas'||myIds.has(c.id)
     return mc&&ms&&mt
   })
-
   const toggle=async(c)=>{
-    if(myIds.has(c.id)){ await leaveCommunity(myId,c.id); setMine(p=>p.filter(x=>x.id!==c.id)); toast('Você saiu da comunidade') }
-    else { await joinCommunity(myId,c.id); setMine(p=>[...p,c]); toast('Bem-vindo(a) à comunidade!') }
+    if(myIds.has(c.id)){await leaveCommunity(myId,c.id);setMine(p=>p.filter(x=>x.id!==c.id));toast('Você saiu')}
+    else{await joinCommunity(myId,c.id);setMine(p=>[...p,c]);toast('Bem-vindo(a)!')}
   }
-
-  const openCom=async(c)=>{
-    setActive(c); const p=await getCommunityPosts(c.id); setPosts(p)
-  }
-
-  // Realtime posts
+  const openCom=async(c)=>{ setActive(c); getCommunityPosts(c.id).then(setPosts) }
   useEffect(()=>{
-    if(!active) return
+    if(!active)return
     const ch=supabase.channel('com-'+active.id)
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'community_posts',filter:`community_id=eq.${active.id}`},
-        ()=>getCommunityPosts(active.id).then(setPosts))
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'community_posts',
+        filter:'community_id=eq.'+active.id},()=>getCommunityPosts(active.id).then(setPosts))
       .subscribe()
     return()=>supabase.removeChannel(ch)
   },[active])
-
   const postMsg=async()=>{
-    if(!newPost.trim()) return
-    await createCommunityPost(myId,active.id,newPost)
-    setNewPost(''); toast('Postagem enviada!')
+    if(!newPost.trim())return
+    await createCommunityPost(myId,active.id,newPost);setNewPost('');toast('Postado!')
   }
 
+  const tag={display:'inline-flex',alignItems:'center',padding:'2px 10px',borderRadius:12,
+    border:`1px solid ${BORDER}`,background:'#f0f4ff',fontSize:11,color:MUTED,
+    marginRight:5,marginBottom:5,cursor:'pointer'}
+
   if(active){
-    const isJoined=myIds.has(active.id)
+    const isJ=myIds.has(active.id)
     return (
       <div>
-        <div style={{fontSize:12,color:C.textLight,marginBottom:10}}>
-          <span style={{color:C.blue,cursor:'pointer'}} onClick={()=>setActive(null)}>Comunidades</span> ›{' '}
-          <span style={{color:C.blue,fontWeight:600}}>{active.name}</span>
+        <div style={{fontSize:12,color:MUTED,marginBottom:8}}>
+          <span style={{color:BLUE,cursor:'pointer'}} onClick={()=>setActive(null)}>Comunidades</span> › {active.name}
         </div>
-        <div style={{...card,padding:18}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:14}}>
-            <div style={{display:'flex',gap:12,alignItems:'center'}}>
-              <img src={`https://picsum.photos/seed/${active.seed}/60/60`} alt=""
-                style={{width:52,height:52,borderRadius:8,objectFit:'cover',border:`1px solid ${C.border}`}}/>
+        <div style={{...card,padding:14,overflow:'hidden'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
+            <div style={{display:'flex',gap:10,alignItems:'center'}}>
+              <img src={"https://picsum.photos/seed/"+active.seed+"/50/50"} alt=""
+                style={{width:48,height:48,borderRadius:3,objectFit:'cover',border:`1px solid ${BORDER}`}}/>
               <div>
-                <div style={{fontWeight:700,fontSize:16,color:C.text,marginBottom:2}}>{active.name}</div>
-                <div style={{fontSize:11,color:C.textLight,marginBottom:4}}>{active.category} · {(active.members_count||0).toLocaleString('pt-BR')} membros</div>
-                <div style={{fontSize:12,color:C.textMid,fontStyle:'italic'}}>{active.description}</div>
+                <div style={{fontWeight:700,fontSize:15,color:TEXT}}>{active.name}</div>
+                <div style={{fontSize:11,color:MUTED}}>{active.category} · {(active.members_count||0).toLocaleString('pt-BR')} membros</div>
+                <div style={{fontSize:12,color:MUTED,fontStyle:'italic',marginTop:2}}>{active.description}</div>
               </div>
             </div>
-            <button style={isJoined?btnGhost:btnBlue} onClick={()=>toggle(active)}>
-              {isJoined?'✓ Membro':'+ Participar'}
-            </button>
+            <button style={isJ?btnGhost:btnBlue} onClick={()=>toggle(active)}>{isJ?'✓ Membro':'+ Participar'}</button>
           </div>
-
-          {isJoined&&(
-            <div style={{background:C.bg,borderRadius:8,padding:12,marginBottom:14}}>
-              <textarea style={tarea} value={newPost} onChange={e=>setNewPost(e.target.value)} placeholder="Compartilhe algo com a comunidade…"/>
-              <button style={{...btnBlue,marginTop:8}} onClick={postMsg}>Postar</button>
+          {isJ&&<div style={{background:'#f5f7fc',borderRadius:3,padding:10,marginBottom:12}}>
+            <textarea style={tarea} value={newPost} onChange={e=>setNewPost(e.target.value)} placeholder="Postar na comunidade…"/>
+            <button style={{...btnBlue,marginTop:8}} onClick={postMsg}>Postar</button>
+          </div>}
+          {posts.length===0
+            ?<div style={{textAlign:'center',color:MUTED,padding:24,fontSize:13}}>
+              {isJ?'Seja o primeiro a postar!':'Entre para ver e postar.'}
             </div>
-          )}
-
-          {posts.length===0?(
-            <div style={{textAlign:'center',color:C.textLight,padding:30,fontSize:13}}>
-              {isJoined?'Seja o primeiro a postar!':'Entre na comunidade para ver e postar conteúdo.'}
-            </div>
-          ):posts.map(p=>(
-            <div key={p.id} style={{display:'flex',gap:11,padding:'11px 0',borderBottom:`1px solid ${C.border}`}}>
-              <Av src={p.author.avatar_url} size={36} name={p.author.name}/>
-              <div>
-                <div style={{fontWeight:700,fontSize:13,color:C.blue}}>{p.author.name}</div>
-                <div style={{fontSize:13,color:C.text,marginTop:3,lineHeight:1.5}}>{p.text}</div>
-                <div style={{fontSize:11,color:C.textLight,marginTop:3}}>{new Date(p.created_at).toLocaleDateString('pt-BR')}</div>
+            :posts.map(p=>(
+              <div key={p.id} style={{display:'flex',gap:10,padding:'10px 0',borderBottom:`1px solid ${BORDER}`}}>
+                <Av src={p.author.avatar_url} size={34} name={p.author.name}/>
+                <div>
+                  <div style={{fontWeight:700,fontSize:12,color:BLUE}}>{p.author.name}</div>
+                  <div style={{fontSize:13,color:TEXT,marginTop:2,lineHeight:1.5}}>{p.text}</div>
+                  <div style={{fontSize:10,color:MUTED,marginTop:2}}>{new Date(p.created_at).toLocaleDateString('pt-BR')}</div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          }
         </div>
       </div>
     )
@@ -937,65 +907,57 @@ function ComunidadesPage({ myId, toast }){
 
   return (
     <div>
-      <div style={{fontSize:12,color:C.textLight,marginBottom:10}}>
-        <span style={{color:C.blue}}>Início</span> › <span style={{color:C.blue,fontWeight:600}}>Comunidades</span>
-      </div>
-      <div style={{...card,padding:16}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:8}}>
+      <div style={{...card,padding:14,overflow:'hidden'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10,flexWrap:'wrap',gap:8}}>
           <div>
-            <div style={{fontWeight:700,fontSize:15,color:C.text}}>Comunidades Clássicas</div>
-            <div style={{fontSize:11,color:C.textLight,marginTop:2}}>{all.length} comunidades · {mine.length} suas</div>
+            <div style={{fontWeight:700,fontSize:14,color:TEXT}}>Comunidades Clássicas</div>
+            <div style={{fontSize:11,color:MUTED}}>{all.length} comunidades · {mine.length} suas</div>
           </div>
-          <input style={{...inp,width:180,fontSize:12}} placeholder="Buscar…" value={search} onChange={e=>setSearch(e.target.value)}/>
+          <input style={{...inp,width:170,fontSize:12}} placeholder="Buscar…" value={search} onChange={e=>setSearch(e.target.value)}/>
         </div>
-
-        <div style={{display:'flex',borderBottom:`1px solid ${C.border}`,marginBottom:12}}>
+        <div style={{display:'flex',borderBottom:`1px solid ${BORDER}`,marginBottom:10}}>
           {[['todas','Todas'],['minhas','Minhas']].map(([t,l])=>(
-            <div key={t} onClick={()=>setTab(t)} style={{
-              padding:'7px 14px',cursor:'pointer',fontSize:12,fontWeight:tab===t?700:400,
-              borderBottom:tab===t?`2px solid ${C.blue}`:'2px solid transparent',
-              color:tab===t?C.blue:C.textMid,boxSizing:'border-box',
-            }}>
-              {l}{t==='minhas'&&mine.length>0&&<span style={{background:C.blue,color:'#fff',borderRadius:10,padding:'1px 6px',fontSize:10,marginLeft:4}}>{mine.length}</span>}
+            <div key={t} onClick={()=>setTab(t)} style={{padding:'6px 12px',cursor:'pointer',fontSize:12,
+              fontWeight:tab===t?700:400,color:tab===t?BLUE:MUTED,
+              borderBottom:tab===t?`2px solid ${BLUE}`:'2px solid transparent',boxSizing:'border-box'}}>
+              {l}{t==='minhas'&&mine.length>0&&<span style={{background:BLUE,color:WHITE,
+                borderRadius:10,padding:'0 5px',fontSize:10,marginLeft:4}}>{mine.length}</span>}
             </div>
           ))}
         </div>
-
-        <div style={{display:'flex',flexWrap:'wrap',gap:5,marginBottom:14}}>
+        <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:10}}>
           {cats.map(c=>(
-            <span key={c} onClick={()=>setCat(c)} style={{...tag,cursor:'pointer',
-              background:cat===c?C.blue:C.tagBg,color:cat===c?'#fff':C.textMid,
-              border:cat===c?`1px solid ${C.blue}`:`1px solid ${C.tagBorder}`,fontWeight:cat===c?600:400}}>
+            <span key={c} onClick={()=>setCat(c)} style={{...tag,
+              background:cat===c?BLUE:'#f0f4ff',color:cat===c?WHITE:MUTED,
+              border:cat===c?`1px solid ${BLUE}`:`1px solid ${BORDER}`,fontWeight:cat===c?600:400}}>
               {c}
             </span>
           ))}
         </div>
-
-        {filtered.length===0?(
-          <div style={{textAlign:'center',color:C.textLight,padding:30,fontSize:13}}>
+        {filtered.length===0
+          ?<div style={{textAlign:'center',color:MUTED,padding:28,fontSize:13}}>
             {tab==='minhas'?'Você ainda não entrou em nenhuma comunidade.':'Nenhuma encontrada.'}
           </div>
-        ):(
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(185px,1fr))',gap:10}}>
+          :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:9}}>
             {filtered.map(c=>{
               const isJ=myIds.has(c.id)
               return (
-                <div key={c.id} style={{border:`1px solid ${isJ?C.blue:C.border}`,borderRadius:9,overflow:'hidden',background:isJ?'#eff4fb':C.bg}}>
+                <div key={c.id} style={{border:`1px solid ${isJ?BLUE:BORDER}`,borderRadius:3,
+                  overflow:'hidden',background:isJ?'#eff4fb':'#f5f7fc'}}>
                   <div style={{position:'relative',cursor:'pointer'}} onClick={()=>openCom(c)}>
-                    <img src={`https://picsum.photos/seed/${c.seed}/300/90`} alt=""
-                      style={{width:'100%',height:70,objectFit:'cover',display:'block'}}/>
-                    {isJ&&<div style={{position:'absolute',top:6,right:6,background:C.blue,color:'#fff',
-                      borderRadius:10,padding:'1px 7px',fontSize:10,fontWeight:700}}>✓</div>}
+                    <img src={"https://picsum.photos/seed/"+c.seed+"/300/80"} alt=""
+                      style={{width:'100%',height:60,objectFit:'cover',display:'block'}}/>
+                    {isJ&&<div style={{position:'absolute',top:4,right:4,background:BLUE,
+                      color:WHITE,borderRadius:8,padding:'0 6px',fontSize:9,fontWeight:700}}>✓</div>}
                   </div>
-                  <div style={{padding:'8px 10px'}}>
-                    <div style={{fontSize:12,fontWeight:600,color:C.text,marginBottom:1,cursor:'pointer',
+                  <div style={{padding:'7px 9px'}}>
+                    <div style={{fontSize:11,fontWeight:600,color:TEXT,marginBottom:1,cursor:'pointer',
                       overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
                       onClick={()=>openCom(c)}>{c.name}</div>
-                    <div style={{fontSize:10,color:C.textLight,marginBottom:1}}>{c.category}</div>
-                    <div style={{fontSize:10,color:C.textLight,marginBottom:7}}>{(c.members_count||0).toLocaleString('pt-BR')} membros</div>
+                    <div style={{fontSize:9,color:MUTED,marginBottom:6}}>{(c.members_count||0).toLocaleString('pt-BR')} membros</div>
                     <div style={{display:'flex',gap:4}}>
-                      {isJ&&<button style={{...btnBlue,padding:'2px 8px',fontSize:10,flex:1}} onClick={()=>openCom(c)}>Entrar →</button>}
-                      <button style={{...(isJ?btnGhost:btnBlue),padding:'2px 8px',fontSize:10,flex:1}} onClick={()=>toggle(c)}>
+                      {isJ&&<button style={{...btnBlue,padding:'1px 7px',fontSize:9,flex:1}} onClick={()=>openCom(c)}>Entrar →</button>}
+                      <button style={{...(isJ?btnGhost:btnBlue),padding:'1px 7px',fontSize:9,flex:1}} onClick={()=>toggle(c)}>
                         {isJ?'Sair':'+ Entrar'}
                       </button>
                     </div>
@@ -1003,186 +965,42 @@ function ComunidadesPage({ myId, toast }){
                 </div>
               )
             })}
-          </div>
-        )}
+          </div>}
       </div>
     </div>
   )
 }
 
-/* ── RIGHT COLUMN ─────────────────────────────────────────────── */
-// Placeholder avatars for friend suggestions — single bold letter
-function LetterAvatar({ letter, size=42 }){
-  const colors=['#e91e8c','#3b72b8','#e8650a','#22a06b']
-  const i = letter.charCodeAt(0) % colors.length
-  return (
-    <div style={{width:size,height:size,borderRadius:'50%',background:colors[i],
-      display:'flex',alignItems:'center',justifyContent:'center',
-      fontWeight:900,fontSize:size*0.48,color:'#fff',flexShrink:0,
-      border:`1px solid ${C.border}`}}>
-      {letter}
-    </div>
-  )
-}
-
-const FRIEND_SUGGESTIONS = [
-  { letter:'A', label:'A.' },
-  { letter:'B', label:'B.' },
-  { letter:'C', label:'C.' },
-  { letter:'D', label:'D.' },
-]
-
-const COMMUNITY_SUGGESTIONS = [
-  { name:'♥ Eu odeio acordar cedo', seed:'acordar', members:'10,2M' },
-  { name:'Orkut para sempre ♥',     seed:'forever', members:'4,8M'  },
-  { name:'Comunidade X',            seed:'comx',    members:'—'     },
-  { name:'Comunidade Y',            seed:'comy',    members:'—'     },
-]
-
-function RightColumn({ myId, setPage }){
-  const [friends,setFriends]=useState([])
-  const [mine,setMine]=useState([])
-  useEffect(()=>{ getFriends(myId).then(setFriends); getMyCommunities(myId).then(setMine) },[myId])
-
-  return (
-    <aside style={{width:192,flexShrink:0}}>
-
-      {/* ── Meus amigos ── */}
-      <div style={{...card,padding:13,marginBottom:10}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
-          <div style={{fontWeight:700,fontSize:12,color:C.text}}>
-            meus amigos ({friends.length})
-          </div>
-          <span style={{fontSize:11,color:C.blue,cursor:'pointer'}} onClick={()=>setPage('amigos')}>ver todos</span>
-        </div>
-        {friends.length===0
-          ? <div style={{fontSize:11,color:C.textLight,textAlign:'center',padding:'4px 0'}}>Sem amigos ainda.</div>
-          : <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
-              {friends.slice(0,9).map(f=>(
-                <div key={f.id} style={{textAlign:'center',cursor:'pointer'}}
-                  onClick={()=>setPage({name:'profile',userId:f.id})}>
-                  <Av src={f.avatar_url} size={42} name={f.name}/>
-                  <div style={{fontSize:9,color:C.textLight,marginTop:2,overflow:'hidden',
-                    textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name.split(' ')[0]}</div>
-                </div>
-              ))}
-            </div>
-        }
-      </div>
-
-      {/* ── Sugestões de amigos ── */}
-      <div style={{...card,padding:13,marginBottom:10}}>
-        <div style={{fontWeight:700,fontSize:12,color:C.text,marginBottom:10}}>
-          sugestões de amigos
-        </div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
-          {FRIEND_SUGGESTIONS.map(({letter,label})=>(
-            <div key={letter} style={{textAlign:'center',cursor:'pointer',opacity:0.7}}
-              title="Em breve">
-              <div style={{display:'flex',justifyContent:'center'}}>
-                <LetterAvatar letter={letter} size={38}/>
-              </div>
-              <div style={{fontSize:9,color:C.textLight,marginTop:3}}>{label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Minhas comunidades + sugestões ── */}
-      <div style={{...card,padding:13}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
-          <div style={{fontWeight:700,fontSize:12,color:C.text}}>
-            minhas comunidades ({mine.length})
-          </div>
-          <span style={{fontSize:11,color:C.blue,cursor:'pointer'}}
-            onClick={()=>setPage('comunidades')}>ver todas</span>
-        </div>
-
-        {/* Real joined communities */}
-        {mine.length>0&&(
-          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,marginBottom:12}}>
-            {mine.slice(0,6).map(c=>(
-              <div key={c.id} style={{textAlign:'center'}}>
-                <img src={`https://picsum.photos/seed/${c.seed}/60/60`} alt=""
-                  style={{width:42,height:42,borderRadius:6,objectFit:'cover',
-                    border:`1px solid ${C.border}`,display:'block'}}/>
-                <div style={{fontSize:9,color:C.textLight,marginTop:2,overflow:'hidden',
-                  textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                  {c.name.replace(/[♥❤★]/g,'').trim()}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Suggested communities */}
-        <div style={{borderTop:`1px solid ${C.border}`,paddingTop:10}}>
-          <div style={{fontSize:10,color:C.textLight,marginBottom:8,fontWeight:600}}>
-            comunidades sugeridas
-          </div>
-          {COMMUNITY_SUGGESTIONS.map((c,i)=>(
-            <div key={i} style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,
-              cursor:'pointer'}} onClick={()=>setPage('comunidades')}>
-              <img src={`https://picsum.photos/seed/${c.seed}/40/40`} alt=""
-                style={{width:32,height:32,borderRadius:5,objectFit:'cover',
-                  border:`1px solid ${C.border}`,flexShrink:0,display:'block'}}/>
-              <div style={{minWidth:0}}>
-                <div style={{fontSize:10,fontWeight:600,color:C.text,overflow:'hidden',
-                  textOverflow:'ellipsis',whiteSpace:'nowrap',lineHeight:1.3}}>
-                  {c.name.replace(/[♥❤★]/g,'').trim()}
-                </div>
-                <div style={{fontSize:9,color:C.textLight}}>{c.members} membros</div>
-              </div>
-            </div>
-          ))}
-          <div style={{textAlign:'center',marginTop:4}}>
-            <span style={{fontSize:11,color:C.blue,cursor:'pointer'}}
-              onClick={()=>setPage('comunidades')}>
-              ver todas as comunidades →
-            </span>
-          </div>
-        </div>
-      </div>
-    </aside>
-  )
-}
-
-/* ── APPS ─────────────────────────────────────────────────────── */
+/* ── APPS ── */
 function AppsPage(){
   const [fortune,setFortune]=useState(null)
-  const fortunes=['Grandes coisas estão a caminho 🌟','Uma velha amizade será renovada em breve 💫','Seu próximo passo é mais fácil do que parece ✨','Confie no processo — o Orkut nunca mente 😄']
-  const pick=a=>a[Math.floor(Math.random()*a.length)]
+  const fortunes=['Grandes coisas estão a caminho 🌟','Uma velha amizade será renovada 💫','Confie no processo ✨','O Orkut nunca mente 😄']
   return (
-    <div>
-      <div style={{fontSize:12,color:C.textLight,marginBottom:10}}>
-        <span style={{color:C.blue}}>Início</span> › <span style={{color:C.blue,fontWeight:600}}>Aplicativos</span>
-      </div>
-      <div style={{...card,padding:16}}>
-        <h2 style={{fontSize:14,fontWeight:700,margin:'0 0 14px'}}>Aplicativos</h2>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12}}>
-          {[
-            {id:1,icon:'♈',name:'Horóscopo',desc:'Veja seu signo e previsões do dia'},
-            {id:2,icon:'🥠',name:'Fortune Cookie',desc:'Receba uma mensagem do destino'},
-            {id:3,icon:'👥',name:'Comparar Perfis',desc:'Compare karma com seus amigos'},
-            {id:4,icon:'🎵',name:'Quiz Musical',desc:'Teste seu conhecimento musical'},
-          ].map(a=>(
-            <div key={a.id} style={{border:`1px solid ${C.border}`,borderRadius:9,padding:14,background:C.bg}}>
-              <div style={{fontSize:26,marginBottom:5}}>{a.icon}</div>
-              <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:3}}>{a.name}</div>
-              <div style={{fontSize:12,color:C.textLight,marginBottom:10}}>{a.desc}</div>
-              <button style={btnBlue} onClick={()=>a.id===2&&setFortune(pick(fortunes))}>Abrir</button>
-              {a.id===2&&fortune&&<div style={{marginTop:8,fontSize:12,fontStyle:'italic',background:'#fff',borderRadius:6,padding:'6px 10px',color:C.text}}>{fortune}</div>}
-            </div>
-          ))}
-        </div>
+    <div style={{...card,padding:16,overflow:'hidden'}}>
+      <h2 style={{fontSize:14,fontWeight:700,margin:'0 0 14px',color:TEXT}}>Aplicativos</h2>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:10}}>
+        {[{id:1,icon:'♈',name:'Horóscopo',desc:'Veja seu signo e previsões do dia'},
+          {id:2,icon:'🥠',name:'Fortune Cookie',desc:'Receba uma mensagem do destino'},
+          {id:3,icon:'👥',name:'Comparar Perfis',desc:'Compare karma com amigos'},
+          {id:4,icon:'🎵',name:'Quiz Musical',desc:'Teste seu conhecimento musical'}
+        ].map(a=>(
+          <div key={a.id} style={{border:`1px solid ${BORDER}`,borderRadius:3,padding:12,background:'#f5f7fc'}}>
+            <div style={{fontSize:24,marginBottom:4}}>{a.icon}</div>
+            <div style={{fontWeight:700,fontSize:12,color:TEXT,marginBottom:2}}>{a.name}</div>
+            <div style={{fontSize:11,color:MUTED,marginBottom:8}}>{a.desc}</div>
+            <button style={btnBlue} onClick={()=>a.id===2&&setFortune(fortunes[Math.floor(Math.random()*fortunes.length)])}>Abrir</button>
+            {a.id===2&&fortune&&<div style={{marginTop:7,fontSize:12,fontStyle:'italic',
+              background:WHITE,borderRadius:2,padding:'5px 8px',color:TEXT}}>{fortune}</div>}
+          </div>
+        ))}
       </div>
     </div>
   )
 }
 
-/* ── ROOT APP ─────────────────────────────────────────────────── */
+/* ── ROOT ── */
 export default function App(){
-  const [session,setSession]=useState(undefined) // undefined=loading
+  const [session,setSession]=useState(undefined)
   const [profile,setProfile]=useState(null)
   const [page,setPage]=useState('home')
   const [pendingReqs,setPendingReqs]=useState(0)
@@ -1192,16 +1010,13 @@ export default function App(){
   const [communityCount,setCommunityCount]=useState(0)
   const [recadoCount,setRecadoCount]=useState(0)
 
-  const showToast=msg=>setToast(msg)
-
   useEffect(()=>{
     supabase.auth.getSession().then(({data:{session}})=>setSession(session))
     const {data:{subscription}}=supabase.auth.onAuthStateChange((_,s)=>setSession(s))
     return()=>subscription.unsubscribe()
   },[])
-
   useEffect(()=>{
-    if(!session?.user) return
+    if(!session?.user)return
     const uid=session.user.id
     getProfile(uid).then(setProfile)
     getFriendRequests(uid).then(r=>setPendingReqs(r.length))
@@ -1212,42 +1027,41 @@ export default function App(){
   },[session])
 
   if(session===undefined) return (
-    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:C.bg}}>
-      <OrkutLogo size={36}/>
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:BG}}>
+      <OrkutLogo size={40} id="load"/>
     </div>
   )
-
   if(!session) return <AuthScreen onAuth={()=>supabase.auth.getSession().then(({data:{session}})=>setSession(session))}/>
 
   const myId=session.user.id
-  const showRight=['home','perfil'].includes(typeof page==='string'?page:page?.name)
+  const cur=typeof page==='string'?page:page?.name
 
   const renderMain=()=>{
-    const pg=typeof page==='string'?page:page?.name
-    switch(pg){
+    switch(cur){
       case 'home':        return <HomePage setPage={setPage} profile={profile} friendCount={friendCount} communityCount={communityCount} recadoCount={recadoCount}/>
-      case 'perfil':      return <PerfilPage myId={myId} userId={null} setPage={setPage} toast={showToast}/>
-      case 'profile':     return <PerfilPage myId={myId} userId={page.userId} setPage={setPage} toast={showToast}/>
-      case 'recados':     return <RecadosPage myId={myId} targetUserId={page?.userId||null} setPage={setPage} toast={showToast}/>
-      case 'amigos':      return <AmigosPage myId={myId} setPage={setPage} toast={showToast}/>
-      case 'comunidades': return <ComunidadesPage myId={myId} toast={showToast}/>
-      case 'galeria':     return <div style={{...card,padding:30,textAlign:'center',color:C.textLight}}>Galeria de fotos em breve 🖼</div>
-      case 'depoimentos': return <PerfilPage myId={myId} userId={null} setPage={setPage} toast={showToast}/>
+      case 'perfil':      return <PerfilPage myId={myId} userId={null} setPage={setPage} toast={setToast}/>
+      case 'profile':     return <PerfilPage myId={myId} userId={page.userId} setPage={setPage} toast={setToast}/>
+      case 'recados':     return <RecadosPage myId={myId} targetUserId={page?.userId||null} setPage={setPage} toast={setToast}/>
+      case 'amigos':      return <AmigosPage myId={myId} setPage={setPage} toast={setToast}/>
+      case 'comunidades': return <ComunidadesPage myId={myId} toast={setToast}/>
+      case 'galeria':     return <div style={{...card,padding:28,textAlign:'center',color:MUTED}}>Galeria em breve 🖼</div>
+      case 'depoimentos': return <PerfilPage myId={myId} userId={null} setPage={setPage} toast={setToast}/>
       case 'apps':        return <AppsPage/>
       default:            return <HomePage setPage={setPage} profile={profile} friendCount={friendCount} communityCount={communityCount} recadoCount={recadoCount}/>
     }
   }
 
   return (
-    <div style={{fontFamily:"'Trebuchet MS','Lucida Grande',sans-serif",background:C.bg,minHeight:'100vh',color:C.text}}>
-      <TopNav page={typeof page==='string'?page:page?.name} setPage={setPage} profile={profile} pendingReqs={pendingReqs}/>
-      <div style={{maxWidth:1040,margin:'0 auto',padding:'14px 14px',display:'flex',gap:11,alignItems:'flex-start'}}>
-        <LeftSidebar page={typeof page==='string'?page:page?.name} setPage={setPage} profile={profile} visitors={visitors}/>
+    <div style={{fontFamily:"'Trebuchet MS','Lucida Grande',sans-serif",background:BG,minHeight:'100vh',color:TEXT}}>
+      <TopNav page={page} setPage={setPage} profile={profile} pendingReqs={pendingReqs}/>
+      <div style={{maxWidth:1040,margin:'0 auto',padding:'9px 9px',display:'flex',gap:8,alignItems:'flex-start'}}>
+        <LeftSidebar page={page} setPage={setPage} profile={profile}/>
         <main style={{flex:1,minWidth:0}}>{renderMain()}</main>
-        {showRight&&<RightColumn myId={myId} setPage={setPage}/>}
+        <RightColumn myId={myId} setPage={setPage}/>
       </div>
-      <div style={{textAlign:'center',padding:'18px 0 28px',fontSize:11,color:C.textLight}}>
-        © Recriado com ❤️ · Reviva a nostalgia
+      <div style={{textAlign:'center',padding:'14px 0 20px',fontSize:11,color:MUTED,
+        borderTop:`1px solid ${BORDER}`,marginTop:8}}>
+        © Recriado com ❤️ · Zero Monetização
       </div>
       <Toast msg={toast} onDone={()=>setToast('')}/>
     </div>
