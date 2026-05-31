@@ -32,19 +32,17 @@ const tarea   = { ...inp, resize:'vertical', minHeight:72 }
 
 /* ── Orkut Logo ─────────────────────────────────────────────── */
 function OrkutLogo({ size=32, id='ol' }){
-  // Giant O in full pink — rkut crashes to invisible.
-  // People complete the word in their memory.
+  // Giant uppercase O — blazing hot pink — rkut vanishes instantly after
   const h=size, w=size*4.4, gid=`${id}g`, mid=`${id}m`
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{display:'block',overflow:'visible'}} aria-label="">
       <defs>
         <linearGradient id={gid} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%"   stopColor="#f0059a" stopOpacity="1"/>
-          <stop offset="20%"  stopColor="#f0059a" stopOpacity="1"/>
-          <stop offset="25%"  stopColor="#f0059a" stopOpacity="0.14"/>
-          <stop offset="36%"  stopColor="#f0059a" stopOpacity="0.04"/>
-          <stop offset="50%"  stopColor="#f0059a" stopOpacity="0.01"/>
-          <stop offset="100%" stopColor="#f0059a" stopOpacity="0"/>
+          <stop offset="0%"   stopColor="#ff0099" stopOpacity="1"/>
+          <stop offset="21%"  stopColor="#ff0099" stopOpacity="1"/>
+          <stop offset="24%"  stopColor="#ff0099" stopOpacity="0.10"/>
+          <stop offset="32%"  stopColor="#ff0099" stopOpacity="0.03"/>
+          <stop offset="45%"  stopColor="#ff0099" stopOpacity="0"/>
         </linearGradient>
         <mask id={mid}>
           <rect x="0" y="0" width={w} height={h*1.2} fill={`url(#${gid})`}/>
@@ -52,8 +50,8 @@ function OrkutLogo({ size=32, id='ol' }){
       </defs>
       <text x="0" y={h*0.88}
         fontFamily="'Nunito Black','Nunito','Montserrat','Arial Rounded MT Bold',Arial,sans-serif"
-        fontSize={h} fontWeight="900" fill="#f0059a" mask={`url(#${mid})`} letterSpacing="-1">
-        orkut
+        fontSize={h} fontWeight="900" fill="#ff0099" mask={`url(#${mid})`} letterSpacing="-1">
+        Orkut
       </text>
     </svg>
   )
@@ -115,96 +113,137 @@ function AuthScreen({ onAuth }){
     ['Compartilhe', 'seus momentos, fotos, paixões e interesses em um só lugar'],
   ]
 
+  // Retro input style — classic Orkut feel
+  const retroInp = {
+    width:'100%', border:'1px solid #a0a8b8', borderRadius:2,
+    padding:'3px 4px', fontSize:12, fontFamily:'inherit',
+    color:'#222', background:'#fff', outline:'none', boxSizing:'border-box',
+  }
+
   return (
     <div style={{minHeight:'100vh', background:C.bg, display:'flex', flexDirection:'column'}}>
       {/* Aviso top bar */}
-      <div style={{background:'#f8f0ff', borderBottom:`1px solid #e0d0f0`, padding:'8px 0',
-        textAlign:'center', fontSize:12}}>
+      <div style={{background:'#f0eeff', borderBottom:'1px solid #d8ccf0',
+        padding:'7px 0', textAlign:'center', fontSize:12}}>
         <span style={{color:C.pink, fontWeight:700}}>Aviso:</span>
         <span style={{color:C.textMid}}> Versão nostálgica do nosso amado site.</span>
       </div>
 
-      {/* Main two-column layout */}
+      {/* Two-column layout */}
       <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center',
-        padding:'32px 20px', gap:32, maxWidth:960, margin:'0 auto', width:'100%', flexWrap:'wrap'}}>
+        padding:'32px 20px', gap:40, maxWidth:960, margin:'0 auto', width:'100%', flexWrap:'wrap'}}>
 
         {/* LEFT — logo + bullets */}
-        <div style={{flex:'1 1 380px', minWidth:280, display:'flex', flexDirection:'column',
+        <div style={{flex:'1 1 360px', minWidth:260, display:'flex', flexDirection:'column',
           alignItems:'center', justifyContent:'center', padding:'20px 0'}}>
-          <div style={{marginBottom:36}}>
-            <OrkutLogo size={90} id="auth"/>
+          <div style={{marginBottom:40}}>
+            <OrkutLogo size={100} id="auth"/>
           </div>
-          <div style={{display:'flex', flexDirection:'column', gap:14}}>
+          <div style={{display:'flex', flexDirection:'column', gap:16}}>
             {bullets.map(([verb, rest]) => (
-              <div key={verb} style={{fontSize:14, color:C.textMid, textAlign:'center'}}>
-                <span style={{color:C.pink, fontWeight:700}}>{verb}</span>
-                {' '}{rest}
+              <div key={verb} style={{fontSize:14, color:C.textMid, textAlign:'center', lineHeight:1.4}}>
+                <span style={{color:C.pink, fontWeight:700}}>{verb}</span>{' '}{rest}
               </div>
             ))}
           </div>
         </div>
 
-        {/* RIGHT — form */}
-        <div style={{flex:'0 1 320px', minWidth:260}}>
-          <div style={{...card, padding:24, marginBottom:12}}>
-            <div style={{fontSize:13, color:C.textMid, marginBottom:16, textAlign:'center'}}>
-              {mode==='login'
-                ? 'Acesse com a sua conta'
-                : 'Crie sua conta gratuitamente'}
+        {/* RIGHT — retro form panel */}
+        <div style={{flex:'0 1 290px', minWidth:240}}>
+
+          {/* Login card — retro style */}
+          <div style={{background:'#fff', border:'1px solid #c8ccd8',
+            borderRadius:3, padding:'16px 18px', marginBottom:10,
+            boxShadow:'0 1px 3px rgba(0,0,0,.08)'}}>
+
+            {/* Header: "Acesse o [logo] com a sua conta" */}
+            <div style={{fontSize:12, color:'#333', marginBottom:14, textAlign:'center',
+              display:'flex', alignItems:'center', justifyContent:'center', gap:5, flexWrap:'wrap'}}>
+              {mode==='login' ? (
+                <><span>Acesse o</span><OrkutLogo size={14} id="form"/><span>com a sua conta</span></>
+              ) : (
+                <span style={{fontWeight:600}}>Cadastre-se gratuitamente</span>
+              )}
             </div>
 
             {mode==='signup'&&(
-              <div style={{marginBottom:12}}>
-                <div style={{fontSize:11, color:C.textLight, marginBottom:4}}>Seu nome:</div>
-                <input style={inp} placeholder="Como quer ser chamado(a)?"
+              <div style={{marginBottom:8}}>
+                <div style={{fontSize:11, color:'#444', marginBottom:2}}>Seu nome:</div>
+                <input style={retroInp} placeholder="Como quer ser chamado(a)?"
                   value={form.name} onChange={e=>f('name',e.target.value)}/>
               </div>
             )}
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:11, color:C.textLight, marginBottom:4}}>E-mail:</div>
-              <input style={inp} type="email" placeholder="seu@email.com"
+
+            <div style={{marginBottom:8}}>
+              <div style={{fontSize:11, color:'#444', marginBottom:2}}>E-mail:</div>
+              <input style={retroInp} type="email"
                 value={form.email} onChange={e=>f('email',e.target.value)}
                 onKeyDown={e=>e.key==='Enter'&&submit()}/>
             </div>
-            <div style={{marginBottom:16}}>
-              <div style={{fontSize:11, color:C.textLight, marginBottom:4}}>Senha:</div>
-              <input style={inp} type="password" placeholder="mínimo 6 caracteres"
+
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:11, color:'#444', marginBottom:2}}>Senha:</div>
+              <input style={retroInp} type="password"
                 value={form.password} onChange={e=>f('password',e.target.value)}
                 onKeyDown={e=>e.key==='Enter'&&submit()}/>
             </div>
 
-            {err&&<div style={{fontSize:12,color:'#ef4444',marginBottom:12,padding:'7px 10px',
-              background:'#fef2f2',borderRadius:6}}>{err}</div>}
+            {err&&(
+              <div style={{fontSize:11, color:'#cc0000', marginBottom:8,
+                padding:'4px 6px', background:'#fff0f0', border:'1px solid #ffcccc', borderRadius:2}}>
+                {err==='Failed to fetch'
+                  ? 'Erro de conexão. Verifique sua internet e tente novamente.'
+                  : err}
+              </div>
+            )}
 
-            <button style={{...btnBlue,width:'100%',padding:'9px',fontSize:13,borderRadius:4}}
-              onClick={submit} disabled={loading}>
-              {loading?'Aguarde…':mode==='login'?'Entrar':'Criar conta'}
-            </button>
+            <div style={{marginBottom:8}}>
+              <button style={{
+                background:'linear-gradient(180deg,#5577bb 0%,#2244aa 100%)',
+                border:'1px solid #1a3a8a', borderRadius:3, color:'#fff',
+                padding:'4px 16px', fontSize:12, fontWeight:700,
+                cursor:'pointer', fontFamily:'inherit',
+              }} onClick={submit} disabled={loading}>
+                {loading ? 'Aguarde…' : mode==='login' ? 'Login' : 'Criar conta'}
+              </button>
+            </div>
 
             {mode==='login'&&(
-              <div style={{textAlign:'center',marginTop:12,fontSize:12,color:C.pink,cursor:'pointer'}}>
+              <div style={{fontSize:11, color:C.pink, cursor:'pointer'}}>
                 Esqueceu sua senha?
               </div>
             )}
           </div>
 
-          {/* Sign-up / Login toggle card */}
-          <div style={{...card, padding:18, textAlign:'center'}}>
+          {/* Sign-up card */}
+          <div style={{background:'#fff', border:'1px solid #c8ccd8',
+            borderRadius:3, padding:'14px 18px',
+            boxShadow:'0 1px 3px rgba(0,0,0,.08)', textAlign:'center'}}>
             {mode==='login' ? (
               <>
-                <div style={{fontSize:13, color:C.textMid, marginBottom:10}}>Ainda não é membro?</div>
-                <button style={{...btnPink, padding:'8px 24px', fontSize:13, fontWeight:700,
-                  letterSpacing:0.5, borderRadius:4}}
-                  onClick={()=>setMode('signup')}>
+                <div style={{fontSize:12, color:'#333', marginBottom:10}}>
+                  Ainda não é membro?
+                </div>
+                <button style={{
+                  background:C.pink, border:'none', borderRadius:3,
+                  color:'#fff', padding:'6px 20px', fontSize:13,
+                  fontWeight:700, cursor:'pointer', letterSpacing:0.5,
+                  fontFamily:'inherit',
+                }} onClick={()=>setMode('signup')}>
                   ENTRAR JÁ
                 </button>
               </>
             ) : (
               <>
-                <div style={{fontSize:13, color:C.textMid, marginBottom:10}}>Já tem uma conta?</div>
-                <button style={{...btnBlue, padding:'8px 24px', fontSize:13, fontWeight:700,
-                  letterSpacing:0.5, borderRadius:4}}
-                  onClick={()=>setMode('login')}>
+                <div style={{fontSize:12, color:'#333', marginBottom:10}}>
+                  Já tem uma conta?
+                </div>
+                <button style={{
+                  background:'linear-gradient(180deg,#5577bb 0%,#2244aa 100%)',
+                  border:'1px solid #1a3a8a', borderRadius:3, color:'#fff',
+                  padding:'6px 20px', fontSize:12, fontWeight:700,
+                  cursor:'pointer', fontFamily:'inherit',
+                }} onClick={()=>setMode('login')}>
                   ENTRAR
                 </button>
               </>
@@ -214,7 +253,7 @@ function AuthScreen({ onAuth }){
       </div>
 
       {/* Footer */}
-      <div style={{textAlign:'center', padding:'14px 0', fontSize:11, color:C.textLight,
+      <div style={{textAlign:'center', padding:'12px 0', fontSize:11, color:C.textLight,
         borderTop:`1px solid ${C.border}`}}>
         © Recriado com ❤️ · Reviva a nostalgia
       </div>
