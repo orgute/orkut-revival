@@ -9,13 +9,30 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
 
 /* ── Design tokens ─────────────────────────────────────────── */
 const C = {
-  pink:'#f0059a', pinkLight:'#fce4f1', blue:'#3b72b8',
-  bg:'#eef0f5', white:'#ffffff', border:'#e2e5ec',
-  text:'#1a1a2e', textMid:'#4a4a6a', textLight:'#8890a8',
-  tagBg:'#f4f5f8', tagBorder:'#dde0ea', star:'#f59e0b',
+  pink:'#f0059a', pinkLight:'#fce4f1',
+  // OG Orkut internal: navy nav, light blue-grey bg, white panels
+  navBg:'#2a4b8d',      // dark blue nav bar
+  navText:'#ffffff',
+  navActive:'#ffffff',
+  navHover:'rgba(255,255,255,0.15)',
+  blue:'#2a4b8d',
+  blueLink:'#4a6fa8',
+  bg:'#dce3f0',         // OG blue-grey page background
+  panelBg:'#f0f4ff',    // OG light blue panel headers
+  white:'#ffffff',
+  border:'#c8d0e0',
+  borderDark:'#a0aabf',
+  text:'#1a1a2e',
+  textMid:'#4a4a6a',
+  textLight:'#7a85a0',
+  tagBg:'#f0f4ff', tagBorder:'#c8d0e0', star:'#f59e0b',
+  // Sidebar
+  sidebarBg:'#e8edf8',
+  sidebarLink:'#2a4b8d',
+  sidebarLinkActive:'#cc0000',
 }
 
-const card    = { background:C.white, border:`1px solid ${C.border}`, borderRadius:10, overflow:'hidden' }
+const card    = { background:C.white, border:`1px solid ${C.border}`, borderRadius:3, overflow:'hidden' }
 const lbl     = { fontSize:11, color:C.textLight, textTransform:'lowercase', minWidth:120 }
 const tag     = { display:'inline-flex', alignItems:'center', padding:'3px 11px', borderRadius:20,
                   border:`1px solid ${C.tagBorder}`, background:C.tagBg, fontSize:12, color:C.textMid,
@@ -271,36 +288,38 @@ function TopNav({ page, setPage, profile, pendingReqs }){
   const doSearch=useCallback(async(q)=>{
     if(q.length<2){setResults([]);return}
     const data=await searchUsers(q)
-    setResults(data)
-    setShowResults(true)
+    setResults(data); setShowResults(true)
   },[])
+  useEffect(()=>{ const t=setTimeout(()=>doSearch(search),300); return()=>clearTimeout(t) },[search])
 
-  useEffect(()=>{
-    const t=setTimeout(()=>doSearch(search),300)
-    return()=>clearTimeout(t)
-  },[search])
-
-  const links=[['Início','home'],['Perfil','perfil'],['Recados','recados'],['Amigos','amigos'],['Comunidades','comunidades'],['Aplicativos','apps']]
+  const links=[['Início','home'],['Perfil','perfil'],['Recados','recados'],
+               ['Amigos','amigos'],['Comunidades','comunidades'],['Aplicativos','apps']]
 
   return (
-    <nav style={{background:C.white,borderBottom:`1px solid ${C.border}`,position:'sticky',top:0,zIndex:200,
-      display:'flex',alignItems:'center',padding:'0 18px',height:50,boxShadow:'0 1px 3px rgba(0,0,0,.06)'}}>
-      <div onClick={()=>setPage('home')} style={{cursor:'pointer',marginRight:20,flexShrink:0,paddingTop:4}}>
-        <OrkutLogo size={24}/>
+    <nav style={{
+      background:C.navBg, position:'sticky', top:0, zIndex:200,
+      display:'flex', alignItems:'center', padding:'0 12px', height:44,
+      boxShadow:'0 2px 4px rgba(0,0,0,.3)',
+    }}>
+      {/* Logo */}
+      <div onClick={()=>setPage('home')} style={{cursor:'pointer',marginRight:18,flexShrink:0,paddingTop:3}}>
+        <OrkutLogo size={22} id="nav"/>
       </div>
-      <div style={{display:'flex',flex:1,alignItems:'center',height:'100%',gap:0}}>
+
+      {/* Nav links — OG style: white text, no underline, spaced */}
+      <div style={{display:'flex',flex:1,alignItems:'center',height:'100%'}}>
         {links.map(([label,pg])=>(
           <div key={pg} onClick={()=>setPage(pg)} style={{
-            padding:'0 11px',height:'100%',display:'flex',alignItems:'center',
-            fontSize:13,fontWeight:page===pg?700:400,cursor:'pointer',
-            color:page===pg?C.blue:C.textMid,
-            borderBottom:page===pg?`2px solid ${C.blue}`:'2px solid transparent',
-            boxSizing:'border-box',position:'relative',
+            padding:'0 10px', height:'100%', display:'flex', alignItems:'center',
+            fontSize:13, fontWeight:page===pg?700:400, cursor:'pointer',
+            color: page===pg ? '#fff' : 'rgba(255,255,255,0.82)',
+            borderBottom: page===pg ? '2px solid #fff' : '2px solid transparent',
+            boxSizing:'border-box', position:'relative', whiteSpace:'nowrap',
           }}>
             {label}
             {pg==='amigos'&&pendingReqs>0&&(
-              <span style={{position:'absolute',top:6,right:2,background:C.pink,color:'#fff',
-                borderRadius:10,padding:'0 5px',fontSize:9,fontWeight:700,lineHeight:'16px'}}>
+              <span style={{position:'absolute',top:5,right:1,background:C.pink,color:'#fff',
+                borderRadius:10,padding:'0 4px',fontSize:9,fontWeight:700,lineHeight:'15px'}}>
                 {pendingReqs}
               </span>
             )}
@@ -308,23 +327,28 @@ function TopNav({ page, setPage, profile, pendingReqs }){
         ))}
       </div>
 
-      {/* Search */}
-      <div style={{position:'relative',marginRight:14}} ref={searchRef}>
-        <span style={{position:'absolute',left:9,top:'50%',transform:'translateY(-50%)',color:C.textLight,fontSize:12}}>🔍</span>
+      {/* Search box — OG style */}
+      <div style={{position:'relative',marginRight:12}} ref={searchRef}>
         <input value={search} onChange={e=>setSearch(e.target.value)}
           onFocus={()=>search.length>1&&setShowResults(true)}
           onBlur={()=>setTimeout(()=>setShowResults(false),200)}
-          placeholder="Pesquisar pessoas…"
-          style={{...inp,width:180,paddingLeft:28,borderRadius:18,fontSize:12,background:C.bg}}/>
+          placeholder="Pesquisar no Orkut"
+          style={{
+            border:'1px solid rgba(255,255,255,.4)', borderRadius:2,
+            padding:'3px 8px', fontSize:12, fontFamily:'inherit',
+            background:'rgba(255,255,255,.15)', color:'#fff',
+            outline:'none', width:170,
+            '::placeholder':{color:'rgba(255,255,255,.6)'}
+          }}/>
         {showResults&&results.length>0&&(
           <div style={{position:'absolute',top:'100%',left:0,right:0,background:C.white,
-            border:`1px solid ${C.border}`,borderRadius:8,boxShadow:'0 4px 16px rgba(0,0,0,.1)',
-            zIndex:999,maxHeight:240,overflowY:'auto',marginTop:4}}>
+            border:`1px solid ${C.border}`,borderRadius:2,
+            boxShadow:'0 3px 10px rgba(0,0,0,.2)',zIndex:999,maxHeight:220,overflowY:'auto',marginTop:2}}>
             {results.map(u=>(
-              <div key={u.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',cursor:'pointer',
-                borderBottom:`1px solid ${C.border}`}}
+              <div key={u.id} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',
+                cursor:'pointer',borderBottom:`1px solid ${C.border}`,background:C.white}}
                 onMouseDown={()=>{ setPage({name:'profile',userId:u.id}); setSearch(''); setShowResults(false) }}>
-                <Av src={u.avatar_url} size={28} name={u.name}/>
+                <Av src={u.avatar_url} size={24} name={u.name}/>
                 <div>
                   <div style={{fontSize:12,fontWeight:600,color:C.text}}>{u.name}</div>
                   <div style={{fontSize:10,color:C.textLight}}>{u.city||u.country||''}</div>
@@ -335,65 +359,71 @@ function TopNav({ page, setPage, profile, pendingReqs }){
         )}
       </div>
 
-      {/* User menu */}
-      <div style={{display:'flex',alignItems:'center',gap:7,cursor:'pointer',
-        padding:'4px 8px',borderRadius:7,border:`1px solid ${C.border}`}}
-        onClick={()=>setPage('perfil')}>
-        <Av src={profile?.avatar_url} size={24} name={profile?.name}/>
-        <span style={{fontSize:12,fontWeight:600,color:C.text,maxWidth:90,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-          {profile?.name||'…'}
+      {/* User — OG: green dot + name + logout */}
+      <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,color:'rgba(255,255,255,.9)'}}>
+        <span style={{width:7,height:7,borderRadius:'50%',background:'#4caf50',display:'inline-block',flexShrink:0}}/>
+        <span style={{cursor:'pointer',fontWeight:600}} onClick={()=>setPage('perfil')}>
+          {profile?.name?.split(' ')[0]||'…'}
         </span>
-        <span style={{fontSize:10,color:C.textLight}}>▾</span>
+        <span style={{color:'rgba(255,255,255,.5)'}}>|</span>
+        <span style={{cursor:'pointer',color:'rgba(255,255,255,.75)'}} onClick={()=>signOut()}>Sair</span>
       </div>
     </nav>
   )
 }
 
-/* ── LEFT SIDEBAR ────────────────────────────────────────────── */
+/* ── LEFT SIDEBAR — OG Orkut style ──────────────────────────── */
 function LeftSidebar({ page, setPage, profile, visitors }){
+  const curPage = typeof page==='string' ? page : page?.name
+  const sideLinks = [
+    ['perfil','perfil'],['recados','Recados'],['galeria','Galeria'],
+    ['depoimentos','Depoimentos'],['apps','Aplicativos'],
+  ]
   return (
-    <aside style={{width:200,flexShrink:0}}>
-      <div style={{...card,padding:14,marginBottom:10,textAlign:'center'}}>
-        <div style={{display:'inline-block',marginBottom:8,position:'relative'}}>
-          <Av src={profile?.avatar_url} size={76} ring name={profile?.name}/>
+    <aside style={{width:190,flexShrink:0}}>
+      {/* Profile card */}
+      <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:3,
+        marginBottom:8,overflow:'hidden'}}>
+        {/* Avatar */}
+        <div style={{background:C.sidebarBg,padding:'12px 0 8px',textAlign:'center',
+          borderBottom:`1px solid ${C.border}`}}>
+          <Av src={profile?.avatar_url} size={80} ring name={profile?.name}/>
+          <div style={{fontWeight:700,fontSize:13,color:C.sidebarLink,marginTop:6}}>
+            {profile?.name||'…'}
+          </div>
+          <div style={{fontSize:11,color:'#4caf50',marginTop:2}}>● disponível</div>
         </div>
-        <div style={{fontWeight:700,fontSize:14,color:C.text}}>{profile?.name||'…'}</div>
-        <div style={{fontSize:11,color:C.textLight,marginTop:2}}>{profile?.gender}, {profile?.rel_status}</div>
-        <div style={{fontSize:11,color:C.textLight}}>{profile?.country}</div>
-        <Divider/>
-        <div style={{display:'flex',flexDirection:'column',gap:1,textAlign:'left'}}>
-          {[['👤','Perfil','perfil'],['✉','Recados','recados'],['🖼','Galeria','galeria'],
-            ['📝','Depoimentos','depoimentos'],['🎮','Aplicativos','apps']].map(([icon,label,pg])=>(
+
+        {/* Nav links — OG sidebar style */}
+        <div style={{padding:'6px 0'}}>
+          <div style={{padding:'3px 12px',fontSize:11,color:C.textLight,fontWeight:700,
+            textTransform:'uppercase',letterSpacing:.5,marginBottom:2}}>
+            perfil <span style={{float:'right',color:C.pink,cursor:'pointer',fontWeight:400,
+              textTransform:'none',letterSpacing:0}} onClick={()=>setPage('perfil')}>editar</span>
+          </div>
+          {sideLinks.map(([pg,label])=>(
             <div key={pg} onClick={()=>setPage(pg)} style={{
-              display:'flex',alignItems:'center',gap:8,
-              padding:'6px 8px',borderRadius:6,cursor:'pointer',
-              background:page===pg||page?.name===pg?'#eff4fb':'transparent',
-              color:page===pg||page?.name===pg?C.blue:C.textMid,
-              fontWeight:page===pg||page?.name===pg?700:400,fontSize:13,
+              padding:'4px 14px', cursor:'pointer', fontSize:13,
+              color: curPage===pg ? C.sidebarLinkActive : C.sidebarLink,
+              fontWeight: curPage===pg ? 700 : 400,
+              background: curPage===pg ? '#e8edf8' : 'transparent',
             }}>
-              <span style={{fontSize:13}}>{icon}</span>{label}
+              {label}
             </div>
           ))}
-          <Divider/>
-          <div onClick={()=>signOut()} style={{display:'flex',alignItems:'center',gap:8,
-            padding:'6px 8px',borderRadius:6,cursor:'pointer',color:'#ef4444',fontSize:13}}>
-            <span>🚪</span>Sair
-          </div>
         </div>
       </div>
 
       {/* Visitors */}
       {visitors.length>0&&(
-        <div style={{...card,padding:12}}>
-          <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:8}}>👁 Quem visitou</div>
-          {visitors.slice(0,5).map((v,i)=>(
-            <div key={i} style={{display:'flex',alignItems:'center',gap:7,marginBottom:6,cursor:'pointer'}}
+        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:3,padding:10}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:'uppercase',
+            letterSpacing:.5,marginBottom:6}}>Visitantes</div>
+          {visitors.slice(0,4).map((v,i)=>(
+            <div key={i} style={{display:'flex',alignItems:'center',gap:6,marginBottom:5,cursor:'pointer'}}
               onClick={()=>setPage({name:'profile',userId:v.visitor.id})}>
-              <Av src={v.visitor.avatar_url} size={28} name={v.visitor.name}/>
-              <div>
-                <div style={{fontSize:11,fontWeight:600,color:C.text}}>{v.visitor.name}</div>
-                <div style={{fontSize:9,color:C.textLight}}>{new Date(v.visited_at).toLocaleDateString('pt-BR')}</div>
-              </div>
+              <Av src={v.visitor.avatar_url} size={24} name={v.visitor.name}/>
+              <div style={{fontSize:11,color:C.sidebarLink}}>{v.visitor.name}</div>
             </div>
           ))}
         </div>
@@ -402,41 +432,86 @@ function LeftSidebar({ page, setPage, profile, visitors }){
   )
 }
 
-/* ── HOME PAGE ───────────────────────────────────────────────── */
-function HomePage({ setPage, profile, friendCount, communityCount, recadoCount }){
+/* ── HOME PAGE — OG Orkut center layout ─────────────────────── */
+function HomePage({ setPage, profile, friendCount, communityCount, recadoCount, myId }){
+  const [fortune] = useState('Tenha um ótimo dia!')
+
+  // OG panel header style
+  const panelHead = {
+    background:'linear-gradient(180deg,#e8edf8 0%,#d0d8ef 100%)',
+    borderBottom:`1px solid ${C.border}`,
+    padding:'4px 10px', fontSize:12, fontWeight:700, color:C.blue,
+    display:'flex', justifyContent:'space-between', alignItems:'center',
+  }
+  const panel = {
+    background:C.white, border:`1px solid ${C.border}`,
+    borderRadius:3, marginBottom:8, overflow:'hidden',
+  }
+
   return (
     <div>
-      <div style={{...card,padding:16,marginBottom:10,background:'linear-gradient(135deg,#eef4ff,#f0f7ff)'}}>
-        <div style={{fontWeight:700,fontSize:16,color:C.blue,marginBottom:3}}>
-          Bem-vindo(a) de volta, {profile?.name?.split(' ')[0]}! 👋
+      {/* Welcome bar */}
+      <div style={{...panel}}>
+        <div style={{padding:'10px 12px'}}>
+          <div style={{fontWeight:700,fontSize:15,color:C.blue,marginBottom:2}}>
+            Bem-vindo(a) de volta, {profile?.name?.split(' ')[0]}! 👋
+          </div>
+          {/* Status box — OG style */}
+          <div style={{display:'flex',alignItems:'center',border:`1px solid ${C.pink}`,
+            borderRadius:2,padding:'4px 10px',marginTop:6,background:'#fff'}}>
+            <span style={{flex:1,fontSize:12,color:C.textMid,fontStyle:'italic'}}>{fortune}</span>
+            <span style={{fontSize:16}}>🙂</span>
+          </div>
         </div>
-        <div style={{fontSize:12,color:C.textMid}}>Reconecte-se. Tudo começa aqui.</div>
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:9,marginBottom:10}}>
-        {[['👥','Amigos',friendCount,'amigos'],['✉️','Recados',recadoCount,'recados'],['🌍','Comunidades',communityCount,'comunidades']].map(([icon,l,v,pg])=>(
-          <div key={l} style={{...card,padding:14,textAlign:'center',cursor:'pointer'}} onClick={()=>setPage(pg)}>
-            <div style={{fontSize:20,marginBottom:3}}>{icon}</div>
-            <div style={{fontSize:19,fontWeight:700,color:C.blue}}>{v}</div>
-            <div style={{fontSize:11,color:C.textLight}}>{l}</div>
-          </div>
-        ))}
+
+      {/* Icon row — OG: scraps, fotos, fotos de mim, fãs, recados */}
+      <div style={{...panel}}>
+        <div style={panelHead}><span>Visão geral</span></div>
+        <div style={{display:'flex',justifyContent:'space-around',padding:'14px 8px',
+          borderBottom:`1px solid ${C.border}`}}>
+          {[
+            ['✏️','recados',recadoCount,'recados'],
+            ['🖼️','fotos',0,'galeria'],
+            ['🌍','comunidades',communityCount,'comunidades'],
+            ['⭐','fãs',0,null],
+            ['✉️','mensagens',0,'recados'],
+          ].map(([icon,label,count,pg])=>(
+            <div key={label} style={{textAlign:'center',cursor:pg?'pointer':'default'}}
+              onClick={()=>pg&&setPage(pg)}>
+              <div style={{fontSize:22,marginBottom:2}}>{icon}</div>
+              <div style={{fontSize:13,fontWeight:700,color:C.blue}}>{count}</div>
+              <div style={{fontSize:10,color:C.textLight}}>{label}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{padding:'8px 12px',fontSize:11,color:C.textMid}}>
+          <span style={{fontWeight:700,color:C.text}}>Visitas ao perfil:</span> desde hoje: 0
+          &nbsp;·&nbsp;
+          <span style={{fontWeight:700,color:C.text}}>Visitantes recentes:</span> —
+          &nbsp;·&nbsp;
+          <span style={{fontWeight:700,color:C.text}}>Fortuna do dia:</span> {fortune}
+        </div>
       </div>
-      <div style={{...card,padding:16}}>
-        <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:8}}>💡 Por onde começar</div>
-        {[
-          ['🔍','Pesquise seus amigos antigos pelo nome','search'],
-          ['🌍','Entre nas comunidades clássicas que você amava','comunidades'],
-          ['✏️','Complete seu perfil com músicas e filmes favoritos','perfil'],
-          ['✉️','Deixe um recado na página de alguém','amigos'],
-        ].map(([icon,text,pg],i)=>(
-          <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 0',
-            borderBottom:i<3?`1px solid ${C.border}`:'none',cursor:'pointer'}}
-            onClick={()=>setPage(pg)}>
-            <span style={{fontSize:18}}>{icon}</span>
-            <span style={{fontSize:13,color:C.textMid}}>{text}</span>
-            <span style={{marginLeft:'auto',fontSize:12,color:C.blue}}>→</span>
-          </div>
-        ))}
+
+      {/* Friend suggestions — OG style with A B C D placeholders */}
+      <div style={{...panel}}>
+        <div style={panelHead}><span>sugestões de amigos</span></div>
+        <div style={{display:'flex',gap:16,padding:'12px 16px',flexWrap:'wrap'}}>
+          {['A','B','C','D'].map((letter,i)=>{
+            const colors=['#2a4b8d','#e8197d','#2e7d32','#c62828']
+            return (
+              <div key={letter} style={{textAlign:'center',cursor:'pointer',opacity:.75}} title="Em breve">
+                <div style={{width:60,height:60,borderRadius:3,border:`1px solid ${C.border}`,
+                  background:colors[i],display:'flex',alignItems:'center',justifyContent:'center',
+                  fontSize:24,fontWeight:900,color:'#fff',margin:'0 auto 4px'}}>
+                  {letter}
+                </div>
+                <div style={{fontSize:11,color:C.sidebarLink}}>{letter}.</div>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
@@ -1050,32 +1125,25 @@ function ComunidadesPage({ myId, toast }){
 }
 
 /* ── RIGHT COLUMN ─────────────────────────────────────────────── */
-// Placeholder avatars for friend suggestions — single bold letter
-function LetterAvatar({ letter, size=42 }){
-  const colors=['#e91e8c','#3b72b8','#e8650a','#22a06b']
+/* ── RIGHT COLUMN — OG Orkut style ──────────────────────────── */
+function LetterAvatar({ letter, size=44 }){
+  const colors=['#2a4b8d','#e8197d','#2e7d32','#c62828']
   const i = letter.charCodeAt(0) % colors.length
   return (
-    <div style={{width:size,height:size,borderRadius:'50%',background:colors[i],
+    <div style={{width:size,height:size,borderRadius:3,background:colors[i],
       display:'flex',alignItems:'center',justifyContent:'center',
-      fontWeight:900,fontSize:size*0.48,color:'#fff',flexShrink:0,
+      fontWeight:900,fontSize:size*0.45,color:'#fff',flexShrink:0,
       border:`1px solid ${C.border}`}}>
       {letter}
     </div>
   )
 }
 
-const FRIEND_SUGGESTIONS = [
-  { letter:'A', label:'A.' },
-  { letter:'B', label:'B.' },
-  { letter:'C', label:'C.' },
-  { letter:'D', label:'D.' },
-]
-
 const COMMUNITY_SUGGESTIONS = [
-  { name:'♥ Eu odeio acordar cedo', seed:'acordar', members:'10,2M' },
-  { name:'Orkut para sempre ♥',     seed:'forever', members:'4,8M'  },
-  { name:'Comunidade X',            seed:'comx',    members:'—'     },
-  { name:'Comunidade Y',            seed:'comy',    members:'—'     },
+  { name:'Eu odeio acordar cedo', seed:'acordar', members:'10,2M' },
+  { name:'Orkut para sempre ♥',   seed:'forever', members:'4,8M'  },
+  { name:'Comunidade X',          seed:'comx',    members:'—'     },
+  { name:'Comunidade Y',          seed:'comy',    members:'—'     },
 ]
 
 function RightColumn({ myId, setPage }){
@@ -1083,102 +1151,80 @@ function RightColumn({ myId, setPage }){
   const [mine,setMine]=useState([])
   useEffect(()=>{ getFriends(myId).then(setFriends); getMyCommunities(myId).then(setMine) },[myId])
 
+  const panelHead = {
+    background:'linear-gradient(180deg,#e8edf8 0%,#d0d8ef 100%)',
+    borderBottom:`1px solid ${C.border}`,
+    padding:'3px 8px', fontSize:11, fontWeight:700, color:C.blue,
+    display:'flex', justifyContent:'space-between', alignItems:'center',
+  }
+  const panel = { background:C.white,border:`1px solid ${C.border}`,borderRadius:3,marginBottom:8,overflow:'hidden' }
+
   return (
-    <aside style={{width:192,flexShrink:0}}>
+    <aside style={{width:180,flexShrink:0}}>
 
-      {/* ── Meus amigos ── */}
-      <div style={{...card,padding:13,marginBottom:10}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
-          <div style={{fontWeight:700,fontSize:12,color:C.text}}>
-            meus amigos ({friends.length})
-          </div>
-          <span style={{fontSize:11,color:C.blue,cursor:'pointer'}} onClick={()=>setPage('amigos')}>ver todos</span>
+      {/* meus amigos */}
+      <div style={panel}>
+        <div style={panelHead}>
+          <span>meus amigos ({friends.length})</span>
+          <span style={{color:C.pink,cursor:'pointer',fontWeight:400}} onClick={()=>setPage('amigos')}>ver todos</span>
         </div>
-        {friends.length===0
-          ? <div style={{fontSize:11,color:C.textLight,textAlign:'center',padding:'4px 0'}}>Sem amigos ainda.</div>
-          : <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
-              {friends.slice(0,9).map(f=>(
-                <div key={f.id} style={{textAlign:'center',cursor:'pointer'}}
-                  onClick={()=>setPage({name:'profile',userId:f.id})}>
-                  <Av src={f.avatar_url} size={42} name={f.name}/>
-                  <div style={{fontSize:9,color:C.textLight,marginTop:2,overflow:'hidden',
-                    textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name.split(' ')[0]}</div>
-                </div>
-              ))}
-            </div>
-        }
-      </div>
-
-      {/* ── Sugestões de amigos ── */}
-      <div style={{...card,padding:13,marginBottom:10}}>
-        <div style={{fontWeight:700,fontSize:12,color:C.text,marginBottom:10}}>
-          sugestões de amigos
-        </div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
-          {FRIEND_SUGGESTIONS.map(({letter,label})=>(
-            <div key={letter} style={{textAlign:'center',cursor:'pointer',opacity:0.7}}
-              title="Em breve">
-              <div style={{display:'flex',justifyContent:'center'}}>
-                <LetterAvatar letter={letter} size={38}/>
+        <div style={{padding:8}}>
+          {friends.length===0
+            ? <div style={{fontSize:11,color:C.textLight,padding:'4px 0'}}>Sem amigos ainda.</div>
+            : <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:4}}>
+                {friends.slice(0,9).map(f=>(
+                  <div key={f.id} style={{textAlign:'center',cursor:'pointer'}}
+                    onClick={()=>setPage({name:'profile',userId:f.id})}>
+                    <Av src={f.avatar_url} size={40} name={f.name}/>
+                    <div style={{fontSize:9,color:C.sidebarLink,marginTop:2,overflow:'hidden',
+                      textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name.split(' ')[0]}</div>
+                  </div>
+                ))}
               </div>
-              <div style={{fontSize:9,color:C.textLight,marginTop:3}}>{label}</div>
-            </div>
-          ))}
+          }
+          {/* Search friends box — OG style */}
+          <input placeholder="buscar amigos"
+            style={{width:'100%',border:`1px solid ${C.border}`,borderRadius:2,
+              padding:'2px 6px',fontSize:11,marginTop:6,boxSizing:'border-box',
+              fontFamily:'inherit',color:C.textMid,background:'#fff'}}/>
         </div>
       </div>
 
-      {/* ── Minhas comunidades + sugestões ── */}
-      <div style={{...card,padding:13}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
-          <div style={{fontWeight:700,fontSize:12,color:C.text}}>
-            minhas comunidades ({mine.length})
-          </div>
-          <span style={{fontSize:11,color:C.blue,cursor:'pointer'}}
-            onClick={()=>setPage('comunidades')}>ver todas</span>
+      {/* minhas comunidades */}
+      <div style={panel}>
+        <div style={panelHead}>
+          <span>minhas comunidades ({mine.length})</span>
+          <span style={{color:C.pink,cursor:'pointer',fontWeight:400}} onClick={()=>setPage('comunidades')}>ver todas</span>
         </div>
-
-        {/* Real joined communities */}
-        {mine.length>0&&(
-          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,marginBottom:12}}>
-            {mine.slice(0,6).map(c=>(
-              <div key={c.id} style={{textAlign:'center'}}>
-                <img src={`https://picsum.photos/seed/${c.seed}/60/60`} alt=""
-                  style={{width:42,height:42,borderRadius:6,objectFit:'cover',
-                    border:`1px solid ${C.border}`,display:'block'}}/>
-                <div style={{fontSize:9,color:C.textLight,marginTop:2,overflow:'hidden',
-                  textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                  {c.name.replace(/[♥❤★]/g,'').trim()}
+        <div style={{padding:8}}>
+          {mine.length===0
+            ? <div style={{fontSize:11,color:C.textLight,marginBottom:8}}>Sem comunidades.</div>
+            : <div style={{marginBottom:8}}>
+                {mine.slice(0,3).map(c=>(
+                  <div key={c.id} style={{display:'flex',gap:6,alignItems:'center',marginBottom:5}}>
+                    <img src={`https://picsum.photos/seed/${c.seed}/32/32`} alt=""
+                      style={{width:28,height:28,borderRadius:2,border:`1px solid ${C.border}`,display:'block',flexShrink:0}}/>
+                    <div style={{fontSize:10,color:C.sidebarLink,lineHeight:1.3,overflow:'hidden',
+                      textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.name.replace(/[♥❤★]/g,'').trim()}</div>
+                  </div>
+                ))}
+              </div>
+          }
+          {/* Suggested communities */}
+          <div style={{borderTop:`1px solid ${C.border}`,paddingTop:6,marginTop:mine.length?0:0}}>
+            <div style={{fontSize:10,color:C.textLight,fontWeight:700,marginBottom:5,textTransform:'uppercase',letterSpacing:.3}}>sugeridas</div>
+            {COMMUNITY_SUGGESTIONS.map((c,i)=>(
+              <div key={i} style={{display:'flex',gap:5,alignItems:'center',marginBottom:5,cursor:'pointer'}}
+                onClick={()=>setPage('comunidades')}>
+                <img src={`https://picsum.photos/seed/${c.seed}/32/32`} alt=""
+                  style={{width:26,height:26,borderRadius:2,border:`1px solid ${C.border}`,display:'block',flexShrink:0}}/>
+                <div style={{minWidth:0}}>
+                  <div style={{fontSize:10,color:C.sidebarLink,lineHeight:1.2,overflow:'hidden',
+                    textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.name.replace(/[♥❤★]/g,'').trim()}</div>
+                  <div style={{fontSize:9,color:C.textLight}}>{c.members} membros</div>
                 </div>
               </div>
             ))}
-          </div>
-        )}
-
-        {/* Suggested communities */}
-        <div style={{borderTop:`1px solid ${C.border}`,paddingTop:10}}>
-          <div style={{fontSize:10,color:C.textLight,marginBottom:8,fontWeight:600}}>
-            comunidades sugeridas
-          </div>
-          {COMMUNITY_SUGGESTIONS.map((c,i)=>(
-            <div key={i} style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,
-              cursor:'pointer'}} onClick={()=>setPage('comunidades')}>
-              <img src={`https://picsum.photos/seed/${c.seed}/40/40`} alt=""
-                style={{width:32,height:32,borderRadius:5,objectFit:'cover',
-                  border:`1px solid ${C.border}`,flexShrink:0,display:'block'}}/>
-              <div style={{minWidth:0}}>
-                <div style={{fontSize:10,fontWeight:600,color:C.text,overflow:'hidden',
-                  textOverflow:'ellipsis',whiteSpace:'nowrap',lineHeight:1.3}}>
-                  {c.name.replace(/[♥❤★]/g,'').trim()}
-                </div>
-                <div style={{fontSize:9,color:C.textLight}}>{c.members} membros</div>
-              </div>
-            </div>
-          ))}
-          <div style={{textAlign:'center',marginTop:4}}>
-            <span style={{fontSize:11,color:C.blue,cursor:'pointer'}}
-              onClick={()=>setPage('comunidades')}>
-              ver todas as comunidades →
-            </span>
           </div>
         </div>
       </div>
@@ -1264,7 +1310,7 @@ export default function App(){
   const renderMain=()=>{
     const pg=typeof page==='string'?page:page?.name
     switch(pg){
-      case 'home':        return <HomePage setPage={setPage} profile={profile} friendCount={friendCount} communityCount={communityCount} recadoCount={recadoCount}/>
+      case 'home':        return <HomePage setPage={setPage} profile={profile} friendCount={friendCount} communityCount={communityCount} recadoCount={recadoCount} myId={myId}/>
       case 'perfil':      return <PerfilPage myId={myId} userId={null} setPage={setPage} toast={showToast}/>
       case 'profile':     return <PerfilPage myId={myId} userId={page.userId} setPage={setPage} toast={showToast}/>
       case 'recados':     return <RecadosPage myId={myId} targetUserId={page?.userId||null} setPage={setPage} toast={showToast}/>
@@ -1273,19 +1319,20 @@ export default function App(){
       case 'galeria':     return <div style={{...card,padding:30,textAlign:'center',color:C.textLight}}>Galeria de fotos em breve 🖼</div>
       case 'depoimentos': return <PerfilPage myId={myId} userId={null} setPage={setPage} toast={showToast}/>
       case 'apps':        return <AppsPage/>
-      default:            return <HomePage setPage={setPage} profile={profile} friendCount={friendCount} communityCount={communityCount} recadoCount={recadoCount}/>
+      default:            return <HomePage setPage={setPage} profile={profile} friendCount={friendCount} communityCount={communityCount} recadoCount={recadoCount} myId={myId}/>
     }
   }
 
   return (
     <div style={{fontFamily:"'Trebuchet MS','Lucida Grande',sans-serif",background:C.bg,minHeight:'100vh',color:C.text}}>
       <TopNav page={typeof page==='string'?page:page?.name} setPage={setPage} profile={profile} pendingReqs={pendingReqs}/>
-      <div style={{maxWidth:1040,margin:'0 auto',padding:'14px 14px',display:'flex',gap:11,alignItems:'flex-start'}}>
+      <div style={{maxWidth:1060,margin:'0 auto',padding:'10px 10px',display:'flex',gap:8,alignItems:'flex-start'}}>
         <LeftSidebar page={typeof page==='string'?page:page?.name} setPage={setPage} profile={profile} visitors={visitors}/>
         <main style={{flex:1,minWidth:0}}>{renderMain()}</main>
-        {showRight&&<RightColumn myId={myId} setPage={setPage}/>}
+        <RightColumn myId={myId} setPage={setPage}/>
       </div>
-      <div style={{textAlign:'center',padding:'18px 0 28px',fontSize:11,color:C.textLight}}>
+      <div style={{textAlign:'center',padding:'14px 0 20px',fontSize:11,color:'#7a85a0',
+        borderTop:`1px solid ${C.border}`,marginTop:8}}>
         © Recriado com ❤️ · Zero Monetização
       </div>
       <Toast msg={toast} onDone={()=>setToast('')}/>
