@@ -354,13 +354,22 @@ function HomePage({ profile, myId, setPage }){
   return (
     <Layout
       left={
-        <div style={{...card,overflow:'hidden',textAlign:'center'}}>
-          <div style={{cursor:'pointer',borderBottom:`1px solid ${BRD}`}} onClick={()=>setPage('profile')}>
-            <Av src={profile?.avatar_url} size={200} ring={false} name={profile?.name}/>
+        <div style={{...card,overflow:'hidden'}}>
+          <div style={{cursor:'pointer',borderBottom:`1px solid ${BRD}`,lineHeight:0}} onClick={()=>setPage('profile')}>
+            <Av src={profile?.avatar_url} size={210} ring={false} name={profile?.name}/>
           </div>
-          <div style={{padding:'8px 0 6px'}}>
-            <div style={{fontWeight:700,fontSize:14,color:PINK,cursor:'pointer'}} onClick={()=>setPage('profile')}>{profile?.name||'…'}</div>
-            <div style={{fontSize:11,color:'#4caf50',marginTop:2}}>● disponível</div>
+          <div style={{padding:'8px 10px 4px',borderBottom:`1px solid ${BRD}`}}>
+            <div style={{fontWeight:700,fontSize:14,color:PINK,cursor:'pointer',marginBottom:2}} onClick={()=>setPage('profile')}>{profile?.name||'…'}</div>
+            <div style={{fontSize:11,color:'#4caf50'}}>● disponível</div>
+          </div>
+          <div style={{padding:'6px 0'}}>
+            <div style={{display:'flex',justifyContent:'space-between',padding:'2px 10px 4px'}}>
+              <span style={{fontSize:10,color:MUT,fontWeight:700,textTransform:'uppercase',letterSpacing:.4}}>perfil</span>
+              <span style={{fontSize:11,color:PINK,cursor:'pointer'}} onClick={()=>setPage('profile')}>editar</span>
+            </div>
+            {[['scrapbook','scrapbook'],['fotos',null],['amigos','friends'],['comunidades','communities'],['depoimentos','profile']].map(([label,pg])=>(
+              <div key={label} onClick={()=>pg&&setPage(pg)} style={{padding:'3px 10px',fontSize:13,cursor:pg?'pointer':'default',color:BLUE}}>{label}</div>
+            ))}
           </div>
         </div>
       }
@@ -374,8 +383,8 @@ function HomePage({ profile, myId, setPage }){
               <span style={{fontSize:18}}>🙂</span>
             </div>
             <div style={{display:'flex',justifyContent:'space-around',borderTop:`1px solid ${BRD}`,paddingTop:12}}>
-              {[['✏️','recados',recadoCount,'scrapbook'],['🖼️','fotos',0,null],
-                ['🎞️','vídeos',0,null],['⭐','fãs',0,null],['✉️','mensagens',0,null]
+              {[['✏️','scraps',recadoCount,'scrapbook'],['🖼️','fotos',0,null],
+                ['🖼','fotos de mim',0,null],['⭐','fãs',0,null],['✉️','mensagens',0,null]
               ].map(([icon,label,count,pg])=>(
                 <div key={label} style={{textAlign:'center',cursor:pg?'pointer':'default'}} onClick={()=>pg&&setPage(pg)}>
                   <div style={{fontSize:22,marginBottom:2}}>{icon}</div>
