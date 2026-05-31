@@ -28,18 +28,27 @@ const btnPk = {cursor:'pointer',border:'none',fontFamily:'inherit',borderRadius:
 const btnGh = {cursor:'pointer',fontFamily:'inherit',borderRadius:2,fontWeight:400,
                background:'transparent',border:`1px solid ${BRD}`,color:MUT,padding:'4px 10px',fontSize:11}
 
-/* ── orkut.br Logo ── */
-function OrkutLogo({ size }){
-  size = size||20
+/* ── orkut.br Logo — exact match from DOM ── */
+function OrkutLogo(){
   return (
-    <div style={{display:'inline-flex',alignItems:'center',background:WHITE,
-      borderRadius:3,padding:'2px 7px',gap:1}}>
-      <span style={{fontFamily:'Georgia,"Times New Roman",serif',fontStyle:'italic',
-        fontWeight:700,fontSize:size*1.3,color:PINK,lineHeight:1}}>orkut</span>
-      <span style={{fontFamily:'Georgia,"Times New Roman",serif',fontStyle:'italic',
-        fontWeight:700,fontSize:size*0.75,color:BLUE,lineHeight:1,marginTop:size*0.35+'px'}}>
-        .br</span>
-    </div>
+    <span style={{
+      display:'inline-flex', alignItems:'baseline',
+      background:WHITE, borderRadius:4,
+      padding:'3px 8px 3px 8px', gap:0,
+      boxShadow:'0 1px 2px rgba(0,0,0,.15)',
+    }}>
+      <span style={{
+        fontFamily:'Georgia,"Times New Roman",serif',
+        fontStyle:'italic', fontWeight:700,
+        fontSize:22, color:PINK, lineHeight:1, letterSpacing:'-0.5px',
+      }}>orkut</span>
+      <span style={{
+        fontFamily:'Georgia,"Times New Roman",serif',
+        fontStyle:'italic', fontWeight:700,
+        fontSize:13, color:BLUE, lineHeight:1,
+        alignSelf:'flex-end', marginBottom:2,
+      }}>.br</span>
+    </span>
   )
 }
 
@@ -167,7 +176,7 @@ function AuthScreen({ onAuth }){
   )
 }
 
-/* ── TOP NAV ── */
+/* ── TOP NAV — exact DOM match from orkut-revival.vercel.app ── */
 function TopNav({ page, setPage, profile, pendingReqs }){
   const [search,setSearch]=useState('')
   const [results,setResults]=useState([])
@@ -177,59 +186,100 @@ function TopNav({ page, setPage, profile, pendingReqs }){
     setResults(await searchUsers(q));setShow(true)
   },[])
   useEffect(()=>{const t=setTimeout(()=>doSearch(search),300);return()=>clearTimeout(t)},[search])
+
   const cur=typeof page==='string'?page:page?.name
-  const links=[['Início','home'],['Perfil','profile'],['Recados','scrapbook'],
-               ['Amigos','friends'],['Comunidades','communities']]
+  // Nav links — EN labels (matching source), PT routing
+  const links=[
+    ['Home','home'],['Profile','profile'],['Scrapbook','scrapbook'],
+    ['Friends','friends'],['Communities','communities']
+  ]
+
   return (
-    <nav style={{background:NAV,position:'sticky',top:0,zIndex:200,height:50,
-      display:'flex',alignItems:'center',padding:'0 12px',boxShadow:'0 2px 4px rgba(0,0,0,.3)'}}>
-      <div onClick={()=>setPage('home')} style={{cursor:'pointer',marginRight:16,flexShrink:0}}>
-        <OrkutLogo size={18}/>
-      </div>
-      <div style={{display:'flex',flex:1,alignItems:'center',height:'100%'}}>
-        {links.map(([label,pg])=>(
-          <div key={pg} onClick={()=>setPage(pg)} style={{
-            padding:'0 12px',height:'100%',display:'flex',alignItems:'center',
-            fontSize:13,fontWeight:cur===pg?700:400,cursor:'pointer',whiteSpace:'nowrap',
-            color:cur===pg?WHITE:'rgba(255,255,255,.82)',
-            borderBottom:cur===pg?'2px solid '+WHITE:'2px solid transparent',
-            boxSizing:'border-box',position:'relative',
-          }}>
-            {label}
-            {pg==='friends'&&pendingReqs>0&&<span style={{position:'absolute',top:5,right:1,
-              background:PINK,color:WHITE,borderRadius:10,padding:'0 4px',fontSize:9,fontWeight:700,lineHeight:'15px'}}>
-              {pendingReqs}</span>}
-          </div>
-        ))}
-      </div>
-      <div style={{position:'relative',marginRight:12}}>
-        <input value={search} onChange={e=>setSearch(e.target.value)}
-          onFocus={()=>search.length>1&&setShow(true)}
-          onBlur={()=>setTimeout(()=>setShow(false),200)}
-          placeholder="buscar pessoas"
-          style={{border:'1px solid rgba(255,255,255,.4)',borderRadius:2,padding:'3px 8px',
-            fontSize:12,background:'rgba(255,255,255,.15)',color:WHITE,outline:'none',width:150,fontFamily:'inherit'}}/>
-        {show&&results.length>0&&(
-          <div style={{position:'absolute',top:'100%',left:0,right:0,background:WHITE,
-            border:`1px solid ${BRD}`,borderRadius:2,zIndex:999,maxHeight:200,overflowY:'auto',marginTop:2}}>
-            {results.map(u=>(
-              <div key={u.id} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',
-                cursor:'pointer',borderBottom:`1px solid ${BRD}`}}
-                onMouseDown={()=>{setPage({name:'profile',userId:u.id});setSearch('');setShow(false)}}>
-                <Av src={u.avatar_url} size={24} name={u.name}/>
-                <div style={{fontSize:12,color:TEXT}}>{u.name}</div>
+    <header style={{
+      background:'hsl(222,60%,35%)',   /* matches --orkut-header */
+      position:'sticky', top:0, zIndex:200, height:40,
+      display:'flex', alignItems:'center',
+      boxShadow:'0 1px 3px rgba(0,0,0,.3)',
+    }}>
+      <div style={{
+        maxWidth:980, margin:'0 auto', width:'100%',
+        height:'100%', display:'flex', alignItems:'center',
+        padding:'0 10px', gap:0,
+      }}>
+        {/* Logo card */}
+        <a onClick={()=>setPage('home')} style={{
+          marginRight:12, cursor:'pointer', textDecoration:'none',
+          flexShrink:0,
+        }}>
+          <OrkutLogo/>
+        </a>
+
+        {/* Nav links */}
+        <nav style={{display:'flex',alignItems:'center',height:'100%'}}>
+          {links.map(([label,pg])=>(
+            <a key={pg} onClick={()=>setPage(pg)} style={{
+              display:'inline-flex', alignItems:'center', height:'100%',
+              padding:'0 12px', cursor:'pointer', textDecoration:'none',
+              fontSize:13, fontWeight:cur===pg?600:400,
+              color: cur===pg ? WHITE : 'rgba(255,255,255,.8)',
+              borderBottom: cur===pg ? '2px solid '+WHITE : '2px solid transparent',
+              boxSizing:'border-box', position:'relative',
+              transition:'color .1s',
+            }}>
+              {label}
+              {pg==='friends'&&pendingReqs>0&&(
+                <span style={{position:'absolute',top:4,right:2,background:PINK,color:WHITE,
+                  borderRadius:10,padding:'0 4px',fontSize:9,fontWeight:700,lineHeight:'15px'}}>
+                  {pendingReqs}
+                </span>
+              )}
+            </a>
+          ))}
+        </nav>
+
+        {/* Right side — user + logout */}
+        <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:12,fontSize:11,color:WHITE}}>
+          {/* Inline search */}
+          <div style={{position:'relative'}}>
+            <input value={search} onChange={e=>setSearch(e.target.value)}
+              onFocus={()=>search.length>1&&setShow(true)}
+              onBlur={()=>setTimeout(()=>setShow(false),200)}
+              placeholder="buscar pessoas"
+              style={{border:'1px solid rgba(255,255,255,.35)',borderRadius:2,
+                padding:'2px 8px',fontSize:11,
+                background:'rgba(255,255,255,.15)',color:WHITE,
+                outline:'none',width:130,fontFamily:'inherit'}}/>
+            {show&&results.length>0&&(
+              <div style={{position:'absolute',top:'100%',left:0,right:0,background:WHITE,
+                border:`1px solid ${BRD}`,borderRadius:2,zIndex:999,maxHeight:200,
+                overflowY:'auto',marginTop:2,boxShadow:'0 3px 10px rgba(0,0,0,.2)'}}>
+                {results.map(u=>(
+                  <div key={u.id} style={{display:'flex',alignItems:'center',gap:8,
+                    padding:'6px 10px',cursor:'pointer',borderBottom:`1px solid ${BRD}`,background:WHITE}}
+                    onMouseDown={()=>{setPage({name:'userprofile',userId:u.id});setSearch('');setShow(false)}}>
+                    <Av src={u.avatar_url} size={24} name={u.name}/>
+                    <div style={{fontSize:12,color:TEXT}}>{u.name}</div>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        )}
+          {/* Green dot + name */}
+          <span style={{display:'flex',alignItems:'center',gap:5}}>
+            <span style={{display:'inline-block',width:8,height:8,borderRadius:'50%',
+              background:'hsl(142,71%,45%)'}}/>
+            <span style={{cursor:'pointer',fontWeight:400}}
+              onClick={()=>setPage('profile')}>{profile?.name?.split(' ')[0]||'…'}</span>
+          </span>
+          {/* Logout */}
+          <button onClick={()=>signOut()} style={{
+            background:'transparent',border:'none',color:WHITE,
+            fontSize:11,cursor:'pointer',fontFamily:'inherit',
+            textDecoration:'none',padding:0,
+          }}>Logout</button>
+        </div>
       </div>
-      <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,color:'rgba(255,255,255,.9)'}}>
-        <span style={{width:7,height:7,borderRadius:'50%',background:'#4caf50',display:'inline-block'}}/>
-        <span style={{cursor:'pointer',fontWeight:600}} onClick={()=>setPage('profile')}>{profile?.name?.split(' ')[0]||'…'}</span>
-        <span style={{color:'rgba(255,255,255,.4)'}}>|</span>
-        <span style={{cursor:'pointer',color:'rgba(255,255,255,.75)'}} onClick={()=>signOut()}>Sair</span>
-      </div>
-    </nav>
+    </header>
   )
 }
 
