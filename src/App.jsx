@@ -8,7 +8,7 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   searchUsers } from './lib/supabase.js'
 
 /* ── Design tokens matching screenshot exactly ── */
-const NAV_BG  = '#2a4b8d'   // dark blue nav
+const NAV_BG  = '#1a2e5a'   // dark navy nav
 const PINK    = '#e8197d'   // orkut pink
 const BG      = '#dce3f0'   // page background blue-grey
 const WHITE   = '#ffffff'
@@ -53,24 +53,24 @@ function OFadeLogo({ size }){
   )
 }
 
-/* ── Nav logo — big O fade ── */
+/* ── Nav logo — big O, bright pink, visible on dark navy ── */
 function NavLogo(){
-  const w=22*4.4, h=22, gid='nlg', mid='nlm'
+  const h=30, w=h*4.4, gid='nlg', mid='nlm'
   return (
     <svg width={w} height={h} viewBox={"0 0 "+w+" "+h}
       style={{display:'block',overflow:'visible',cursor:'pointer'}} aria-label="">
       <defs>
         <linearGradient id={gid} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%"   stopColor="#ff0099" stopOpacity="1"/>
-          <stop offset="21%"  stopColor="#ff0099" stopOpacity="1"/>
-          <stop offset="24%"  stopColor="#ff0099" stopOpacity="0.10"/>
-          <stop offset="40%"  stopColor="#ff0099" stopOpacity="0"/>
+          <stop offset="0%"   stopColor="#ff00aa" stopOpacity="1"/>
+          <stop offset="20%"  stopColor="#ff00aa" stopOpacity="1"/>
+          <stop offset="24%"  stopColor="#ff00aa" stopOpacity="0.12"/>
+          <stop offset="38%"  stopColor="#ff00aa" stopOpacity="0"/>
         </linearGradient>
         <mask id={mid}><rect x="0" y="0" width={w} height={h*1.2} fill={"url(#"+gid+")"}/></mask>
       </defs>
       <text x="0" y={h*0.88}
         fontFamily="'Nunito Black','Nunito','Montserrat','Arial Rounded MT Bold',Arial,sans-serif"
-        fontSize={h} fontWeight="900" fill="#ff0099" mask={"url(#"+mid+")"} letterSpacing="-1">Orkut</text>
+        fontSize={h} fontWeight="900" fill="#ff00aa" mask={"url(#"+mid+")"} letterSpacing="-1">Orkut</text>
     </svg>
   )
 }
@@ -349,8 +349,8 @@ function HomePage({ profile, myId, setPage }){
             <span style={{fontSize:11,color:BLUE,cursor:'pointer',textDecoration:'underline'}}
               onClick={()=>setPage('profile')}>editar</span>
           </div>
-          {[['scrapbook','scrapbook'],['fotos',null],['amigos','friends'],
-            ['comunidades','communities'],['depoimentos',null]].map(([label,pg])=>(
+          {[['scrapbook','scrapbook'],['fotos','galeria'],['amigos','friends'],
+            ['comunidades','communities'],['depoimentos','depoimentos']].map(([label,pg])=>(
             <div key={label} onClick={()=>pg&&setPage(pg)} style={{
               padding:'5px 10px',fontSize:13,
               cursor:pg?'pointer':'default',
@@ -502,8 +502,8 @@ function ProfilePage({ myId, userId, setPage, toast }){
           </label>}
         </div>
         <div style={{borderTop:`1px solid ${BRD}`,padding:'6px 0'}}>
-          {[['scrapbook','scrapbook'],['fotos',null],['amigos','friends'],
-            ['comunidades','communities'],['depoimentos',null]].map(([label,pg])=>(
+          {[['scrapbook','scrapbook'],['fotos','galeria'],['amigos','friends'],
+            ['comunidades','communities'],['depoimentos','depoimentos']].map(([label,pg])=>(
             <div key={label} onClick={()=>pg&&setPage(pg)} style={{
               padding:'3px 10px',fontSize:13,cursor:pg?'pointer':'default',color:BLUE}}>
               {label}
@@ -866,6 +866,57 @@ function CommunitiesPage({ myId, toast }){
   )
 }
 
+/* ── GALERIA ── */
+function GaleriaPage({ profile }){
+  return (
+    <div style={{maxWidth:980,margin:'0 auto',padding:'8px'}}>
+      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
+        <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'6px 12px',
+          display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <span style={{fontWeight:700,fontSize:14,color:TEXT}}>fotos de {profile?.name||'…'}</span>
+          <span style={{fontSize:12,color:MUTED}}>em breve</span>
+        </div>
+        <div style={{padding:'30px',textAlign:'center',color:MUTED,fontSize:13}}>
+          🖼️ Galeria de fotos em breve.<br/>
+          <span style={{fontSize:11,marginTop:8,display:'block'}}>Esta funcionalidade está sendo desenvolvida.</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── DEPOIMENTOS ── */
+function DepoimentosPage({ myId, setPage }){
+  const [deps,setDeps]=useState([])
+  useEffect(()=>{ getDepoimentos(myId).then(setDeps) },[myId])
+  return (
+    <div style={{maxWidth:980,margin:'0 auto',padding:'8px'}}>
+      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
+        <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'6px 12px',
+          fontWeight:700,fontSize:14,color:TEXT}}>
+          depoimentos ({deps.length})
+        </div>
+        <div style={{padding:'10px 14px'}}>
+          {deps.length===0
+            ?<div style={{color:MUTED,fontSize:13,padding:'14px 0'}}>Nenhum depoimento ainda.</div>
+            :deps.map(d=>(
+              <div key={d.id} style={{display:'flex',gap:10,padding:'10px 0',borderBottom:`1px solid ${BRD}`}}>
+                <Av src={d.from.avatar_url} size={36} name={d.from.name} radius="3px"/>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:12,color:BLUE,cursor:'pointer',marginBottom:2}}
+                    onClick={()=>setPage({name:'userprofile',userId:d.from.id})}>{d.from.name}:</div>
+                  <div style={{fontSize:13,color:TEXT,lineHeight:1.5}}>{d.text}</div>
+                  <div style={{fontSize:10,color:MUTED,marginTop:3}}>{new Date(d.created_at).toLocaleDateString('pt-BR')}</div>
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ── ROOT ── */
 export default function App(){
   const [session,setSession]=useState(undefined)
@@ -910,6 +961,8 @@ export default function App(){
       case 'scrapbook':   return <ScrapbookPage myId={myId} targetUserId={page?.userId||null} setPage={navTo} toast={setToast}/>
       case 'friends':     return <FriendsPage myId={myId} setPage={navTo} toast={setToast}/>
       case 'communities': return <CommunitiesPage myId={myId} toast={setToast}/>
+      case 'galeria':     return <GaleriaPage profile={profile}/>
+      case 'depoimentos': return <DepoimentosPage myId={myId} setPage={navTo}/>
       default:            return <HomePage profile={profile} myId={myId} setPage={navTo}/>
     }
   }
