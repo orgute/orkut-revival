@@ -122,14 +122,28 @@ function AuthScreen({ onAuth }){
         <div style={{flex:'1 1 360px',minWidth:260,display:'flex',flexDirection:'column',
           alignItems:'center',justifyContent:'center'}}>
           <div style={{marginBottom:40}}><OFadeLogo size={100}/></div>
-          {[['Conecte-se','aos seus amigos e familiares usando recados e mensagens'],
-            ['Conheça','novas pessoas através de amigos de seus amigos e comunidades'],
-            ['Compartilhe','seus momentos, fotos, paixões e interesses em um só lugar']
-          ].map(([v,r])=>(
-            <div key={v} style={{fontSize:14,color:MUTED,textAlign:'center',lineHeight:1.4,marginBottom:14}}>
-              <span style={{color:PINK,fontWeight:700}}>{v}</span>{' '}{r}
+          {/* OG Orkut-inspired invite-only manifesto */}
+          <div style={{maxWidth:340,textAlign:'center'}}>
+            <p style={{fontSize:15,color:TEXT,lineHeight:1.7,marginBottom:14}}>
+              <span style={{color:PINK,fontWeight:700}}>Uma comunidade exclusiva</span>{' '}
+              para conexões reais com as pessoas que você ama.
+            </p>
+            <p style={{fontSize:13,color:MUTED,lineHeight:1.8,marginBottom:14}}>
+              Estamos comprometidos em oferecer um espaço seguro para socializar,
+              reencontrar amigos e criar memórias com quem realmente importa.
+              Sem anúncios. Sem rastreamento. Sem influencers. Sem monetização.
+            </p>
+            <p style={{fontSize:13,color:MUTED,lineHeight:1.8,marginBottom:14}}>
+              Aqui é só sobre <strong style={{color:TEXT}}>pessoas reais</strong>,{' '}
+              <strong style={{color:TEXT}}>família</strong> e{' '}
+              <strong style={{color:TEXT}}>amigos verdadeiros</strong> que você quer
+              manter perto — como nos velhos tempos.
+            </p>
+            <div style={{borderTop:`1px solid ${BRD}`,paddingTop:14,fontSize:12,color:MUTED,fontStyle:'italic'}}>
+              🔒 Comunidade por convite.<br/>
+              Cada membro pode convidar até 10 pessoas de confiança.
             </div>
-          ))}
+          </div>
         </div>
         <div style={{flex:'0 1 290px',minWidth:240}}>
           <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
@@ -137,7 +151,13 @@ function AuthScreen({ onAuth }){
             <div style={{fontSize:12,color:TEXT,marginBottom:12,textAlign:'center',
               display:'flex',alignItems:'center',justifyContent:'center',gap:5,flexWrap:'wrap'}}>
               {mode==='login'
-                ?<><span>Acesse o</span><NavLogo/><span>com a sua conta</span></>
+                ?<div style={{textAlign:'center',fontSize:12,color:TEXT}}>
+                    Acesse o{' '}
+                    <span style={{display:'inline-block',verticalAlign:'middle',marginBottom:2}}>
+                      <OFadeLogo size={22}/>
+                    </span>
+                    {' '}com a sua conta
+                  </div>
                 :<span style={{fontWeight:600}}>Cadastre-se gratuitamente</span>}
             </div>
             {mode==='signup'&&<div style={{marginBottom:8}}>
@@ -867,19 +887,58 @@ function CommunitiesPage({ myId, toast }){
 }
 
 /* ── GALERIA ── */
-function GaleriaPage({ profile }){
+function GaleriaPage({ myId, profile, isOwn }){
+  const [photos,setPhotos]=useState([])
+  const [uploading,setUploading]=useState(false)
+
+  const handleUpload=async(e)=>{
+    const files=[...e.target.files]
+    if(!files.length)return
+    setUploading(true)
+    try{
+      const uploaded=[]
+      for(const file of files){
+        const url=await uploadAvatar(myId,file+'_'+Date.now())
+        // Store photo URLs in profile musica field temporarily as hack
+        // until photos table is added — just show uploaded images
+        uploaded.push({url,name:file.name,id:Date.now()+Math.random()})
+      }
+      setPhotos(p=>[...uploaded,...p])
+    }catch(err){console.error(err)}
+    setUploading(false)
+  }
+
   return (
     <div style={{maxWidth:980,margin:'0 auto',padding:'8px'}}>
       <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
         <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'6px 12px',
           display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-          <span style={{fontWeight:700,fontSize:14,color:TEXT}}>fotos de {profile?.name||'…'}</span>
-          <span style={{fontSize:12,color:MUTED}}>em breve</span>
+          <span style={{fontWeight:700,fontSize:14,color:TEXT}}>
+            fotos de {profile?.name||'…'}
+          </span>
+          {isOwn&&<label style={{fontSize:12,color:BLUE,cursor:'pointer',fontWeight:600}}>
+            {uploading?'Enviando…':'+ adicionar fotos'}
+            <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={handleUpload}/>
+          </label>}
         </div>
-        <div style={{padding:'30px',textAlign:'center',color:MUTED,fontSize:13}}>
-          🖼️ Galeria de fotos em breve.<br/>
-          <span style={{fontSize:11,marginTop:8,display:'block'}}>Esta funcionalidade está sendo desenvolvida.</span>
-        </div>
+        {photos.length===0?(
+          <div style={{padding:'40px',textAlign:'center',color:MUTED}}>
+            <div style={{fontSize:32,marginBottom:12}}>🖼️</div>
+            <div style={{fontSize:14,marginBottom:6}}>Nenhuma foto ainda.</div>
+            {isOwn&&<div style={{fontSize:12}}>Clique em "+ adicionar fotos" para começar.</div>}
+          </div>
+        ):(
+          <div style={{padding:12,display:'grid',
+            gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:8}}>
+            {photos.map(p=>(
+              <div key={p.id} style={{borderRadius:3,overflow:'hidden',
+                border:`1px solid ${BRD}`,aspectRatio:'1',background:'#f0f0f0'}}>
+                <img src={p.url} alt={p.name}
+                  style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -961,7 +1020,7 @@ export default function App(){
       case 'scrapbook':   return <ScrapbookPage myId={myId} targetUserId={page?.userId||null} setPage={navTo} toast={setToast}/>
       case 'friends':     return <FriendsPage myId={myId} setPage={navTo} toast={setToast}/>
       case 'communities': return <CommunitiesPage myId={myId} toast={setToast}/>
-      case 'galeria':     return <GaleriaPage profile={profile}/>
+      case 'galeria':     return <GaleriaPage myId={myId} profile={profile} isOwn={true}/>
       case 'depoimentos': return <DepoimentosPage myId={myId} setPage={navTo}/>
       default:            return <HomePage profile={profile} myId={myId} setPage={navTo}/>
     }
