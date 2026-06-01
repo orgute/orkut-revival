@@ -337,19 +337,39 @@ function HomePage({ profile, myId, setPage }){
     <div style={{maxWidth:980,margin:'0 auto',padding:'8px',
       display:'grid',gridTemplateColumns:'210px 1fr 230px',gap:8,alignItems:'flex-start'}}>
 
-      {/* LEFT COL — photo + name + status */}
-      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
-        <div style={{lineHeight:0,borderBottom:`1px solid ${BRD}`,cursor:'pointer'}}
-          onClick={()=>setPage('profile')}>
-          <img src={profile?.avatar_url||("https://api.dicebear.com/9.x/personas/svg?seed="+(profile?.name||'u'))}
-            alt={profile?.name||''}
-            style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block'}}
-            onError={e=>{e.target.src="https://api.dicebear.com/9.x/personas/svg?seed=u"}}/>
+      {/* LEFT COL — photo + name + status + nav */}
+      <div>
+        <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden',marginBottom:6}}>
+          <div style={{lineHeight:0,borderBottom:`1px solid ${BRD}`,cursor:'pointer'}}
+            onClick={()=>setPage('profile')}>
+            <img src={profile?.avatar_url||("https://api.dicebear.com/9.x/personas/svg?seed="+(profile?.name||'u'))}
+              alt={profile?.name||''}
+              style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block'}}
+              onError={e=>{e.target.src="https://api.dicebear.com/9.x/personas/svg?seed=u"}}/>
+          </div>
+          <div style={{padding:'8px 10px'}}>
+            <div style={{fontWeight:700,fontSize:14,color:PINK,cursor:'pointer',marginBottom:3}}
+              onClick={()=>setPage('profile')}>{profile?.name||'…'}</div>
+            <div style={{fontSize:12,color:'#4caf50'}}>● disponível</div>
+          </div>
         </div>
-        <div style={{padding:'8px 10px'}}>
-          <div style={{fontWeight:700,fontSize:14,color:PINK,cursor:'pointer',marginBottom:3}}
-            onClick={()=>setPage('profile')}>{profile?.name||'…'}</div>
-          <div style={{fontSize:12,color:'#4caf50'}}>● disponível</div>
+        {/* Nav panel — light blue header, links list */}
+        <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
+          <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,
+            padding:'4px 8px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <span style={{fontWeight:700,fontSize:12,color:TEXT}}>perfil</span>
+            <span style={{fontSize:11,color:BLUE,cursor:'pointer',textDecoration:'underline'}}
+              onClick={()=>setPage('profile')}>editar</span>
+          </div>
+          {[['scrapbook','scrapbook'],['fotos',null],['amigos','friends'],
+            ['comunidades','communities'],['depoimentos',null]].map(([label,pg])=>(
+            <div key={label} onClick={()=>pg&&setPage(pg)} style={{
+              padding:'5px 10px',fontSize:13,
+              cursor:pg?'pointer':'default',
+              color:BLUE,
+              borderBottom:`1px solid ${BRD}`,
+            }}>{label}</div>
+          ))}
         </div>
       </div>
 
@@ -387,6 +407,27 @@ function HomePage({ profile, myId, setPage }){
             <div><strong>Visitas ao perfil:</strong> desde hoje: 0</div>
             <div><strong>Visitantes recentes:</strong> —</div>
             <div><strong>Fortuna do dia:</strong> Tenha um ótimo dia!</div>
+          </div>
+        </div>
+        {/* Friend suggestions — screenshot style: grey square avatars */}
+        <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden',marginTop:8}}>
+          <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,
+            padding:'5px 10px',fontWeight:700,fontSize:12,color:TEXT}}>
+            sugestões de amigos
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,padding:'12px 14px'}}>
+            {['A','B','C','D'].map((letter)=>(
+              <div key={letter} style={{textAlign:'center',cursor:'pointer'}} title="Em breve">
+                <div style={{
+                  width:'100%',aspectRatio:'1',borderRadius:2,
+                  border:`1px solid ${BRD}`,background:'#e0e6f2',
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                  fontSize:30,fontWeight:900,color:'#4a5a7a',marginBottom:5,
+                }}>{letter}</div>
+                <div style={{fontSize:11,color:TEXT,overflow:'hidden',
+                  textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{letter}.</div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
