@@ -5,7 +5,7 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getDepoimentos, sendDepoimento, getCommunities, getMyCommunities,
   joinCommunity, leaveCommunity, getCommunityPosts, createCommunityPost,
   getMessages, sendMessage, recordVisit, getVisitors, uploadAvatar,
-  searchUsers } from './lib/supabase.js'
+  searchUsers, validateInviteCode, useInviteCode, getMyInvites } from './lib/supabase.js'
 
 /* ── Design tokens matching screenshot exactly ── */
 const NAV_BG  = '#1a2e5a'   // dark navy nav
@@ -97,15 +97,26 @@ function Toast({ msg, onDone }){
 /* ── AUTH SCREEN ── */
 function AuthScreen({ onAuth }){
   const [mode,setMode]=useState('login')
-  const [form,setForm]=useState({email:'',password:'',name:''})
+  const [form,setForm]=useState({email:'',password:'',name:'',invite:''})
   const [err,setErr]=useState('')
   const [loading,setLoading]=useState(false)
   const f=(k,v)=>setForm(p=>({...p,[k]:v}))
   const submit=async()=>{
     setErr('');setLoading(true)
     try{
-      if(mode==='login') await signIn({email:form.email,password:form.password})
-      else{ if(!form.name.trim())throw new Error('Digite seu nome'); await signUp({email:form.email,password:form.password,name:form.name}) }
+      if(mode==='login'){
+        await signIn({email:form.email,password:form.password})
+      } else {
+        if(!form.name.trim()) throw new Error('Digite seu nome')
+        if(!form.invite.trim()) throw new Error('Código de convite obrigatório')
+        // Validate invite code first
+        const invite = await validateInviteCode(form.invite)
+        if(!invite) throw new Error('Código de convite inválido ou já utilizado')
+        // Create account
+        const data = await signUp({email:form.email,password:form.password,name:form.name})
+        // Mark invite as used
+        if(data?.user) await useInviteCode(form.invite, data.user.id)
+      }
       onAuth()
     }catch(e){ setErr(e.message==='Failed to fetch'?'Erro de conexão. Tente novamente.':e.message) }
     setLoading(false)
@@ -160,10 +171,17 @@ function AuthScreen({ onAuth }){
                   </div>
                 :<span style={{fontWeight:600}}>Cadastre-se gratuitamente</span>}
             </div>
-            {mode==='signup'&&<div style={{marginBottom:8}}>
-              <div style={{fontSize:11,color:TEXT,marginBottom:2}}>Seu nome:</div>
-              <input style={ri} value={form.name} onChange={e=>f('name',e.target.value)}/>
-            </div>}
+            {mode==='signup'&&<>
+              <div style={{marginBottom:8}}>
+                <div style={{fontSize:11,color:TEXT,marginBottom:2}}>Código de convite:</div>
+                <input style={ri} value={form.invite} onChange={e=>f('invite',e.target.value.toUpperCase())}
+                  placeholder="Ex: AB12CD34" maxLength={8}/>
+              </div>
+              <div style={{marginBottom:8}}>
+                <div style={{fontSize:11,color:TEXT,marginBottom:2}}>Seu nome:</div>
+                <input style={ri} value={form.name} onChange={e=>f('name',e.target.value)}/>
+              </div>
+            </>}
             <div style={{marginBottom:8}}>
               <div style={{fontSize:11,color:TEXT,marginBottom:2}}>E-mail:</div>
               <input style={ri} type="email" value={form.email} onChange={e=>f('email',e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()}/>
@@ -468,12 +486,15 @@ function ProfilePage({ myId, userId, setPage, toast }){
   const [fStatus,setFStatus]=useState(null)
   const [uploading,setUploading]=useState(false)
   const [scraps,setScraps]=useState([])
+  const [invites,setInvites]=useState([])
+  const [showInvites,setShowInvites]=useState(false)
 
   useEffect(()=>{
     if(!targetId)return
     getProfile(targetId).then(p=>{setProfile(p);setDraft(p||{})})
     getDepoimentos(targetId).then(setDeps)
     getRecados(targetId).then(setScraps)
+    if(isOwn) getMyInvites(myId).then(setInvites)
     if(!isOwn){recordVisit(myId,targetId);getFriendshipStatus(myId,targetId).then(setFStatus)}
   },[targetId])
 
@@ -613,6 +634,43 @@ function ProfilePage({ myId, userId, setPage, toast }){
             </div>}
           </div>
         </div>
+        {/* Invites panel — own profile only */}
+        {isOwn&&<div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
+          overflow:'hidden',marginTop:8}}>
+          <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'5px 10px',
+            display:'flex',justifyContent:'space-between',alignItems:'center',cursor:'pointer'}}
+            onClick={()=>setShowInvites(!showInvites)}>
+            <span style={{fontWeight:700,fontSize:13,color:TEXT}}>
+              🔒 meus convites ({invites.filter(i=>!i.used_by).length}/{invites.length} restantes)
+            </span>
+            <span style={{fontSize:11,color:BLUE}}>{showInvites?'▲ fechar':'▼ ver'}</span>
+          </div>
+          {showInvites&&<div style={{padding:'10px 14px'}}>
+            <p style={{fontSize:12,color:MUTED,marginBottom:10,lineHeight:1.6}}>
+              Compartilhe estes códigos com pessoas de confiança. Cada código só pode ser usado uma vez.
+            </p>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:6}}>
+              {invites.map(inv=>(
+                <div key={inv.id} style={{display:'flex',alignItems:'center',gap:8,
+                  padding:'7px 10px',borderRadius:2,
+                  background:inv.used_by?'#f0f0f0':'#f0fff4',
+                  border:`1px solid ${inv.used_by?BRD:'#b0d8c0'}`}}>
+                  <span style={{fontFamily:'monospace',fontWeight:700,fontSize:14,
+                    color:inv.used_by?MUTED:BLUE,letterSpacing:2}}>{inv.code}</span>
+                  {inv.used_by
+                    ?<span style={{fontSize:10,color:MUTED,marginLeft:'auto'}}>✓ usado</span>
+                    :<span style={{fontSize:10,color:'#2e7d32',marginLeft:'auto',cursor:'pointer'}}
+                      onClick={()=>navigator.clipboard?.writeText(inv.code).then(()=>alert('Copiado!'))}>
+                      📋 copiar
+                    </span>}
+                </div>
+              ))}
+            </div>
+            {invites.length===0&&<div style={{fontSize:12,color:MUTED}}>
+              Seus convites estão sendo gerados…
+            </div>}
+          </div>}
+        </div>}
       </div>
 
       {/* Right */}

@@ -193,3 +193,32 @@ export async function uploadAvatar(userId, file) {
   const { data } = supabase.storage.from('avatars').getPublicUrl(path)
   return data.publicUrl
 }
+
+/* ── Invites ─────────────────────────────────────────────────── */
+export async function validateInviteCode(code) {
+  const { data } = await supabase
+    .from('invites')
+    .select('id, code, used_by, created_by')
+    .eq('code', code.toUpperCase().trim())
+    .is('used_by', null)
+    .maybeSingle()
+  return data  // null = invalid/used
+}
+
+export async function useInviteCode(code, userId) {
+  const { error } = await supabase
+    .from('invites')
+    .update({ used_by: userId, used_at: new Date().toISOString() })
+    .eq('code', code.toUpperCase().trim())
+    .is('used_by', null)
+  if (error) throw error
+}
+
+export async function getMyInvites(userId) {
+  const { data } = await supabase
+    .from('invites')
+    .select('id, code, used_by, used_at, used_profile:profiles!invites_used_by_fkey(name)')
+    .eq('created_by', userId)
+    .order('created_at', { ascending: true })
+  return data || []
+}
