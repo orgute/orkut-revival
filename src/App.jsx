@@ -944,59 +944,108 @@ function CommunitiesPage({ myId, toast }){
   )
 }
 
-/* ── GALERIA ── */
+/* ── GALERIA — albums style matching image 1 ── */
 function GaleriaPage({ myId, profile, isOwn }){
-  const [photos,setPhotos]=useState([])
+  const [albums,setAlbums]=useState([])
+  const [activeAlbum,setActiveAlbum]=useState(null)
   const [uploading,setUploading]=useState(false)
+  const [newAlbumName,setNewAlbumName]=useState('')
+  const [creating,setCreating]=useState(false)
+
+  const storageKey='albums_'+myId
+  useEffect(()=>{
+    try{ setAlbums(JSON.parse(localStorage.getItem(storageKey)||'[]')) }catch(e){}
+  },[myId])
+  const saveAlbums=(a)=>{ setAlbums(a); localStorage.setItem(storageKey,JSON.stringify(a)) }
+
+  const createAlbum=()=>{
+    if(!newAlbumName.trim())return
+    const a={id:Date.now(),name:newAlbumName.trim(),photos:[],created:new Date().toISOString()}
+    saveAlbums([...albums,a]); setNewAlbumName(''); setCreating(false); setActiveAlbum(a)
+  }
 
   const handleUpload=async(e)=>{
-    const files=[...e.target.files]
-    if(!files.length)return
+    const files=[...e.target.files]; if(!files.length||!activeAlbum)return
     setUploading(true)
-    try{
-      const uploaded=[]
-      for(const file of files){
-        const url=await uploadAvatar(myId,file+'_'+Date.now())
-        // Store photo URLs in profile musica field temporarily as hack
-        // until photos table is added — just show uploaded images
-        uploaded.push({url,name:file.name,id:Date.now()+Math.random()})
-      }
-      setPhotos(p=>[...uploaded,...p])
-    }catch(err){console.error(err)}
-    setUploading(false)
+    const uploaded=[]
+    for(const file of files){
+      const reader=new FileReader()
+      const dataUrl=await new Promise(res=>{reader.onload=e=>res(e.target.result);reader.readAsDataURL(file)})
+      uploaded.push({id:Date.now()+Math.random(),url:dataUrl,name:file.name})
+    }
+    const updated=albums.map(a=>a.id===activeAlbum.id?{...a,photos:[...a.photos,...uploaded]}:a)
+    saveAlbums(updated); setActiveAlbum(updated.find(a=>a.id===activeAlbum.id)); setUploading(false)
   }
+
+  if(activeAlbum) return (
+    <div style={{maxWidth:980,margin:'0 auto',padding:'8px'}}>
+      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
+        <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'6px 12px',
+          display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <span style={{fontSize:12,color:BLUE,cursor:'pointer'}} onClick={()=>setActiveAlbum(null)}>← álbuns</span>
+            <span style={{fontWeight:700,fontSize:14,color:TEXT}}>{activeAlbum.name}</span>
+            <span style={{fontSize:11,color:MUTED}}>({activeAlbum.photos.length} fotos)</span>
+          </div>
+          {isOwn&&<label style={{...btnBl,padding:'3px 12px',fontSize:11,cursor:'pointer'}}>
+            {uploading?'Enviando…':'+ adicionar fotos'}
+            <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={handleUpload}/>
+          </label>}
+        </div>
+        {activeAlbum.photos.length===0
+          ?<div style={{padding:'40px',textAlign:'center',color:MUTED,fontSize:13}}>Nenhuma foto ainda. Clique em "+ adicionar fotos".</div>
+          :<div style={{padding:10,display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:8}}>
+            {activeAlbum.photos.map(p=>(
+              <div key={p.id} style={{borderRadius:2,overflow:'hidden',border:`1px solid ${BRD}`,aspectRatio:'1'}}>
+                <img src={p.url} alt={p.name} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+              </div>
+            ))}
+          </div>}
+      </div>
+    </div>
+  )
 
   return (
     <div style={{maxWidth:980,margin:'0 auto',padding:'8px'}}>
       <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
         <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'6px 12px',
-          display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-          <span style={{fontWeight:700,fontSize:14,color:TEXT}}>
-            fotos de {profile?.name||'…'}
-          </span>
-          {isOwn&&<label style={{fontSize:12,color:BLUE,cursor:'pointer',fontWeight:600}}>
-            {uploading?'Enviando…':'+ adicionar fotos'}
-            <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={handleUpload}/>
-          </label>}
+          fontWeight:700,fontSize:14,color:TEXT}}>
+          álbuns de {profile?.name||'…'}
         </div>
-        {photos.length===0?(
-          <div style={{padding:'40px',textAlign:'center',color:MUTED}}>
-            <div style={{fontSize:32,marginBottom:12}}>🖼️</div>
-            <div style={{fontSize:14,marginBottom:6}}>Nenhuma foto ainda.</div>
-            {isOwn&&<div style={{fontSize:12}}>Clique em "+ adicionar fotos" para começar.</div>}
-          </div>
-        ):(
-          <div style={{padding:12,display:'grid',
-            gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:8}}>
-            {photos.map(p=>(
-              <div key={p.id} style={{borderRadius:3,overflow:'hidden',
-                border:`1px solid ${BRD}`,aspectRatio:'1',background:'#f0f0f0'}}>
-                <img src={p.url} alt={p.name}
-                  style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+        <div style={{padding:'12px 14px'}}>
+          {isOwn&&<div style={{marginBottom:12}}>
+            {creating
+              ?<div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <input autoFocus style={{...inp,width:200}} value={newAlbumName}
+                  onChange={e=>setNewAlbumName(e.target.value)}
+                  onKeyDown={e=>e.key==='Enter'&&createAlbum()} placeholder="Nome do álbum"/>
+                <button style={btnBl} onClick={createAlbum}>criar</button>
+                <button style={btnGh} onClick={()=>setCreating(false)}>cancelar</button>
               </div>
-            ))}
-          </div>
-        )}
+              :<button style={btnBl} onClick={()=>setCreating(true)}>criar álbum</button>}
+          </div>}
+          {albums.length===0
+            ?<div style={{fontSize:13,color:MUTED}}>Nenhum álbum.</div>
+            :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:10}}>
+              {albums.map(a=>(
+                <div key={a.id} style={{cursor:'pointer',border:`1px solid ${BRD}`,
+                  borderRadius:3,overflow:'hidden',background:'#f8f9fc'}} onClick={()=>setActiveAlbum(a)}>
+                  <div style={{aspectRatio:'1',background:'#e8edf8',display:'flex',
+                    alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
+                    {a.photos.length>0
+                      ?<img src={a.photos[0].url} alt={a.name}
+                          style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+                      :<span style={{fontSize:32}}>🖼️</span>}
+                  </div>
+                  <div style={{padding:'6px 8px'}}>
+                    <div style={{fontSize:12,fontWeight:600,color:TEXT,overflow:'hidden',
+                      textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.name}</div>
+                    <div style={{fontSize:10,color:MUTED}}>{a.photos.length} fotos</div>
+                  </div>
+                </div>
+              ))}
+            </div>}
+        </div>
       </div>
     </div>
   )
