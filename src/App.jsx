@@ -53,18 +53,25 @@ function OFadeLogo({ size }){
   )
 }
 
-/* ── orkut.br nav logo — white card, italic Georgia ── */
+/* ── Nav logo — big O fade ── */
 function NavLogo(){
+  const w=22*4.4, h=22, gid='nlg', mid='nlm'
   return (
-    <span style={{ display:'inline-flex', alignItems:'baseline',
-      background:WHITE, borderRadius:3, padding:'2px 8px',
-      boxShadow:'0 1px 2px rgba(0,0,0,.2)', cursor:'pointer' }}>
-      <span style={{ fontFamily:'Georgia,serif', fontStyle:'italic',
-        fontWeight:700, fontSize:20, color:PINK, lineHeight:1 }}>orkut</span>
-      <span style={{ fontFamily:'Georgia,serif', fontStyle:'italic',
-        fontWeight:700, fontSize:12, color:BLUE,
-        alignSelf:'flex-end', marginBottom:2 }}>.br</span>
-    </span>
+    <svg width={w} height={h} viewBox={"0 0 "+w+" "+h}
+      style={{display:'block',overflow:'visible',cursor:'pointer'}} aria-label="">
+      <defs>
+        <linearGradient id={gid} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"   stopColor="#ff0099" stopOpacity="1"/>
+          <stop offset="21%"  stopColor="#ff0099" stopOpacity="1"/>
+          <stop offset="24%"  stopColor="#ff0099" stopOpacity="0.10"/>
+          <stop offset="40%"  stopColor="#ff0099" stopOpacity="0"/>
+        </linearGradient>
+        <mask id={mid}><rect x="0" y="0" width={w} height={h*1.2} fill={"url(#"+gid+")"}/></mask>
+      </defs>
+      <text x="0" y={h*0.88}
+        fontFamily="'Nunito Black','Nunito','Montserrat','Arial Rounded MT Bold',Arial,sans-serif"
+        fontSize={h} fontWeight="900" fill="#ff0099" mask={"url(#"+mid+")"} letterSpacing="-1">Orkut</text>
+    </svg>
   )
 }
 
@@ -213,29 +220,7 @@ function TopNav({ page, setPage, profile, pendingReqs }){
           ))}
         </nav>
         <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:10,fontSize:11,color:WHITE}}>
-          <div style={{position:'relative'}}>
-            <input value={search} onChange={e=>setSearch(e.target.value)}
-              onFocus={()=>search.length>1&&setShow(true)}
-              onBlur={()=>setTimeout(()=>setShow(false),200)}
-              placeholder="buscar pessoas"
-              style={{border:'1px solid rgba(255,255,255,.35)',borderRadius:2,padding:'2px 7px',
-                fontSize:11,background:'rgba(255,255,255,.15)',color:WHITE,outline:'none',
-                width:130,fontFamily:'inherit'}}/>
-            {show&&results.length>0&&(
-              <div style={{position:'absolute',top:'100%',left:0,right:0,background:WHITE,
-                border:`1px solid ${BRD}`,borderRadius:2,zIndex:999,maxHeight:200,
-                overflowY:'auto',marginTop:2,boxShadow:'0 3px 10px rgba(0,0,0,.2)'}}>
-                {results.map(u=>(
-                  <div key={u.id} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',
-                    cursor:'pointer',borderBottom:`1px solid ${BRD}`,background:WHITE}}
-                    onMouseDown={()=>{setPage({name:'userprofile',userId:u.id});setSearch('');setShow(false)}}>
-                    <Av src={u.avatar_url} size={22} name={u.name}/>
-                    <div style={{fontSize:12,color:TEXT}}>{u.name}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+
           <span style={{display:'flex',alignItems:'center',gap:4}}>
             <span style={{display:'inline-block',width:8,height:8,borderRadius:'50%',background:'#4caf50'}}/>
             <span style={{cursor:'pointer'}} onClick={()=>setPage('profile')}>{profile?.name?.split(' ')[0]||'…'}</span>
@@ -318,6 +303,9 @@ function RightSidebar({ myId, setPage }){
 function HomePage({ profile, myId, setPage }){
   const [scrapCount,setScrapCount]=useState(0)
   const [comCount,setComCount]=useState(0)
+  const [fortune,setFortune]=useState('Tenha um ótimo dia!')
+  const [editingFortune,setEditingFortune]=useState(false)
+  const [fortuneDraft,setFortuneDraft]=useState('')
   useEffect(()=>{
     if(!myId)return
     getRecados(myId).then(r=>setScrapCount(r.length))
@@ -381,11 +369,20 @@ function HomePage({ profile, myId, setPage }){
           <div style={{fontWeight:700,fontSize:18,color:TEXT,marginBottom:10}}>
             Bem-vindo(a), {profile?.name?.split(' ')[0]}!
           </div>
-          {/* Status box — pink border */}
+          {/* Status box — pink border, editable */}
           <div style={{display:'flex',alignItems:'center',
             border:`1px solid ${PINK}`,borderRadius:3,
-            padding:'6px 10px',marginBottom:14,background:WHITE}}>
-            <span style={{flex:1,fontSize:13,color:TEXT}}>Tenha um ótimo dia!</span>
+            padding:'6px 10px',marginBottom:14,background:WHITE,cursor:'text'}}
+            onClick={()=>{setFortuneDraft(fortune);setEditingFortune(true)}}>
+            {editingFortune
+              ? <input autoFocus style={{flex:1,border:'none',outline:'none',fontSize:13,
+                  color:TEXT,fontFamily:'inherit',background:'transparent'}}
+                  value={fortuneDraft}
+                  onChange={e=>setFortuneDraft(e.target.value)}
+                  onBlur={()=>{setFortune(fortuneDraft);setEditingFortune(false)}}
+                  onKeyDown={e=>{if(e.key==='Enter'){setFortune(fortuneDraft);setEditingFortune(false)}}}/>
+              : <span style={{flex:1,fontSize:13,color:TEXT}}>{fortune}</span>
+            }
             <span style={{fontSize:18}}>🙂</span>
           </div>
           {/* Icon row — colored, count above, label below */}
@@ -406,7 +403,7 @@ function HomePage({ profile, myId, setPage }){
           <div style={{fontSize:12,color:TEXT,lineHeight:1.9,borderTop:`1px solid ${BRD}`,paddingTop:10}}>
             <div><strong>Visitas ao perfil:</strong> desde hoje: 0</div>
             <div><strong>Visitantes recentes:</strong> —</div>
-            <div><strong>Fortuna do dia:</strong> Tenha um ótimo dia!</div>
+            <div><strong>Fortuna do dia:</strong> {fortune}</div>
           </div>
         </div>
         {/* Friend suggestions — screenshot style: grey square avatars */}
