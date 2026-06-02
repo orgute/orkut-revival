@@ -1115,36 +1115,37 @@ function AdminCleanup({ setToast }){
         await supabase.from('profiles').update({bio:'Olá! Estou de volta :)'}).eq('id',p.id)
       out.push(`✅ Bios: ${(profs||[]).length}`); setLog([...out])
 
-      // Keep deleting in rounds until nothing left to delete
+      // Count before
+      const {count:before}=await supabase.from('communities').select('*',{count:'exact',head:true})
+      out.push(`📦 Total antes: ${before}`); setLog([...out])
+
+      // Strategy: delete ALL communities with 0 members AND members_count=0
+      // Our real seeded communities all have members_count > 0
+      // The bad imported ones all have members_count = 0
       let totalDeleted=0, round=0
       while(true){
         round++
-        // Fetch a batch of communities that have /cNNNN in name
+        // Fetch batch of zero-member communities
         const {data:batch}=await supabase.from('communities')
-          .select('id,name')
-          .or('name.like.%/c%,name.like.%c0%,name.like.%c1%,name.like.%c2%,name.like.%c3%,name.like.%c4%,name.like.%c5%')
+          .select('id,name,members_count')
+          .eq('members_count', 0)
           .limit(500)
 
-        if(!batch||batch.length===0){ out.push(`✅ Nada mais para apagar`); break }
+        if(!batch||batch.length===0) break
 
-        // Filter strictly — must match /cNNNN pattern
-        const toDelete=batch.filter(c=>/\/c\d{3,}/i.test(c.name)||/^c\d{5,}$/.test(c.name.trim()))
-        if(toDelete.length===0){ out.push(`✅ Batch limpo`); break }
-
-        const ids=toDelete.map(c=>c.id)
-        await supabase.from('communities').delete().in('id',ids)
-        totalDeleted+=toDelete.length
-        out.push(`🗑 Round ${round}: apagados ${toDelete.length} (total: ${totalDeleted})`)
+        const ids=batch.map(c=>c.id)
+        const {error}=await supabase.from('communities').delete().in('id',ids)
+        if(error){ out.push(`❌ ${error.message}`); break }
+        totalDeleted+=batch.length
+        out.push(`🗑 Round ${round}: +${batch.length} (total: ${totalDeleted})`)
         setLog([...out])
-
-        // Safety: max 200 rounds = 100k deletions
-        if(round>=200) break
+        if(round>=1000) break  // safety
       }
-      out.push(`✅ Total apagados: ${totalDeleted}`)
+      out.push(`✅ Apagados: ${totalDeleted}`)
 
       // Final count
-      const {count}=await supabase.from('communities').select('*',{count:'exact',head:true})
-      out.push(`🏁 Restantes: ${count}`)
+      const {count:after}=await supabase.from('communities').select('*',{count:'exact',head:true})
+      out.push(`🏁 Restantes: ${after}`)
       setToast('Limpeza concluída!')
     }catch(e){ out.push(`❌ Erro: ${e.message}`) }
     setLog([...out]); setBusy(false)
