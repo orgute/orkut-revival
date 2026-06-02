@@ -1116,35 +1116,43 @@ function AdminCleanup({ setToast }){
       }
       out.push(`✅ Bios corrigidos: ${(profs||[]).length}`)
 
-      // Get all communities
-      const {data:comms}=await supabase.from('communities').select('id,name').limit(5000)
-      out.push(`📦 Total comunidades: ${(comms||[]).length}`)
+      // Get ALL communities (paginate to get everything)
+      let allComms=[], page=0, pageSize=1000
+      while(true){
+        const {data:batch}=await supabase.from('communities')
+          .select('id,name,members_count')
+          .range(page*pageSize,(page+1)*pageSize-1)
+        if(!batch||batch.length===0) break
+        allComms=[...allComms,...batch]
+        if(batch.length<pageSize) break
+        page++
+      }
+      out.push(`📦 Total comunidades: ${allComms.length}`)
 
-      // Find bad ones — pure codes or contain /cXXXX
-      const bad=(comms||[]).filter(c=>/\/c\d+/.test(c.name)||/^c\d{5,}$/.test(c.name.trim()))
-      out.push(`🗑 Para apagar (códigos): ${bad.length}`)
+      // NUCLEAR: delete anything with /cNNNN anywhere in name
+      // OR name is pure code, OR 0 members AND looks like spam
+      const codeRe=/\/c\d{3,}/i           // /c followed by 3+ digits anywhere
+      const pureCode=/^[0-9\s\-\.]*c\d{4,}[^a-zA-ZÀ-ú]*$/i  // mostly code
+      
+      const toDelete=allComms.filter(c=>{
+        const n=c.name
+        if(codeRe.test(n)) return true        // has /cXXXX anywhere
+        if(/^c\d{4,}$/.test(n.trim())) return true  // pure code
+        if(/^\/c\d/.test(n.trim())) return true     // starts with /c
+        return false
+      })
+      out.push(`🗑 Para apagar: ${toDelete.length}`)
+      out.push(`Exemplos: ${toDelete.slice(0,3).map(c=>c.name).join(' | ')}`)
 
-      // Delete in chunks
-      for(let i=0;i<bad.length;i+=50){
-        const ids=bad.slice(i,i+50).map(c=>c.id)
+      for(let i=0;i<toDelete.length;i+=50){
+        const ids=toDelete.slice(i,i+50).map(c=>c.id)
         await supabase.from('communities').delete().in('id',ids)
       }
-      out.push(`✅ Apagados: ${bad.length}`)
-
-      // Fix names with /cXXX suffix but otherwise valid
-      const fixable=(comms||[]).filter(c=>{
-        if(bad.find(b=>b.id===c.id)) return false
-        return c.name.includes('/c')
-      })
-      for(const c of fixable){
-        const fixed=c.name.replace(/\s*\/c\d+/gi,'').trim()
-        if(fixed.length>1) await supabase.from('communities').update({name:fixed}).eq('id',c.id)
-      }
-      out.push(`✅ Nomes corrigidos: ${fixable.length}`)
+      out.push(`✅ Apagados: ${toDelete.length}`)
 
       // Final count
       const {count}=await supabase.from('communities').select('*',{count:'exact',head:true})
-      out.push(`🏁 Comunidades restantes: ${count}`)
+      out.push(`🏁 Restantes: ${count}`)
       setToast('Limpeza concluída!')
     }catch(e){ out.push(`❌ Erro: ${e.message}`) }
     setLog(out); setBusy(false)
