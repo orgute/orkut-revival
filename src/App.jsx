@@ -1202,6 +1202,15 @@ export default function App(){
     else setPage(pg)
   }
 
+  // Ctrl+Shift+A → admin panel
+  useEffect(()=>{
+    const handler=(e)=>{
+      if(e.ctrlKey&&e.shiftKey&&e.key==='A') setPage('__admin')
+    }
+    window.addEventListener('keydown',handler)
+    return()=>window.removeEventListener('keydown',handler)
+  },[])
+
   const renderPage=()=>{
     switch(cur){
       case 'home':        return <HomePage profile={profile} myId={myId} setPage={navTo}/>
@@ -1225,6 +1234,8 @@ export default function App(){
       <footer style={{textAlign:'center',padding:'14px 0 20px',fontSize:11,color:MUTED,
         borderTop:`1px solid ${BRD}`,marginTop:8}}>
         © Recriado com ❤️ · Zero Monetização
+        {' · '}<span style={{opacity:0.01,cursor:'default',userSelect:'none'}}
+          onClick={()=>setPage('__admin')}>·</span>
       </footer>
       <Toast msg={toast} onDone={()=>setToast('')}/>
     </div>
