@@ -2,61 +2,93 @@ const https = require("https")
 const PROJECT = "uakmvwwgtjrwdymfwtrf"
 const KEY     = process.env.SUPABASE_SERVICE_KEY
 
-function mgmt(sql) {
+// ONLY use the REST API — management API rejects service role keys
+function rest(method, path, body) {
   return new Promise((resolve, reject) => {
-    const data = JSON.stringify({ query: sql })
-    const req  = https.request({
-      hostname: "api.supabase.com",
-      path: `/v1/projects/${PROJECT}/database/query`,
-      method: "POST",
-      headers: { "Authorization": `Bearer ${KEY}`, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data) }
-    }, res => { let b=""; res.on("data",d=>b+=d); res.on("end",()=>resolve({status:res.statusCode,body:b})) })
-    req.on("error", reject); req.write(data); req.end()
+    const data = body ? JSON.stringify(body) : null
+    const req = https.request({
+      hostname: `${PROJECT}.supabase.co`,
+      path: `/rest/v1/${path}`, method,
+      headers: {
+        "apikey": KEY, "Authorization": `Bearer ${KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=representation",
+        ...(data ? {"Content-Length": Buffer.byteLength(data)} : {})
+      }
+    }, res => {
+      let b = ""
+      res.on("data", d => b += d)
+      res.on("end", () => resolve({ status: res.statusCode, body: b }))
+    })
+    req.on("error", reject)
+    if (data) req.write(data)
+    req.end()
   })
 }
 
 async function main() {
-  let r
+  console.log("=== Cleanup via REST API only ===\n")
+  console.log(`Key present: ${KEY ? KEY.slice(0,20)+'...' : 'MISSING — set SUPABASE_SERVICE_KEY'}`)
 
-  // ── 1. Fix bio on all profiles ────────────────────────────────────────────
-  r = await mgmt(`UPDATE profiles SET bio = 'Olá! Estou de volta :)' WHERE bio = 'Olá! Estou de volta no Orkut :)'`)
-  console.log(`Bio fix: ${r.status} — ${r.body.slice(0,100)}`)
+  // 1. Count total
+  let r = await rest("GET", "communities?select=count", null)
+  console.log(`Total communities: ${r.status} — ${r.body.slice(0,100)}`)
 
-  // ── 2. Communities — nuclear approach ─────────────────────────────────────
-  // Show exactly what patterns still exist
-  r = await mgmt(`SELECT name FROM communities WHERE name ~ '[/\\\\]?c[0-9]{4,}' LIMIT 20`)
-  console.log(`\nSamples with codes:\n${r.body.slice(0,600)}`)
+  // 2. Find communities with /c codes in name
+  r = await rest("GET", "communities?name=like.*%2Fc*&select=id,name&limit=100", null)
+  console.log(`With /c pattern: ${r.status} — count: ${(JSON.parse(r.body||'[]')).length}`)
 
-  // Delete ANY community where name contains /cNNNN or cNNNN (5+ digits)
-  r = await mgmt(`DELETE FROM communities WHERE name ~ '/c[0-9]{4,}'`)
-  console.log(`\nDeleted /cNNNN entries: ${r.status} — ${r.body.slice(0,80)}`)
+  // 3. Get ALL communities and filter in JS
+  r = await rest("GET", "communities?select=id,name&limit=5000", null)
+  const all = JSON.parse(r.body || "[]")
+  console.log(`Fetched ${all.length} communities`)
 
-  r = await mgmt(`DELETE FROM communities WHERE name ~ '(^|\\s)c[0-9]{5,}($|\\s)'`)
-  console.log(`Deleted standalone cNNNNN entries: ${r.status}`)
+  const BAD_RE    = /\/c\d+/i        // contains /c followed by digits
+  const CODE_RE   = /^c\d{4,}$/i     // pure code like c12345
+  const PREFIX_RE = /^\d+\s/          // starts with "0 " or "1 " etc
 
-  // Strip trailing code patterns like " /c12345" or " c12345" from names
-  r = await mgmt(`UPDATE communities SET name = trim(regexp_replace(name, '[[:space:]]*/c[0-9]+[[:space:]]*', '', 'g'))`)
-  console.log(`Stripped /cNNN from names: ${r.status}`)
+  const toDelete = all.filter(c => BAD_RE.test(c.name) || CODE_RE.test(c.name.trim()))
+  const toFix    = all.filter(c => !BAD_RE.test(c.name) && !CODE_RE.test(c.name.trim()) && PREFIX_RE.test(c.name))
 
-  r = await mgmt(`UPDATE communities SET name = trim(regexp_replace(name, '[[:space:]]+c[0-9]{5,}[[:space:]]*$', ''))`)
-  console.log(`Stripped trailing cNNNNN: ${r.status}`)
+  console.log(`\nTo delete (has /cXXXX or is pure code): ${toDelete.length}`)
+  toDelete.slice(0,10).forEach(c => console.log(`  DEL: "${c.name}"`))
 
-  // Clean up "0 " prefix 
-  r = await mgmt(`UPDATE communities SET name = trim(substring(name from 3)) WHERE name ~ '^0 '`)
-  console.log(`Removed "0 " prefix: ${r.status}`)
+  console.log(`\nTo fix (has "0 " prefix): ${toFix.length}`)
+  toFix.slice(0,5).forEach(c => console.log(`  FIX: "${c.name}"`))
 
-  // Delete anything now empty or too short
-  r = await mgmt(`DELETE FROM communities WHERE length(trim(name)) < 3`)
-  console.log(`Deleted short names: ${r.status}`)
+  // 4. Delete bad ones in batches by ID
+  let deleted = 0
+  for (let i = 0; i < toDelete.length; i += 50) {
+    const batch = toDelete.slice(i, i + 50)
+    const ids   = batch.map(c => c.id).join(",")
+    const res   = await rest("DELETE", `communities?id=in.(${ids})`, null)
+    if (res.status >= 200 && res.status < 300) deleted += batch.length
+    else console.log(`Delete batch error: ${res.status} — ${res.body.slice(0,100)}`)
+  }
+  console.log(`\nDeleted: ${deleted}`)
 
-  // Final check
-  r = await mgmt(`SELECT count(*) FROM communities WHERE name ~ 'c[0-9]{4,}'`)
-  console.log(`\nStill has codes: ${r.body}`)
+  // 5. Fix "0 " prefix by updating each row
+  let fixed = 0
+  for (const c of toFix) {
+    const newName = c.name.replace(/^\d+\s+/, "").trim()
+    if (newName.length < 2) continue
+    const res = await rest("PATCH", `communities?id=eq.${c.id}`, { name: newName })
+    if (res.status >= 200 && res.status < 300) fixed++
+  }
+  console.log(`Fixed prefix: ${fixed}`)
 
-  r = await mgmt(`SELECT count(*) FROM communities`)
-  console.log(`Total: ${r.body}`)
+  // 6. Fix bio on all profiles
+  r = await rest("PATCH", `profiles?bio=eq.Ol%C3%A1!%20Estou%20de%20volta%20no%20Orkut%20%3A)`,
+    { bio: "Olá! Estou de volta :)" })
+  console.log(`\nBio fix: ${r.status} — ${r.body.slice(0,100)}`)
 
-  r = await mgmt(`SELECT name FROM communities ORDER BY members_count DESC LIMIT 8`)
-  console.log(`Top 8:\n${r.body.slice(0,400)}`)
+  // Also try URL-encoded version
+  r = await rest("GET", "profiles?select=name,bio&limit=10", null)
+  console.log(`Profiles bio check: ${r.body.slice(0,300)}`)
+
+  // 7. Final count
+  r = await rest("GET", "communities?select=count", null)
+  console.log(`\nFinal total: ${r.body}`)
 }
-main().catch(e=>{ console.error(e.message); process.exit(1) })
+
+main().catch(e => { console.error("FATAL:", e.message); process.exit(1) })
