@@ -33,22 +33,22 @@ const btnGh= { cursor:'pointer', fontFamily:'inherit', borderRadius:2, fontWeigh
                padding:'4px 10px', fontSize:11 }
 
 /* ── Big O fade logo (auth screen only) ── */
-function OFadeLogo({ size }){
-  size=size||80; const w=size*4.4,h=size
+function OFadeLogo({ size, id }){
+  size=size||80; id=id||'ofl'; const w=size*4.4,h=size,gid=id+'g',mid=id+'m'
   return (
     <svg width={w} height={h} viewBox={"0 0 "+w+" "+h} style={{display:'block',overflow:'visible'}}>
       <defs>
-        <linearGradient id="afg" x1="0%" y1="0%" x2="100%" y2="0%">
+        <linearGradient id={gid} x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%"   stopColor="#ff0099" stopOpacity="1"/>
           <stop offset="21%"  stopColor="#ff0099" stopOpacity="1"/>
           <stop offset="24%"  stopColor="#ff0099" stopOpacity="0.10"/>
           <stop offset="40%"  stopColor="#ff0099" stopOpacity="0"/>
         </linearGradient>
-        <mask id="afm"><rect x="0" y="0" width={w} height={h*1.2} fill="url(#afg)"/></mask>
+        <mask id={mid}><rect x="0" y="0" width={w} height={h*1.2} fill={"url(#"+gid+")"}/></mask>
       </defs>
       <text x="0" y={h*0.88}
         fontFamily="'Nunito Black','Nunito','Montserrat','Arial Rounded MT Bold',Arial,sans-serif"
-        fontSize={h} fontWeight="900" fill="#ff0099" mask="url(#afm)" letterSpacing="-1">Orkut</text>
+        fontSize={h} fontWeight="900" fill="#ff0099" mask={"url(#"+mid+")"} letterSpacing="-1">Orkut</text>
     </svg>
   )
 }
@@ -151,7 +151,11 @@ function AuthScreen({ onAuth }){
               manter perto — como nos velhos tempos.
             </p>
             <div style={{borderTop:`1px solid ${BRD}`,paddingTop:14,fontSize:12,color:MUTED,fontStyle:'italic'}}>
-              🔒 Comunidade por convite.<br/>
+              <svg width="12" height="15" viewBox="0 0 12 15" fill="none" style={{display:'inline',verticalAlign:'middle',marginRight:5}}>
+                <rect x="1" y="6.5" width="10" height="8" rx="1.5" fill="#9aa0b0"/>
+                <path d="M3 6.5V4.5a3 3 0 0 1 6 0v2" stroke="#9aa0b0" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
+                <circle cx="6" cy="11" r="1.2" fill="white"/>
+              </svg> Comunidade por convite.<br/>
               Cada membro pode convidar até 10 pessoas de confiança.
             </div>
           </div>
@@ -165,7 +169,7 @@ function AuthScreen({ onAuth }){
                 ?<div style={{textAlign:'center',fontSize:12,color:TEXT}}>
                     Acesse o{' '}
                     <span style={{display:'inline-block',verticalAlign:'middle',marginBottom:2}}>
-                      <OFadeLogo size={22}/>
+                      <OFadeLogo size={22} id="frm"/>
                     </span>
                     {' '}com a sua conta
                   </div>
@@ -353,7 +357,7 @@ function HomePage({ profile, myId, setPage }){
   // Icon row — colored icons matching screenshot
   const icons=[
     { emoji:'✏️',  color:'#e8700a', label:'scraps',       count:scrapCount, pg:'scrapbook' },
-    { emoji:'🖼️',  color:'#2e7d32', label:'fotos',         count:0,          pg:null },
+    { emoji:'📷',  color:'#555577', label:'fotos',         count:0,          pg:'galeria' },
     { emoji:'🏷️',  color:'#e8700a', label:'fotos de mim',  count:0,          pg:null },
     { emoji:'⭐',  color:'#f5a623', label:'fãs',            count:0,          pg:null },
     { emoji:'✉️',  color:'#757575', label:'mensagens',      count:0,          pg:null },
@@ -423,16 +427,26 @@ function HomePage({ profile, myId, setPage }){
             }
             <span style={{fontSize:18}}>🙂</span>
           </div>
-          {/* Icon row — colored, count above, label below */}
+          {/* Icon row — colored icons */}
           <div style={{display:'flex',justifyContent:'space-around',
             paddingTop:12,borderTop:`1px solid ${BRD}`,marginBottom:12}}>
             {icons.map(({emoji,color,label,count,pg})=>(
               <div key={label} style={{textAlign:'center',cursor:pg?'pointer':'default',minWidth:60}}
                 onClick={()=>pg&&setPage(pg)}>
                 <div style={{fontSize:11,fontWeight:700,color:BLUE,marginBottom:2}}>{count}</div>
-                <div style={{fontSize:24,marginBottom:3}}
-                  dangerouslySetInnerHTML={{__html:
-                    `<span style="color:${color}">${emoji}</span>`}}/>
+                {label==='fotos'
+                  ? <div style={{marginBottom:3,display:'flex',justifyContent:'center'}}>
+                      <svg width="26" height="22" viewBox="0 0 26 22" fill="none">
+                        <rect x="1" y="5" width="24" height="16" rx="2.5" fill="none" stroke="#555577" strokeWidth="1.8"/>
+                        <circle cx="13" cy="13" r="4.5" fill="none" stroke="#555577" strokeWidth="1.8"/>
+                        <circle cx="13" cy="13" r="2" fill="#555577"/>
+                        <path d="M9 5l1.5-3h5L17 5" stroke="#555577" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
+                        <circle cx="21" cy="9" r="1.2" fill="#555577"/>
+                      </svg>
+                    </div>
+                  : <div style={{fontSize:24,marginBottom:3}}
+                      dangerouslySetInnerHTML={{__html:`<span style="color:${color}">${emoji}</span>`}}/>
+                }
                 <div style={{fontSize:11,color:TEXT}}>{label}</div>
               </div>
             ))}
