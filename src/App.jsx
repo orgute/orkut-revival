@@ -1111,51 +1111,43 @@ function AdminCleanup({ setToast }){
       // Fix bio
       const {data:profs}=await supabase.from('profiles')
         .select('id,bio').eq('bio','Olá! Estou de volta no Orkut :)')
-      for(const p of profs||[]){
+      for(const p of profs||[])
         await supabase.from('profiles').update({bio:'Olá! Estou de volta :)'}).eq('id',p.id)
-      }
-      out.push(`✅ Bios corrigidos: ${(profs||[]).length}`)
+      out.push(`✅ Bios: ${(profs||[]).length}`); setLog([...out])
 
-      // Get ALL communities (paginate to get everything)
-      let allComms=[], page=0, pageSize=1000
+      // Keep deleting in rounds until nothing left to delete
+      let totalDeleted=0, round=0
       while(true){
+        round++
+        // Fetch a batch of communities that have /cNNNN in name
         const {data:batch}=await supabase.from('communities')
-          .select('id,name,members_count')
-          .range(page*pageSize,(page+1)*pageSize-1)
-        if(!batch||batch.length===0) break
-        allComms=[...allComms,...batch]
-        if(batch.length<pageSize) break
-        page++
-      }
-      out.push(`📦 Total comunidades: ${allComms.length}`)
+          .select('id,name')
+          .or('name.like.%/c%,name.like.%c0%,name.like.%c1%,name.like.%c2%,name.like.%c3%,name.like.%c4%,name.like.%c5%')
+          .limit(500)
 
-      // NUCLEAR: delete anything with /cNNNN anywhere in name
-      // OR name is pure code, OR 0 members AND looks like spam
-      const codeRe=/\/c\d{3,}/i           // /c followed by 3+ digits anywhere
-      const pureCode=/^[0-9\s\-\.]*c\d{4,}[^a-zA-ZÀ-ú]*$/i  // mostly code
-      
-      const toDelete=allComms.filter(c=>{
-        const n=c.name
-        if(codeRe.test(n)) return true        // has /cXXXX anywhere
-        if(/^c\d{4,}$/.test(n.trim())) return true  // pure code
-        if(/^\/c\d/.test(n.trim())) return true     // starts with /c
-        return false
-      })
-      out.push(`🗑 Para apagar: ${toDelete.length}`)
-      out.push(`Exemplos: ${toDelete.slice(0,3).map(c=>c.name).join(' | ')}`)
+        if(!batch||batch.length===0){ out.push(`✅ Nada mais para apagar`); break }
 
-      for(let i=0;i<toDelete.length;i+=50){
-        const ids=toDelete.slice(i,i+50).map(c=>c.id)
+        // Filter strictly — must match /cNNNN pattern
+        const toDelete=batch.filter(c=>/\/c\d{3,}/i.test(c.name)||/^c\d{5,}$/.test(c.name.trim()))
+        if(toDelete.length===0){ out.push(`✅ Batch limpo`); break }
+
+        const ids=toDelete.map(c=>c.id)
         await supabase.from('communities').delete().in('id',ids)
+        totalDeleted+=toDelete.length
+        out.push(`🗑 Round ${round}: apagados ${toDelete.length} (total: ${totalDeleted})`)
+        setLog([...out])
+
+        // Safety: max 200 rounds = 100k deletions
+        if(round>=200) break
       }
-      out.push(`✅ Apagados: ${toDelete.length}`)
+      out.push(`✅ Total apagados: ${totalDeleted}`)
 
       // Final count
       const {count}=await supabase.from('communities').select('*',{count:'exact',head:true})
       out.push(`🏁 Restantes: ${count}`)
       setToast('Limpeza concluída!')
     }catch(e){ out.push(`❌ Erro: ${e.message}`) }
-    setLog(out); setBusy(false)
+    setLog([...out]); setBusy(false)
   }
 
   return (
