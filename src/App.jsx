@@ -248,7 +248,7 @@ function TopNav({ page, setPage, profile, pendingReqs }){
             <div key={pg} onClick={()=>setPage(pg)} style={{
               display:'inline-flex',alignItems:'center',height:'100%',
               padding:'0 13px',cursor:'pointer',
-              fontFamily:'Arial,sans-serif',fontWeight:700,fontSize:13,
+              fontFamily:'"Helvetica Neue",Helvetica,Arial,sans-serif',fontWeight:900,fontSize:13,
               color:WHITE,userSelect:'none',
               background:cur===pg?'rgba(0,0,0,.28)':'transparent',
               boxShadow:cur===pg?'inset 0 2px 4px rgba(0,0,0,.25)':'none',
@@ -503,6 +503,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
   const [scraps,setScraps]=useState([])
   const [invites,setInvites]=useState([])
   const [showInvites,setShowInvites]=useState(false)
+  const [tab,setTab]=useState('social')
 
   useEffect(()=>{
     if(!targetId)return
@@ -570,85 +571,166 @@ function ProfilePage({ myId, userId, setPage, toast }){
 
       {/* Center */}
       <div>
-        <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,padding:'14px 16px',marginBottom:8}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
-            <h1 style={{fontSize:22,fontWeight:700,color:PINK,margin:0}}>{profile.name}</h1>
-            <div style={{display:'flex',gap:7}}>
-              {isOwn&&<button style={btnBl} onClick={()=>setEditing(!editing)}>{editing?'cancelar':'editar perfil'}</button>}
-              {!isOwn&&<button style={fStatus?.status==='accepted'?btnGh:btnBl} onClick={handleFriend}>
-                {!fStatus?'+ adicionar':fStatus.status==='pending'&&fStatus.requester_id===myId?'pedido enviado':'aceitar'}</button>}
-              {!isOwn&&<button style={btnPk} onClick={()=>setPage({name:'scrapbook',userId:targetId})}>✉ recado</button>}
-            </div>
-          </div>
-          {/* Stats */}
-          <div style={{display:'flex',gap:16,fontSize:12,color:TEXT,marginBottom:10,flexWrap:'wrap'}}>
-            <span>✏️ recados <strong>{scraps.length}</strong></span>
-            <span>🖼️ fotos <strong>0</strong></span>
-            <span>⭐ fãs <strong>0</strong></span>
-          </div>
-          {/* Ratings */}
-          <div style={{display:'flex',gap:14,fontSize:12,color:MUTED,marginBottom:12,alignItems:'center',flexWrap:'wrap'}}>
-            <span>confiável <span style={{fontSize:16}}>😊😊😊</span></span>
-            <span>legal <span style={{color:'#3b5bdb',fontSize:16}}>■■■</span></span>
-            <span>sexy <span style={{color:'#e03131',fontSize:16}}>♥♥♥</span></span>
-          </div>
-          {editing?(
-            <div style={{display:'flex',flexDirection:'column',gap:7}}>
-              {[['nome','name'],['cidade','city'],['país','country'],['gênero','gender'],['relacionamento','rel_status']].map(([l,k])=>(
-                <div key={k} style={{display:'flex',alignItems:'center',gap:10}}>
-                  <div style={{fontSize:11,color:MUTED,minWidth:110}}>{l}</div>
-                  <input style={{...inp,flex:1}} value={draft[k]||''} onChange={e=>setDraft({...draft,[k]:e.target.value})}/>
-                </div>
-              ))}
-              {[['música (vírgula)','musica'],['filmes','filmes']].map(([l,k])=>(
-                <div key={k} style={{display:'flex',alignItems:'center',gap:10}}>
-                  <div style={{fontSize:11,color:MUTED,minWidth:110}}>{l}</div>
-                  <input style={{...inp,flex:1}} value={(draft[k]||[]).join(', ')} onChange={e=>af(k,e.target.value)}/>
-                </div>
-              ))}
-              <button style={{...btnBl,alignSelf:'flex-start',marginTop:4}} onClick={save}>Salvar</button>
-            </div>
-          ):(
-            <div>
-              {profile.bio&&<div style={{fontStyle:'italic',color:MUTED,marginBottom:8,fontSize:13}}>{profile.bio}</div>}
-              {[['relacionamento',profile.rel_status],['país',profile.country],['cidade',profile.city]].map(([l,v])=>v&&(
-                <div key={l} style={{display:'flex',padding:'5px 0',borderTop:`1px solid ${BRD}`,fontSize:13}}>
-                  <div style={{color:MUTED,minWidth:120}}>{l}</div><div>{v}</div>
-                </div>
-              ))}
-              {profile.musica?.length>0&&<div style={{display:'flex',flexWrap:'wrap',padding:'5px 0',borderTop:`1px solid ${BRD}`}}>
-                <div style={{color:MUTED,minWidth:120,fontSize:13,paddingTop:2}}>música</div>
-                <div>{profile.musica.map(t=><span key={t} style={tag}>{t}</span>)}</div>
-              </div>}
-            </div>
-          )}
-        </div>
-        {/* Depoimentos */}
-        <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
-          <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'5px 10px',
-            fontWeight:700,fontSize:13,color:TEXT}}>depoimentos ({deps.length})</div>
-          <div style={{padding:'10px 14px'}}>
-            {deps.map(d=>(
-              <div key={d.id} style={{display:'flex',gap:10,padding:'8px 0',borderBottom:`1px solid ${BRD}`}}>
-                <Av src={d.from.avatar_url} size={32} name={d.from.name} radius="3px"/>
-                <div>
-                  <div style={{fontWeight:700,fontSize:12,color:BLUE,cursor:'pointer',marginBottom:2}}
-                    onClick={()=>setPage({name:'userprofile',userId:d.from.id})}>{d.from.name}:</div>
-                  <div style={{fontSize:13,color:TEXT,lineHeight:1.5}}>{d.text}</div>
-                </div>
+        <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,marginBottom:8,overflow:'hidden'}}>
+          {/* Header: name + buttons */}
+          <div style={{padding:'12px 16px 8px'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
+              <h1 style={{fontSize:20,fontWeight:700,color:PINK,margin:0,textDecoration:'underline',cursor:'default'}}>{profile.name}</h1>
+              <div style={{display:'flex',gap:7}}>
+                {isOwn&&<><button style={btnBl} onClick={()=>setEditing(!editing)}>{editing?'cancelar':'editar perfil'}</button>
+                  <label style={{...btnGh,cursor:'pointer'}}>trocar foto<input type="file" accept="image/*" style={{display:'none'}} onChange={handleAvatar}/></label></>}
+                {!isOwn&&<button style={fStatus?.status==='accepted'?btnGh:btnBl} onClick={handleFriend}>
+                  {!fStatus?'+ adicionar':fStatus.status==='pending'&&fStatus.requester_id===myId?'pedido enviado':'aceitar'}</button>}
+                {!isOwn&&<button style={btnPk} onClick={()=>setPage({name:'scrapbook',userId:targetId})}>✉ recado</button>}
               </div>
+            </div>
+            {/* Stats row */}
+            <div style={{display:'flex',gap:14,fontSize:12,color:TEXT,marginBottom:8,flexWrap:'wrap',alignItems:'center'}}>
+              <span style={{display:'flex',alignItems:'center',gap:4}}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="10" rx="1.5" stroke={MUTED} strokeWidth="1.4" fill="none"/><line x1="1" y1="5" x2="13" y2="5" stroke={MUTED} strokeWidth="1.2"/></svg>
+                recados <strong>{scraps.length}</strong>
+              </span>
+              <span style={{display:'flex',alignItems:'center',gap:4}}>
+                <svg width="14" height="12" viewBox="0 0 14 12" fill="none"><rect x="0.5" y="1" width="13" height="10" rx="1.5" stroke={MUTED} strokeWidth="1.4" fill="none"/><path d="M0.5 8l3.5-3 3 3 2.5-2.5 5 4" stroke={MUTED} strokeWidth="1.2" strokeLinejoin="round" fill="none"/><circle cx="4" cy="4.5" r="1.2" fill="none" stroke={MUTED} strokeWidth="1.2"/></svg>
+                fotos <strong>0</strong>
+              </span>
+              <span style={{display:'flex',alignItems:'center',gap:4}}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5" stroke={MUTED} strokeWidth="1.2" fill="none"/></svg>
+                vídeos <strong>0</strong>
+              </span>
+              <span style={{display:'flex',alignItems:'center',gap:4}}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5" stroke={MUTED} strokeWidth="1.4" fill="none"/></svg>
+                fãs <strong>0</strong>
+              </span>
+            </div>
+            {/* Ratings */}
+            <div style={{display:'flex',gap:14,fontSize:12,color:MUTED,alignItems:'center',flexWrap:'wrap'}}>
+              <span>confiável <span style={{fontSize:15}}>😊😊😊</span></span>
+              <span>legal <span style={{color:'#3b5bdb',fontSize:15}}>■■■</span></span>
+              <span>sexy <span style={{color:'#e03131',fontSize:15}}>♥♥♥</span></span>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div style={{display:'flex',borderTop:`1px solid ${BRD}`,borderBottom:`1px solid ${BRD}`,background:'#f0f4ff'}}>
+            {['social','profissional','depoimentos'].map(t=>(
+              <div key={t} onClick={()=>{setTab(t);setEditing(false)}} style={{
+                padding:'7px 18px',cursor:'pointer',fontSize:12,fontWeight:700,
+                background:tab===t?PINK:'transparent',
+                color:tab===t?WHITE:MUTED,
+                borderRight:`1px solid ${BRD}`,
+              }}>{t}</div>
             ))}
-            {deps.length===0&&<div style={{fontSize:12,color:MUTED}}>Nenhum depoimento ainda.</div>}
-            {!tWrite&&!isOwn&&<button style={{...btnBl,marginTop:8}} onClick={()=>setTWrite(true)}>escrever depoimento</button>}
-            {tWrite&&<div style={{marginTop:8}}>
-              <textarea style={tarea} value={tDraft} onChange={e=>setTDraft(e.target.value)} placeholder="Escreva algo bonito…"/>
-              <div style={{display:'flex',gap:8,marginTop:8}}>
-                <button style={btnBl} onClick={submitDep}>Postar</button>
-                <button style={btnGh} onClick={()=>setTWrite(false)}>Cancelar</button>
-              </div>
+          </div>
+
+          {/* Tab content */}
+          <div style={{padding:'0'}}>
+            {tab==='social'&&(editing
+              ? /* ── EDIT FORM ── */
+                <div style={{padding:'12px 16px',display:'flex',flexDirection:'column',gap:6}}>
+                  {[
+                    ['relacionamento','rel_status'],['aniversário','birthday'],['sexo','gender'],
+                    ['interesses no orkut','interests'],['quem sou eu','bio'],['filhos','children'],
+                    ['etnia','ethnicity'],['humor','humor'],['orientação sexual','orientation'],
+                    ['estilo','style'],['fumo','smoking'],['bebo','drinking'],['animais','pets'],
+                    ['moro com','living_with'],['cidade','city'],['país','country'],
+                    ['cidade natal','hometown'],['página web','website'],['paixões','passions'],
+                    ['esportes','sports'],['atividades','activities'],['fortune','fortune'],
+                  ].map(([l,k])=>(
+                    <div key={k} style={{display:'grid',gridTemplateColumns:'160px 1fr',gap:8,alignItems:'center'}}>
+                      <div style={{fontSize:12,color:MUTED,textAlign:'right'}}>{l}:</div>
+                      <input style={inp} value={draft[k]||''} onChange={e=>setDraft({...draft,[k]:e.target.value})}/>
+                    </div>
+                  ))}
+                  <div style={{display:'flex',gap:8,marginTop:8,paddingLeft:168}}>
+                    <button style={btnBl} onClick={async()=>{
+                      await updateProfile(myId,draft); setProfile(draft); setEditing(false); toast('Perfil atualizado!')
+                    }}>Salvar</button>
+                    <button style={btnGh} onClick={()=>setEditing(false)}>Cancelar</button>
+                  </div>
+                </div>
+              : /* ── SOCIAL VIEW ── */
+                <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                  <tbody>
+                    {[
+                      ['relacionamento','rel_status'],['aniversário','birthday'],['sexo','gender'],
+                      ['interesses no orkut','interests'],['quem sou eu','bio'],['filhos','children'],
+                      ['etnia','ethnicity'],['humor','humor'],['orientação sexual','orientation'],
+                      ['estilo','style'],['fumo','smoking'],['bebo','drinking'],['animais','pets'],
+                      ['moro com','living_with'],['cidade','city'],['país','country'],
+                      ['cidade natal','hometown'],['página web','website'],['paixões','passions'],
+                      ['esportes','sports'],['atividades','activities'],['fortune','fortune'],
+                    ].map(([l,k],i)=>(
+                      <tr key={k} style={{background:i%2===0?'#f8f9fc':WHITE}}>
+                        <td style={{padding:'6px 16px',color:MUTED,width:170,fontWeight:600,textAlign:'right',
+                          borderRight:`1px solid ${BRD}`,whiteSpace:'nowrap'}}>{l}:</td>
+                        <td style={{padding:'6px 16px',color:profile[k]?TEXT:MUTED}}>
+                          {profile[k]||'—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+            )}
+            {tab==='profissional'&&(editing
+              ? <div style={{padding:'12px 16px',display:'flex',flexDirection:'column',gap:6}}>
+                  {[
+                    ['empresa','company'],['cargo','job_title'],['resumo profissional','professional_bio'],
+                    ['experiência','experience'],['formação','education'],['habilidades','skills'],
+                    ['idiomas','languages'],['interesses profissionais','professional_interests'],
+                  ].map(([l,k])=>(
+                    <div key={k} style={{display:'grid',gridTemplateColumns:'160px 1fr',gap:8,alignItems:'center'}}>
+                      <div style={{fontSize:12,color:MUTED,textAlign:'right'}}>{l}:</div>
+                      <input style={inp} value={draft[k]||''} onChange={e=>setDraft({...draft,[k]:e.target.value})}/>
+                    </div>
+                  ))}
+                  <div style={{display:'flex',gap:8,marginTop:8,paddingLeft:168}}>
+                    <button style={btnBl} onClick={async()=>{
+                      await updateProfile(myId,draft); setProfile(draft); setEditing(false); toast('Perfil atualizado!')
+                    }}>Salvar</button>
+                    <button style={btnGh} onClick={()=>setEditing(false)}>Cancelar</button>
+                  </div>
+                </div>
+              : <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                  <tbody>
+                    {[
+                      ['empresa','company'],['cargo','job_title'],['resumo profissional','professional_bio'],
+                      ['experiência','experience'],['formação','education'],['habilidades','skills'],
+                      ['idiomas','languages'],['interesses profissionais','professional_interests'],
+                    ].map(([l,k],i)=>(
+                      <tr key={k} style={{background:i%2===0?'#f8f9fc':WHITE}}>
+                        <td style={{padding:'6px 16px',color:MUTED,width:170,fontWeight:600,textAlign:'right',
+                          borderRight:`1px solid ${BRD}`,whiteSpace:'nowrap'}}>{l}:</td>
+                        <td style={{padding:'6px 16px',color:profile[k]?TEXT:MUTED}}>{profile[k]||'—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+            )}
+            {tab==='depoimentos'&&<div style={{padding:'10px 14px'}}>
+              {deps.map(d=>(
+                <div key={d.id} style={{display:'flex',gap:10,padding:'8px 0',borderBottom:`1px solid ${BRD}`}}>
+                  <Av src={d.from.avatar_url} size={32} name={d.from.name} radius="3px"/>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:12,color:BLUE,cursor:'pointer',marginBottom:2}}
+                      onClick={()=>setPage({name:'userprofile',userId:d.from.id})}>{d.from.name}:</div>
+                    <div style={{fontSize:13,color:TEXT,lineHeight:1.5}}>{d.text}</div>
+                  </div>
+                </div>
+              ))}
+              {deps.length===0&&<div style={{fontSize:12,color:MUTED}}>Nenhum depoimento ainda.</div>}
+              {!tWrite&&!isOwn&&<button style={{...btnBl,marginTop:8}} onClick={()=>setTWrite(true)}>escrever depoimento</button>}
+              {tWrite&&<div style={{marginTop:8}}>
+                <textarea style={tarea} value={tDraft} onChange={e=>setTDraft(e.target.value)} placeholder="Escreva algo bonito…"/>
+                <div style={{display:'flex',gap:8,marginTop:8}}>
+                  <button style={btnBl} onClick={submitDep}>Postar</button>
+                  <button style={btnGh} onClick={()=>setTWrite(false)}>Cancelar</button>
+                </div>
+              </div>}
             </div>}
           </div>
         </div>
+
         {/* Invites panel — own profile only */}
         {isOwn&&<div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
           overflow:'hidden',marginTop:8}}>
