@@ -4,237 +4,199 @@ const http  = require("http")
 const PROJECT = "uakmvwwgtjrwdymfwtrf"
 const KEY     = process.env.SUPABASE_SERVICE_KEY
 
-function mgmtQuery(sql) {
-  return new Promise((resolve, reject) => {
-    const data = JSON.stringify({ query: sql })
-    const req = https.request({
-      hostname: "api.supabase.com",
-      path: `/v1/projects/${PROJECT}/database/query`,
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${KEY}`,
-        "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(data)
-      }
-    }, res => {
-      let b = ""; res.on("data", d => b += d)
-      res.on("end", () => resolve({ status: res.statusCode, body: b }))
-    })
-    req.on("error", reject)
-    req.write(data); req.end()
-  })
-}
+if (!KEY) { console.error("SUPABASE_SERVICE_KEY not set"); process.exit(1) }
+console.log(`Key present: ${KEY.slice(0,20)}...`)
 
-function restInsert(rows) {
+function supaREST(method, path, body) {
   return new Promise((resolve, reject) => {
-    const data = JSON.stringify(rows)
+    const data = body ? JSON.stringify(body) : null
     const req = https.request({
       hostname: `${PROJECT}.supabase.co`,
-      path: "/rest/v1/communities",
-      method: "POST",
+      path: `/rest/v1/${path}`,
+      method,
       headers: {
         "apikey": KEY, "Authorization": `Bearer ${KEY}`,
         "Content-Type": "application/json",
         "Prefer": "resolution=ignore-duplicates,return=minimal",
-        "Content-Length": Buffer.byteLength(data)
+        ...(data ? {"Content-Length": Buffer.byteLength(data)} : {})
       }
     }, res => {
       let b = ""; res.on("data", d => b += d)
       res.on("end", () => resolve({ status: res.statusCode, body: b }))
     })
     req.on("error", reject)
-    req.write(data); req.end()
+    if (data) req.write(data)
+    req.end()
   })
 }
 
-// Follow redirects manually
-function fetchWithRedirects(url, rangeStart, rangeEnd, maxRedirects=5) {
+function fetchURL(url, rangeEnd) {
   return new Promise((resolve, reject) => {
-    function doRequest(url, hops) {
-      if (hops > maxRedirects) return reject(new Error("Too many redirects"))
+    function doReq(url, hops) {
+      if (hops > 8) return reject(new Error("Too many redirects"))
       const mod = url.startsWith("https") ? https : http
       const u = new URL(url)
-      const opts = {
+      const req = mod.request({
         hostname: u.hostname, path: u.pathname + u.search, method: "GET",
         headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)",
-          "Range": `bytes=${rangeStart}-${rangeEnd}`
+          "User-Agent": "ia_downloader/1.0",
+          ...(rangeEnd ? {"Range": `bytes=0-${rangeEnd}`} : {})
         }
-      }
-      const req = mod.request(opts, res => {
-        console.log(`  → ${url.slice(0,80)} [${res.statusCode}]`)
-        if ([301,302,303,307,308].includes(res.statusCode)) {
-          return doRequest(res.headers.location, hops+1)
+      }, res => {
+        console.log(`  ${res.statusCode} ${url.slice(0,80)}`)
+        if ([301,302,303,307,308].includes(res.statusCode) && res.headers.location) {
+          const loc = res.headers.location.startsWith("http") 
+            ? res.headers.location 
+            : `https://${u.hostname}${res.headers.location}`
+          return doReq(loc, hops+1)
         }
-        let chunks = []; let total = 0
-        res.on("data", d => { chunks.push(d); total += d.length })
-        res.on("end", () => resolve({ status: res.statusCode, data: Buffer.concat(chunks).toString("utf8"), total }))
+        const chunks = []
+        res.on("data", d => chunks.push(d))
+        res.on("end", () => resolve({ status: res.statusCode, data: Buffer.concat(chunks).toString("utf8") }))
       })
       req.on("error", reject)
       req.end()
     }
-    doRequest(url, 0)
+    doReq(url, 0)
   })
 }
 
-// Stream entire file line by line, following redirects
-function streamLines(url, onLine, maxLines) {
+function streamFile(url, onLine, maxLines) {
   return new Promise((resolve, reject) => {
-    function doRequest(url, hops) {
-      if (hops > 5) return reject(new Error("Too many redirects"))
+    function doReq(url, hops) {
+      if (hops > 8) return reject(new Error("Too many redirects"))
       const mod = url.startsWith("https") ? https : http
       const u = new URL(url)
-      let lineCount = 0, buffer = "", aborted = false
+      let count = 0, buf = "", done = false
 
       const req = mod.request({
         hostname: u.hostname, path: u.pathname + u.search, method: "GET",
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" }
+        headers: { "User-Agent": "ia_downloader/1.0" }
       }, res => {
-        console.log(`  Streaming from ${u.hostname}${u.pathname.slice(0,50)} [${res.statusCode}]`)
-        if ([301,302,303,307,308].includes(res.statusCode)) {
-          return doRequest(res.headers.location, hops+1)
+        console.log(`  Stream: ${res.statusCode} ${url.slice(0,80)}`)
+        if ([301,302,303,307,308].includes(res.statusCode) && res.headers.location) {
+          const loc = res.headers.location.startsWith("http")
+            ? res.headers.location
+            : `https://${u.hostname}${res.headers.location}`
+          return doReq(loc, hops+1)
         }
         res.on("data", chunk => {
-          if (aborted) return
-          buffer += chunk.toString("utf8")
-          const lines = buffer.split("\n")
-          buffer = lines.pop()
-          for (const line of lines) {
-            if (aborted) break
-            const t = line.trim()
-            if (t) { onLine(t); lineCount++ }
-            if (maxLines && lineCount >= maxLines) {
-              aborted = true; req.destroy(); break
-            }
+          if (done) return
+          buf += chunk.toString("utf8")
+          const lines = buf.split("\n")
+          buf = lines.pop()
+          for (const ln of lines) {
+            if (done) break
+            const t = ln.trim()
+            if (t) { onLine(t); count++ }
+            if (maxLines && count >= maxLines) { done = true; req.destroy(); break }
           }
         })
-        res.on("end", () => resolve(lineCount))
+        res.on("end", () => resolve(count))
         res.on("error", reject)
       })
-      req.on("error", e => { if (aborted) resolve(lineCount); else reject(e) })
+      req.on("error", e => { if (done) resolve(count); else reject(e) })
       req.end()
     }
-    doRequest(url, 0)
+    doReq(url, 0)
   })
 }
 
 async function main() {
   console.log("=== OG Orkut Community Import ===\n")
 
-  const URL = "https://archive.org/download/orkut-community-list/Orkut%20Community%20List.txt"
+  // 1. Test Supabase connectivity
+  console.log("1. Testing Supabase connectivity...")
+  let r = await supaREST("GET", "communities?limit=1&select=count")
+  console.log(`   Supabase: ${r.status} — ${r.body.slice(0,100)}`)
 
-  // Step 1: Peek at first 3KB
-  console.log("Step 1: Peeking at file format (first 3KB)...")
+  // 2. Add column
+  console.log("\n2. Schema prep (via REST RPC not needed — column already attempted)")
+
+  // 3. Peek at archive file
+  const FILE = "https://archive.org/download/orkut-community-list/Orkut%20Community%20List.txt"
+  console.log("\n3. Fetching first 3KB of community list...")
   try {
-    const peek = await fetchWithRedirects(URL, 0, 3000)
-    console.log(`Response: ${peek.status}, bytes: ${peek.total}`)
-    console.log("First 2000 chars:")
-    console.log(peek.data.slice(0, 2000))
-    console.log("\n---\n")
+    const peek = await fetchURL(FILE, 3000)
+    console.log(`   Status: ${peek.status}, length: ${peek.data.length}`)
+    console.log("   --- First 1500 chars ---")
+    console.log(peek.data.slice(0, 1500))
+    console.log("   ---")
   } catch(e) {
-    console.log(`Peek failed: ${e.message}`)
+    console.log(`   Fetch error: ${e.message}`)
   }
 
-  // Step 2: Check communities table
-  console.log("Step 2: Checking communities table...")
-  let r = await mgmtQuery("SELECT count(*) FROM communities")
-  console.log(`Existing: ${r.body}`)
-
-  // Step 3: Add orkut_code column
-  r = await mgmtQuery("ALTER TABLE communities ADD COLUMN IF NOT EXISTS orkut_code text UNIQUE")
-  console.log(`Column add: ${r.status} — ${r.body.slice(0,100)}`)
-
-  // Step 4: Stream and parse
-  console.log("\nStep 3: Streaming communities (up to 200K lines)...")
+  // 4. Stream and parse
+  console.log("\n4. Streaming file...")
   const communities = []
-  let linesSeen = 0
+  let seen = 0
 
-  await streamLines(URL, (line) => {
-    linesSeen++
-    if (linesSeen <= 15) console.log(`  [${linesSeen}] ${line.slice(0,120)}`)
+  try {
+    await streamFile(FILE, line => {
+      seen++
+      if (seen <= 20) console.log(`   [${seen}] ${line.slice(0,100)}`)
 
-    // Parse multiple possible formats
-    let name, code, category, members_count
+      // Detect format from line structure
+      let name = "", code = "", category = "Geral", members_count = 0
+      if (line.includes("\t")) {
+        const p = line.split("\t")
+        code = (p[0]||"").trim(); name = (p[1]||"").trim()
+        category = (p[2]||"Geral").trim(); members_count = parseInt(p[3]||"0")||0
+      } else if (line.includes("|")) {
+        const p = line.split("|")
+        code = (p[0]||"").trim(); name = (p[1]||"").trim()
+        category = (p[2]||"Geral").trim(); members_count = parseInt(p[3]||"0")||0
+      } else if (line.match(/^[a-z]\d{4,}/i)) {
+        // Looks like a code at start: "c00001234 Community Name"
+        const m = line.match(/^([a-z0-9]+)\s+(.+)$/i)
+        if (m) { code = m[1]; name = m[2] }
+        else { name = line }
+      } else {
+        name = line
+      }
 
-    // Tab separated?
-    if (line.includes("\t")) {
-      const p = line.split("\t")
-      ;[code, name, category, members_count] = p
-    }
-    // Pipe separated?
-    else if (line.includes("|")) {
-      const p = line.split("|")
-      ;[code, name, category, members_count] = p
-    }
-    // Comma separated?
-    else if (line.includes(",")) {
-      const p = line.split(",")
-      ;[code, name, category, members_count] = p
-    }
-    // Just a name?
-    else {
-      name = line; code = null; category = "Geral"; members_count = 0
-    }
-
-    name = (name||"").trim()
-    code = (code||"").trim()
-    category = (category||"Geral").trim() || "Geral"
-    members_count = parseInt((members_count||"0").replace(/[^0-9]/g,"")) || 0
-
-    if (name && name.length > 1 && name.length < 300) {
-      communities.push({ name, code: code||null, category, members_count })
-    }
-  }, 200000)
-
-  console.log(`\nLines seen: ${linesSeen}`)
-  console.log(`Communities parsed: ${communities.length}`)
-  console.log("\nSample (first 10):")
-  communities.slice(0,10).forEach(c => console.log(`  ${JSON.stringify(c)}`))
-
-  if (communities.length === 0) {
-    console.log("⚠️ No communities parsed — check format above"); process.exit(0)
+      if (name && name.length > 1 && name.length < 300) {
+        communities.push({ code: code||null, name: name.trim(), category: category||"Geral", members_count })
+      }
+    }, 300000)
+  } catch(e) {
+    console.log(`   Stream error: ${e.message}`)
   }
 
-  // Step 5: Insert in batches
-  console.log(`\nStep 4: Inserting ${communities.length} communities...`)
+  console.log(`\n   Lines: ${seen}, Parsed: ${communities.length}`)
+  if (communities.length === 0) { console.log("⚠️ Nothing parsed — see format above"); process.exit(0) }
 
-  // Map to DB schema, skip duplicates by name
-  const seen = new Set()
+  // 5. Deduplicate + insert
+  console.log(`\n5. Inserting ${communities.length} communities...`)
+  const nameSet = new Set()
   const rows = []
   for (const c of communities) {
-    const key = c.name.toLowerCase().slice(0, 50)
-    if (seen.has(key)) continue
-    seen.add(key)
+    const key = c.name.toLowerCase().slice(0,60)
+    if (nameSet.has(key)) continue
+    nameSet.add(key)
     rows.push({
-      name:          c.name.slice(0, 200),
-      category:      c.category.slice(0, 100) || "Geral",
+      name:          c.name.slice(0,200),
+      category:      (c.category||"Geral").slice(0,100),
       description:   null,
-      seed:          c.code ? c.code.replace(/[^a-z0-9]/gi,"").slice(0,20) : ("s"+rows.length),
-      members_count: c.members_count,
-      orkut_code:    c.code || null,
+      seed:          (c.code||("s"+rows.length)).replace(/[^a-z0-9]/gi,"").slice(0,20)||("s"+rows.length),
+      members_count: c.members_count||0,
     })
   }
 
-  console.log(`Unique communities: ${rows.length}`)
-
-  let inserted = 0, errors = 0
+  console.log(`   Unique: ${rows.length}`)
+  let inserted = 0, errs = 0
   const BATCH = 200
   for (let i = 0; i < rows.length; i += BATCH) {
     const batch = rows.slice(i, i+BATCH)
-    const res = await restInsert(batch)
-    if (res.status >= 200 && res.status < 300) {
-      inserted += batch.length
-    } else {
-      errors++
-      if (errors <= 3) console.log(`  Batch error ${i}: ${res.status} — ${res.body.slice(0,150)}`)
-    }
-    if (i % 10000 === 0 && i > 0) console.log(`  Progress: ${inserted} inserted, ${i} processed`)
+    const res = await supaREST("POST", "communities", batch)
+    if (res.status >= 200 && res.status < 300) inserted += batch.length
+    else { errs++; if (errs<=3) console.log(`   ERR batch ${i}: ${res.status} ${res.body.slice(0,120)}`) }
+    if (i % 20000===0 && i>0) console.log(`   Progress: ${inserted}/${rows.length}`)
   }
 
-  // Final count
-  r = await mgmtQuery("SELECT count(*) FROM communities")
-  console.log(`\n✅ Done! Inserted: ${inserted}, Errors: ${errors}`)
-  console.log(`Total in DB: ${r.body}`)
+  r = await supaREST("GET", "communities?select=count", null)
+  console.log(`\n✅ Done! Inserted: ${inserted}, Errors: ${errs}`)
+  console.log(`   Total in DB: ${r.body}`)
 }
 
-main().catch(e => { console.error("FATAL:", e.message, e.stack); process.exit(1) })
+main().catch(e => { console.error("FATAL:", e.message); process.exit(1) })
