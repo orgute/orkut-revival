@@ -965,6 +965,29 @@ function CommunitiesPage({ myId, toast }){
   )
 }
 
+/* ── ADMIN PAGE ── */
+function AdminPage(){
+  const [log,setLog]=useState([])
+  const [running,setRunning]=useState(false)
+  const run=async()=>{
+    setRunning(true); setLog(['Running…'])
+    try{ const r=await runCleanup(); setLog(r) }
+    catch(e){ setLog(['Error: '+e.message]) }
+    setRunning(false)
+  }
+  return (
+    <div style={{maxWidth:980,margin:'20px auto',padding:'8px'}}>
+      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,padding:20}}>
+        <h2 style={{margin:'0 0 16px',fontSize:16}}>Admin Cleanup</h2>
+        <button style={btnBl} onClick={run} disabled={running}>{running?'Running…':'Run Cleanup'}</button>
+        <div style={{marginTop:14,fontFamily:'monospace',fontSize:12,lineHeight:1.8}}>
+          {log.map((l,i)=><div key={i}>{l}</div>)}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ── GALERIA — albums style matching image 1 ── */
 function GaleriaPage({ myId, profile, isOwn }){
   const [albums,setAlbums]=useState([])
@@ -1104,6 +1127,45 @@ function DepoimentosPage({ myId, setPage }){
   )
 }
 
+/* ── ADMIN: one-time cleanup (runs in browser with real Supabase client) ── */
+async function runCleanup() {
+  const res = []
+
+  // 1. Fix bio
+  const { data: profiles } = await supabase.from('profiles')
+    .select('id,bio').eq('bio','Olá! Estou de volta no Orkut :)')
+  for (const p of profiles||[]) {
+    await supabase.from('profiles').update({bio:'Olá! Estou de volta :)'}).eq('id',p.id)
+    res.push(`Bio fixed: ${p.id}`)
+  }
+
+  // 2. Fetch all communities and find bad ones
+  const { data: comms } = await supabase.from('communities').select('id,name')
+  const BAD = /\/c\d+/i
+  const CODE = /^c\d{4,}$/i
+  const toDelete = (comms||[]).filter(c => BAD.test(c.name) || CODE.test(c.name.trim()))
+  const toStrip  = (comms||[]).filter(c => !BAD.test(c.name) && !CODE.test(c.name.trim()) && BAD.test(c.name))
+
+  res.push(`Communities with /c codes: ${toDelete.length}`)
+
+  // Delete in batches
+  for (let i=0;i<toDelete.length;i+=50) {
+    const ids = toDelete.slice(i,i+50).map(c=>c.id)
+    await supabase.from('communities').delete().in('id',ids)
+  }
+  res.push(`Deleted ${toDelete.length} bad communities`)
+
+  // Fix names that have /cXXX appended
+  const toFix = (comms||[]).filter(c => c.name.includes('/c') && c.name.replace(/\/c\d+/gi,'').trim().length>1)
+  for (const c of toFix) {
+    const fixed = c.name.replace(/\s*\/c\d+/gi,'').trim()
+    await supabase.from('communities').update({name:fixed}).eq('id',c.id)
+  }
+  res.push(`Fixed ${toFix.length} community names`)
+
+  return res
+}
+
 /* ── ROOT ── */
 export default function App(){
   const [session,setSession]=useState(undefined)
@@ -1148,6 +1210,7 @@ export default function App(){
       case 'scrapbook':   return <ScrapbookPage myId={myId} targetUserId={page?.userId||null} setPage={navTo} toast={setToast}/>
       case 'friends':     return <FriendsPage myId={myId} setPage={navTo} toast={setToast}/>
       case 'communities': return <CommunitiesPage myId={myId} toast={setToast}/>
+      case '__admin':     return <AdminPage/>
       case 'galeria':     return <GaleriaPage myId={myId} profile={profile} isOwn={true}/>
       case 'depoimentos': return <DepoimentosPage myId={myId} setPage={navTo}/>
       default:            return <HomePage profile={profile} myId={myId} setPage={navTo}/>
