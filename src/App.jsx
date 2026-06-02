@@ -938,12 +938,8 @@ function CommunitiesPage({ myId, toast }){
               <div key={c.id} style={{display:'flex',gap:10,padding:'10px',
                 border:`1.5px solid ${isJ?BLUE:BRD}`,borderRadius:2,
                 background:isJ?'#f0f4ff':'#f8f9fc',alignItems:'center',
-                cursor:'pointer',position:'relative'}}
+                cursor:'pointer'}}
                 onClick={()=>openCom(c)}>
-                {isJ&&<span style={{position:'absolute',top:5,right:6,fontSize:9,
-                  background:BLUE,color:WHITE,borderRadius:8,padding:'1px 6px',fontWeight:700}}>
-                  membro
-                </span>}
                 <img src={"https://picsum.photos/seed/"+(c.seed||c.id)+"/55/55"} alt=""
                   style={{width:52,height:52,borderRadius:2,objectFit:'cover',
                     border:`1px solid ${BRD}`,flexShrink:0}}/>
@@ -951,93 +947,15 @@ function CommunitiesPage({ myId, toast }){
                   <div style={{fontWeight:700,fontSize:13,color:BLUE,marginBottom:2,
                     overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.name}</div>
                   <div style={{fontSize:10,color:MUTED,marginBottom:5}}>{(c.members_count||0).toLocaleString('pt-BR')} membros</div>
-                  <button style={{...btnBl,padding:'2px 10px',fontSize:11,background:isJ?'#1a5276':BLUE}}
-                    onClick={e=>{e.stopPropagation();openCom(c)}}>
-                    {isJ?'✓ entrar →':'+ participar'}
+                  <button style={{...(isJ?btnBl:btnGh),padding:'2px 10px',fontSize:11}}
+                    onClick={e=>{e.stopPropagation();isJ?openCom(c):toggle(c)}}>
+                    {isJ?'✓ entrar':'+ participar'}
                   </button>
                 </div>
               </div>
             )
           })}
         </div>
-      </div>
-    </div>
-  )
-}
-
-/* ── ADMIN PAGE ── */
-function AdminPage(){
-  const [log,setLog]=useState([])
-  const [running,setRunning]=useState(false)
-
-  const run=async()=>{
-    setRunning(true)
-    const out=[]
-    try{
-      // Fix bio
-      const {data:profs}=await supabase.from('profiles')
-        .select('id,bio').eq('bio','Olá! Estou de volta no Orkut :)')
-      out.push(`Profiles with old bio: ${(profs||[]).length}`)
-      for(const p of profs||[]){
-        await supabase.from('profiles').update({bio:'Olá! Estou de volta :)'}).eq('id',p.id)
-      }
-      out.push('✅ Bio fixed')
-
-      // Fetch all community names
-      const {data:comms,error:ce}=await supabase.from('communities').select('id,name').limit(5000)
-      if(ce) throw new Error(ce.message)
-      out.push(`Total communities: ${(comms||[]).length}`)
-
-      const BAD=/\/c\d+/i
-      const CODE=/^c\d{4,}$/i
-      const toDelete=(comms||[]).filter(c=>BAD.test(c.name)||CODE.test(c.name.trim()))
-      out.push(`To delete (have /cXXX or are pure codes): ${toDelete.length}`)
-
-      // Delete in batches of 50
-      for(let i=0;i<toDelete.length;i+=50){
-        const ids=toDelete.slice(i,i+50).map(c=>c.id)
-        const {error:de}=await supabase.from('communities').delete().in('id',ids)
-        if(de) out.push(`Delete error: ${de.message}`)
-      }
-      out.push(`✅ Deleted ${toDelete.length} bad entries`)
-
-      // Strip /cXXX from names that are otherwise valid
-      const toFix=(comms||[]).filter(c=>{
-        if(toDelete.find(d=>d.id===c.id)) return false
-        return /\/c\d+/i.test(c.name)
-      })
-      out.push(`Names to strip /cXXX from: ${toFix.length}`)
-      for(const c of toFix){
-        const fixed=c.name.replace(/\s*\/c\d+/gi,'').trim()
-        if(fixed.length>1) await supabase.from('communities').update({name:fixed}).eq('id',c.id)
-      }
-      out.push(`✅ Fixed ${toFix.length} names`)
-
-      // Final count
-      const {count}=await supabase.from('communities').select('*',{count:'exact',head:true})
-      out.push(`✅ Done! Communities remaining: ${count}`)
-    }catch(e){
-      out.push(`❌ Error: ${e.message}`)
-    }
-    setLog(out); setRunning(false)
-  }
-
-  return (
-    <div style={{maxWidth:600,margin:'40px auto',padding:'8px'}}>
-      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,padding:24}}>
-        <div style={{fontWeight:700,fontSize:15,color:TEXT,marginBottom:4}}>Admin · Limpeza do banco</div>
-        <div style={{fontSize:12,color:MUTED,marginBottom:16}}>
-          Corrige bios, remove comunidades com códigos /cXXXX
-        </div>
-        <button style={{...btnBl,padding:'8px 20px',fontSize:13}}
-          onClick={run} disabled={running}>
-          {running?'Executando…':'▶ Executar limpeza'}
-        </button>
-        {log.length>0&&<div style={{marginTop:16,background:'#f5f7fc',borderRadius:3,
-          padding:12,fontFamily:'monospace',fontSize:12,lineHeight:1.9,
-          border:`1px solid ${BRD}`}}>
-          {log.map((l,i)=><div key={i} style={{color:l.startsWith('✅')?'#2e7d32':l.startsWith('❌')?'#cc0000':TEXT}}>{l}</div>)}
-        </div>}
       </div>
     </div>
   )
@@ -1182,6 +1100,79 @@ function DepoimentosPage({ myId, setPage }){
   )
 }
 
+/* ── ADMIN CLEANUP (one-time use) ── */
+function AdminCleanup({ setToast }){
+  const [log,setLog]=useState([])
+  const [busy,setBusy]=useState(false)
+
+  const run=async()=>{
+    setBusy(true); const out=[]
+    try{
+      // Fix bio
+      const {data:profs}=await supabase.from('profiles')
+        .select('id,bio').eq('bio','Olá! Estou de volta no Orkut :)')
+      for(const p of profs||[]){
+        await supabase.from('profiles').update({bio:'Olá! Estou de volta :)'}).eq('id',p.id)
+      }
+      out.push(`✅ Bios corrigidos: ${(profs||[]).length}`)
+
+      // Get all communities
+      const {data:comms}=await supabase.from('communities').select('id,name').limit(5000)
+      out.push(`📦 Total comunidades: ${(comms||[]).length}`)
+
+      // Find bad ones — pure codes or contain /cXXXX
+      const bad=(comms||[]).filter(c=>/\/c\d+/.test(c.name)||/^c\d{5,}$/.test(c.name.trim()))
+      out.push(`🗑 Para apagar (códigos): ${bad.length}`)
+
+      // Delete in chunks
+      for(let i=0;i<bad.length;i+=50){
+        const ids=bad.slice(i,i+50).map(c=>c.id)
+        await supabase.from('communities').delete().in('id',ids)
+      }
+      out.push(`✅ Apagados: ${bad.length}`)
+
+      // Fix names with /cXXX suffix but otherwise valid
+      const fixable=(comms||[]).filter(c=>{
+        if(bad.find(b=>b.id===c.id)) return false
+        return c.name.includes('/c')
+      })
+      for(const c of fixable){
+        const fixed=c.name.replace(/\s*\/c\d+/gi,'').trim()
+        if(fixed.length>1) await supabase.from('communities').update({name:fixed}).eq('id',c.id)
+      }
+      out.push(`✅ Nomes corrigidos: ${fixable.length}`)
+
+      // Final count
+      const {count}=await supabase.from('communities').select('*',{count:'exact',head:true})
+      out.push(`🏁 Comunidades restantes: ${count}`)
+      setToast('Limpeza concluída!')
+    }catch(e){ out.push(`❌ Erro: ${e.message}`) }
+    setLog(out); setBusy(false)
+  }
+
+  return (
+    <div style={{maxWidth:500,margin:'60px auto',padding:'0 16px'}}>
+      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,padding:24}}>
+        <div style={{fontWeight:700,fontSize:15,color:TEXT,marginBottom:4}}>🛠 Admin · Limpeza</div>
+        <div style={{fontSize:12,color:MUTED,marginBottom:16,lineHeight:1.6}}>
+          Corrige bios e remove comunidades com códigos /cXXXX.
+        </div>
+        <button style={{...btnBl,padding:'8px 20px'}} onClick={run} disabled={busy}>
+          {busy?'Executando…':'▶ Executar limpeza'}
+        </button>
+        {log.length>0&&<div style={{marginTop:16,background:'#f5f7fc',borderRadius:3,
+          padding:12,fontFamily:'monospace',fontSize:12,lineHeight:2,border:`1px solid ${BRD}`}}>
+          {log.map((l,i)=>(
+            <div key={i} style={{color:l.startsWith('✅')||l.startsWith('🏁')?'#2e7d32':l.startsWith('❌')?'#c0392b':TEXT}}>
+              {l}
+            </div>
+          ))}
+        </div>}
+      </div>
+    </div>
+  )
+}
+
 /* ── ROOT ── */
 export default function App(){
   const [session,setSession]=useState(undefined)
@@ -1193,7 +1184,9 @@ export default function App(){
   useEffect(()=>{
     supabase.auth.getSession().then(({data:{session}})=>setSession(session))
     const {data:{subscription}}=supabase.auth.onAuthStateChange((_,s)=>setSession(s))
-    return()=>subscription.unsubscribe()
+    const onKey=(e)=>{ if(e.ctrlKey&&e.shiftKey&&e.key==='A') setPage('__admin') }
+    window.addEventListener('keydown',onKey)
+    return()=>{ subscription.unsubscribe(); window.removeEventListener('keydown',onKey) }
   },[])
   useEffect(()=>{
     if(!session?.user)return
@@ -1218,15 +1211,6 @@ export default function App(){
     else setPage(pg)
   }
 
-  // Ctrl+Shift+A → admin panel
-  useEffect(()=>{
-    const handler=(e)=>{
-      if(e.ctrlKey&&e.shiftKey&&e.key==='A') setPage('__admin')
-    }
-    window.addEventListener('keydown',handler)
-    return()=>window.removeEventListener('keydown',handler)
-  },[])
-
   const renderPage=()=>{
     switch(cur){
       case 'home':        return <HomePage profile={profile} myId={myId} setPage={navTo}/>
@@ -1235,7 +1219,7 @@ export default function App(){
       case 'scrapbook':   return <ScrapbookPage myId={myId} targetUserId={page?.userId||null} setPage={navTo} toast={setToast}/>
       case 'friends':     return <FriendsPage myId={myId} setPage={navTo} toast={setToast}/>
       case 'communities': return <CommunitiesPage myId={myId} toast={setToast}/>
-      case '__admin':     return <AdminPage/>
+      case '__admin':     return <AdminCleanup setToast={setToast}/>
       case 'galeria':     return <GaleriaPage myId={myId} profile={profile} isOwn={true}/>
       case 'depoimentos': return <DepoimentosPage myId={myId} setPage={navTo}/>
       default:            return <HomePage profile={profile} myId={myId} setPage={navTo}/>
@@ -1250,8 +1234,6 @@ export default function App(){
       <footer style={{textAlign:'center',padding:'14px 0 20px',fontSize:11,color:MUTED,
         borderTop:`1px solid ${BRD}`,marginTop:8}}>
         © Recriado com ❤️ · Zero Monetização
-        {' · '}<span style={{opacity:0.01,cursor:'default',userSelect:'none'}}
-          onClick={()=>setPage('__admin')}>·</span>
       </footer>
       <Toast msg={toast} onDone={()=>setToast('')}/>
     </div>
