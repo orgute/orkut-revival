@@ -9,7 +9,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Delete bad entries
+      - name: Test APIs and fix data
         env:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: node scripts/cleanup-bad-communities.cjs
+        run: node scripts/test-mgmt.cjs
