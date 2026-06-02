@@ -427,24 +427,24 @@ function HomePage({ profile, myId, setPage }){
             }
             <span style={{fontSize:18}}>🙂</span>
           </div>
-          {/* Icon row — colored icons */}
+          {/* Icon row — colored icons, fixed 32px icon height so labels align */}
           <div style={{display:'flex',justifyContent:'space-around',
             paddingTop:12,borderTop:`1px solid ${BRD}`,marginBottom:12}}>
             {icons.map(({emoji,color,label,count,pg})=>(
               <div key={label} style={{textAlign:'center',cursor:pg?'pointer':'default',minWidth:60}}
                 onClick={()=>pg&&setPage(pg)}>
                 <div style={{fontSize:11,fontWeight:700,color:BLUE,marginBottom:2}}>{count}</div>
-                {label==='fotos'
-                  ? <div style={{marginBottom:3,display:'flex',justifyContent:'center'}}>
-                      <svg width="26" height="22" viewBox="0 0 26 22" fill="none">
+                <div style={{height:32,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:3}}>
+                  {label==='fotos'
+                    ? <svg width="26" height="22" viewBox="0 0 26 22" fill="none">
                         <rect x="1" y="2" width="24" height="18" rx="2" fill="none" stroke="#2e7d32" strokeWidth="1.8"/>
                         <path d="M1 14l6-5 5 5 4-4 9 7" stroke="#2e7d32" strokeWidth="1.6" strokeLinejoin="round" fill="none"/>
                         <circle cx="8" cy="7" r="2.2" fill="none" stroke="#2e7d32" strokeWidth="1.6"/>
                       </svg>
-                    </div>
-                  : <div style={{fontSize:24,marginBottom:3}}
-                      dangerouslySetInnerHTML={{__html:`<span style="color:${color}">${emoji}</span>`}}/>
-                }
+                    : <span style={{fontSize:24,color}}
+                        dangerouslySetInnerHTML={{__html:`<span style="color:${color}">${emoji}</span>`}}/>
+                  }
+                </div>
                 <div style={{fontSize:11,color:TEXT}}>{label}</div>
               </div>
             ))}
@@ -936,16 +936,21 @@ function CommunitiesPage({ myId, toast }){
             const isJ=myIds.has(c.id)
             return (
               <div key={c.id} style={{display:'flex',gap:10,padding:'10px',
-                border:`1px solid ${BRD}`,borderRadius:2,background:'#f8f9fc',alignItems:'center'}}>
+                border:`1.5px solid ${isJ?BLUE:BRD}`,borderRadius:2,
+                background:isJ?'#f0f4ff':'#f8f9fc',alignItems:'center',
+                cursor:'pointer'}}
+                onClick={()=>openCom(c)}>
                 <img src={"https://picsum.photos/seed/"+(c.seed||c.id)+"/55/55"} alt=""
-                  style={{width:52,height:52,borderRadius:2,objectFit:'cover',border:`1px solid ${BRD}`,flexShrink:0,cursor:'pointer'}}
-                  onClick={()=>openCom(c)}/>
+                  style={{width:52,height:52,borderRadius:2,objectFit:'cover',
+                    border:`1px solid ${BRD}`,flexShrink:0}}/>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:700,fontSize:13,color:BLUE,cursor:'pointer',marginBottom:2,
-                    overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} onClick={()=>openCom(c)}>{c.name}</div>
+                  <div style={{fontWeight:700,fontSize:13,color:BLUE,marginBottom:2,
+                    overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.name}</div>
                   <div style={{fontSize:10,color:MUTED,marginBottom:5}}>{(c.members_count||0).toLocaleString('pt-BR')} membros</div>
-                  <button style={{...(isJ?btnGh:btnBl),padding:'2px 10px',fontSize:11}}
-                    onClick={()=>isJ?openCom(c):toggle(c)}>{isJ?'entrar →':'participar'}</button>
+                  <button style={{...(isJ?btnBl:btnGh),padding:'2px 10px',fontSize:11}}
+                    onClick={e=>{e.stopPropagation();isJ?openCom(c):toggle(c)}}>
+                    {isJ?'✓ entrar':'+ participar'}
+                  </button>
                 </div>
               </div>
             )

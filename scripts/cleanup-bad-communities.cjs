@@ -9,17 +9,9 @@ function mgmt(sql) {
       hostname: "api.supabase.com",
       path: `/v1/projects/${PROJECT}/database/query`,
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${KEY}`,
-        "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(data)
-      }
-    }, res => {
-      let b = ""; res.on("data", d => b += d)
-      res.on("end", () => resolve({ status: res.statusCode, body: b }))
-    })
-    req.on("error", reject)
-    req.write(data); req.end()
+      headers: { "Authorization": `Bearer ${KEY}`, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data) }
+    }, res => { let b=""; res.on("data",d=>b+=d); res.on("end",()=>resolve({status:res.statusCode,body:b})) })
+    req.on("error", reject); req.write(data); req.end()
   })
 }
 
@@ -27,30 +19,37 @@ async function main() {
   let r = await mgmt("SELECT count(*) FROM communities")
   console.log(`Before: ${r.body}`)
 
-  // Show sample of bad ones to understand pattern
-  r = await mgmt(`SELECT name FROM communities WHERE name ~ '/c[0-9]+$' LIMIT 10`)
-  console.log(`Sample with /cXXX suffix: ${r.body.slice(0,400)}`)
+  // Show samples of what still has codes
+  r = await mgmt(`SELECT name FROM communities WHERE name ~ '/c[0-9]+' OR name ~ ' c[0-9]{4,}' LIMIT 15`)
+  console.log(`Samples with codes still:\n${r.body.slice(0,600)}`)
 
-  // 1. Delete entries where name is ONLY a code: starts with / or pure c+digits
-  r = await mgmt(`DELETE FROM communities WHERE name ~ '^/c[0-9]+$' OR name ~ '^c[0-9]{4,}$'`)
-  console.log(`Deleted pure codes: ${r.status}`)
+  // Step 1: Strip " /cNNNNNN" from anywhere in the name (middle or end)
+  r = await mgmt(`UPDATE communities SET name = trim(regexp_replace(name, '\\s*/c[0-9]+', '', 'g')) WHERE name ~ '/c[0-9]+'`)
+  console.log(`Stripped /cXXX: ${r.status} — ${r.body.slice(0,80)}`)
 
-  // 2. Clean names that have code appended at end: "Real Name /c12345678"
-  r = await mgmt(`UPDATE communities SET name = trim(regexp_replace(name, '\\s*/c[0-9]+\\s*$', '')) WHERE name ~ '/c[0-9]+$'`)
-  console.log(`Cleaned /cXXX suffix from names: ${r.status} — ${r.body.slice(0,100)}`)
+  // Step 2: Strip " cNNNNNN" (space + c + digits) from end
+  r = await mgmt(`UPDATE communities SET name = trim(regexp_replace(name, '\\s+c[0-9]{4,}\\s*$', '')) WHERE name ~ '\\s+c[0-9]{4,}$'`)
+  console.log(`Stripped cXXX suffix: ${r.status}`)
 
-  // 3. Also clean "0 " prefix that appears in some names like "0 Bobby eH..."
+  // Step 3: Delete rows where name is now empty or just a code
+  r = await mgmt(`DELETE FROM communities WHERE trim(name) = '' OR name ~ '^c[0-9]+$' OR name ~ '^/c[0-9]+$' OR length(trim(name)) < 2`)
+  console.log(`Deleted empty/code rows: ${r.status}`)
+
+  // Step 4: Remove "0 " prefix left by earlier bad import
   r = await mgmt(`UPDATE communities SET name = trim(substring(name from 3)) WHERE name ~ '^0 ' AND members_count = 0`)
-  console.log(`Cleaned "0 " prefix: ${r.status}`)
+  console.log(`Removed "0 " prefix: ${r.status}`)
 
-  // 4. Delete any remaining that look like garbage (very short, pure symbols, etc.)
-  r = await mgmt(`DELETE FROM communities WHERE length(trim(name)) < 2`)
-  console.log(`Deleted empty names: ${r.status}`)
+  // Final check — any remaining with codes?
+  r = await mgmt(`SELECT count(*) FROM communities WHERE name ~ '/c[0-9]+'`)
+  console.log(`Still has /c codes: ${r.body}`)
+
+  r = await mgmt(`SELECT count(*) FROM communities WHERE name ~ ' c[0-9]{4,}'`)
+  console.log(`Still has space+c codes: ${r.body}`)
 
   r = await mgmt("SELECT count(*) FROM communities")
-  console.log(`After: ${r.body}`)
+  console.log(`Total after cleanup: ${r.body}`)
 
-  r = await mgmt("SELECT name, members_count FROM communities ORDER BY members_count DESC LIMIT 5")
-  console.log(`Top 5: ${r.body.slice(0,300)}`)
+  r = await mgmt("SELECT name, members_count FROM communities ORDER BY members_count DESC LIMIT 8")
+  console.log(`Top 8:\n${r.body.slice(0,400)}`)
 }
-main().catch(e => { console.error(e.message); process.exit(1) })
+main().catch(e=>{ console.error(e.message); process.exit(1) })
