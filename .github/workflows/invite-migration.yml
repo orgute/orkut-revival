@@ -14,4 +14,4 @@ jobs:
       - name: Check and seed invites
         env:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: node scripts/check-and-seed-invites.js
+        run: node scripts/check-and-seed-invites.cjs

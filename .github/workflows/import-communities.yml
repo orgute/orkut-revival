@@ -9,31 +9,10 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Add orkut_code column if missing
+      - name: Import OG Orkut communities
         env:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: |
-          node -e "
-          const https = require('https')
-          const sql = 'ALTER TABLE communities ADD COLUMN IF NOT EXISTS orkut_code text'
-          const data = JSON.stringify({ query: sql })
-          const req = https.request({
-            hostname: 'api.supabase.com',
-            path: '/v1/projects/uakmvwwgtjrwdymfwtrf/database/query',
-            method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + process.env.SUPABASE_SERVICE_KEY,
-              'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) }
-          }, res => { let b=''; res.on('data',d=>b+=d); res.on('end',()=>console.log('Column:', res.statusCode, b.slice(0,100))) })
-          req.on('error', e => console.log('Error:', e.message))
-          req.write(data); req.end()
-          "
-
-      - name: Import communities
-        env:
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: node scripts/import-communities.js
+        run: node scripts/import-communities.cjs 2>&1
