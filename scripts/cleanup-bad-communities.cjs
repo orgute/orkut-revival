@@ -16,40 +16,47 @@ function mgmt(sql) {
 }
 
 async function main() {
-  let r = await mgmt("SELECT count(*) FROM communities")
-  console.log(`Before: ${r.body}`)
+  let r
 
-  // Show samples of what still has codes
-  r = await mgmt(`SELECT name FROM communities WHERE name ~ '/c[0-9]+' OR name ~ ' c[0-9]{4,}' LIMIT 15`)
-  console.log(`Samples with codes still:\n${r.body.slice(0,600)}`)
+  // ── 1. Fix bio on all profiles ────────────────────────────────────────────
+  r = await mgmt(`UPDATE profiles SET bio = 'Olá! Estou de volta :)' WHERE bio = 'Olá! Estou de volta no Orkut :)'`)
+  console.log(`Bio fix: ${r.status} — ${r.body.slice(0,100)}`)
 
-  // Step 1: Strip " /cNNNNNN" from anywhere in the name (middle or end)
-  r = await mgmt(`UPDATE communities SET name = trim(regexp_replace(name, '\\s*/c[0-9]+', '', 'g')) WHERE name ~ '/c[0-9]+'`)
-  console.log(`Stripped /cXXX: ${r.status} — ${r.body.slice(0,80)}`)
+  // ── 2. Communities — nuclear approach ─────────────────────────────────────
+  // Show exactly what patterns still exist
+  r = await mgmt(`SELECT name FROM communities WHERE name ~ '[/\\\\]?c[0-9]{4,}' LIMIT 20`)
+  console.log(`\nSamples with codes:\n${r.body.slice(0,600)}`)
 
-  // Step 2: Strip " cNNNNNN" (space + c + digits) from end
-  r = await mgmt(`UPDATE communities SET name = trim(regexp_replace(name, '\\s+c[0-9]{4,}\\s*$', '')) WHERE name ~ '\\s+c[0-9]{4,}$'`)
-  console.log(`Stripped cXXX suffix: ${r.status}`)
+  // Delete ANY community where name contains /cNNNN or cNNNN (5+ digits)
+  r = await mgmt(`DELETE FROM communities WHERE name ~ '/c[0-9]{4,}'`)
+  console.log(`\nDeleted /cNNNN entries: ${r.status} — ${r.body.slice(0,80)}`)
 
-  // Step 3: Delete rows where name is now empty or just a code
-  r = await mgmt(`DELETE FROM communities WHERE trim(name) = '' OR name ~ '^c[0-9]+$' OR name ~ '^/c[0-9]+$' OR length(trim(name)) < 2`)
-  console.log(`Deleted empty/code rows: ${r.status}`)
+  r = await mgmt(`DELETE FROM communities WHERE name ~ '(^|\\s)c[0-9]{5,}($|\\s)'`)
+  console.log(`Deleted standalone cNNNNN entries: ${r.status}`)
 
-  // Step 4: Remove "0 " prefix left by earlier bad import
-  r = await mgmt(`UPDATE communities SET name = trim(substring(name from 3)) WHERE name ~ '^0 ' AND members_count = 0`)
+  // Strip trailing code patterns like " /c12345" or " c12345" from names
+  r = await mgmt(`UPDATE communities SET name = trim(regexp_replace(name, '[[:space:]]*/c[0-9]+[[:space:]]*', '', 'g'))`)
+  console.log(`Stripped /cNNN from names: ${r.status}`)
+
+  r = await mgmt(`UPDATE communities SET name = trim(regexp_replace(name, '[[:space:]]+c[0-9]{5,}[[:space:]]*$', ''))`)
+  console.log(`Stripped trailing cNNNNN: ${r.status}`)
+
+  // Clean up "0 " prefix 
+  r = await mgmt(`UPDATE communities SET name = trim(substring(name from 3)) WHERE name ~ '^0 '`)
   console.log(`Removed "0 " prefix: ${r.status}`)
 
-  // Final check — any remaining with codes?
-  r = await mgmt(`SELECT count(*) FROM communities WHERE name ~ '/c[0-9]+'`)
-  console.log(`Still has /c codes: ${r.body}`)
+  // Delete anything now empty or too short
+  r = await mgmt(`DELETE FROM communities WHERE length(trim(name)) < 3`)
+  console.log(`Deleted short names: ${r.status}`)
 
-  r = await mgmt(`SELECT count(*) FROM communities WHERE name ~ ' c[0-9]{4,}'`)
-  console.log(`Still has space+c codes: ${r.body}`)
+  // Final check
+  r = await mgmt(`SELECT count(*) FROM communities WHERE name ~ 'c[0-9]{4,}'`)
+  console.log(`\nStill has codes: ${r.body}`)
 
-  r = await mgmt("SELECT count(*) FROM communities")
-  console.log(`Total after cleanup: ${r.body}`)
+  r = await mgmt(`SELECT count(*) FROM communities`)
+  console.log(`Total: ${r.body}`)
 
-  r = await mgmt("SELECT name, members_count FROM communities ORDER BY members_count DESC LIMIT 8")
+  r = await mgmt(`SELECT name FROM communities ORDER BY members_count DESC LIMIT 8`)
   console.log(`Top 8:\n${r.body.slice(0,400)}`)
 }
 main().catch(e=>{ console.error(e.message); process.exit(1) })

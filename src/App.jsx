@@ -938,8 +938,12 @@ function CommunitiesPage({ myId, toast }){
               <div key={c.id} style={{display:'flex',gap:10,padding:'10px',
                 border:`1.5px solid ${isJ?BLUE:BRD}`,borderRadius:2,
                 background:isJ?'#f0f4ff':'#f8f9fc',alignItems:'center',
-                cursor:'pointer'}}
+                cursor:'pointer',position:'relative'}}
                 onClick={()=>openCom(c)}>
+                {isJ&&<span style={{position:'absolute',top:5,right:6,fontSize:9,
+                  background:BLUE,color:WHITE,borderRadius:8,padding:'1px 6px',fontWeight:700}}>
+                  membro
+                </span>}
                 <img src={"https://picsum.photos/seed/"+(c.seed||c.id)+"/55/55"} alt=""
                   style={{width:52,height:52,borderRadius:2,objectFit:'cover',
                     border:`1px solid ${BRD}`,flexShrink:0}}/>
@@ -947,9 +951,9 @@ function CommunitiesPage({ myId, toast }){
                   <div style={{fontWeight:700,fontSize:13,color:BLUE,marginBottom:2,
                     overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.name}</div>
                   <div style={{fontSize:10,color:MUTED,marginBottom:5}}>{(c.members_count||0).toLocaleString('pt-BR')} membros</div>
-                  <button style={{...(isJ?btnBl:btnGh),padding:'2px 10px',fontSize:11}}
-                    onClick={e=>{e.stopPropagation();isJ?openCom(c):toggle(c)}}>
-                    {isJ?'✓ entrar':'+ participar'}
+                  <button style={{...btnBl,padding:'2px 10px',fontSize:11,background:isJ?'#1a5276':BLUE}}
+                    onClick={e=>{e.stopPropagation();openCom(c)}}>
+                    {isJ?'✓ entrar →':'+ participar'}
                   </button>
                 </div>
               </div>
