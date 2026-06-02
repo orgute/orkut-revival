@@ -325,7 +325,8 @@ function RightSidebar({ myId, setPage }){
           ?<div style={{fontSize:12,color:MUTED}}>Sem comunidades.</div>
           :<div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:4}}>
             {mine.slice(0,8).map(c=>(
-              <div key={c.id} style={{textAlign:'center'}}>
+              <div key={c.id} style={{textAlign:'center',cursor:'pointer'}}
+                onClick={()=>setPage('communities')}>
                 <img src={"https://picsum.photos/seed/"+(c.seed||c.id)+"/40/40"} alt=""
                   style={{width:40,height:40,borderRadius:3,objectFit:'cover',
                     border:`1px solid ${BRD}`,display:'block'}}/>
