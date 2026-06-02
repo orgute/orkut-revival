@@ -247,10 +247,12 @@ function TopNav({ page, setPage, profile, pendingReqs }){
           {links.map(([label,pg])=>(
             <div key={pg} onClick={()=>setPage(pg)} style={{
               display:'inline-flex',alignItems:'center',height:'100%',
-              padding:'0 12px',cursor:'pointer',fontSize:13,fontWeight:cur===pg?600:400,
-              color:cur===pg?WHITE:'rgba(255,255,255,.82)',
-              borderBottom:cur===pg?'2px solid '+WHITE:'2px solid transparent',
-              boxSizing:'border-box',position:'relative',userSelect:'none',
+              padding:'0 13px',cursor:'pointer',
+              fontFamily:'Arial,sans-serif',fontWeight:700,fontSize:13,
+              color:WHITE,userSelect:'none',
+              background:cur===pg?'rgba(0,0,0,.28)':'transparent',
+              boxShadow:cur===pg?'inset 0 2px 4px rgba(0,0,0,.25)':'none',
+              position:'relative',
             }}>
               {label}
               {pg==='friends'&&pendingReqs>0&&(
@@ -326,7 +328,7 @@ function RightSidebar({ myId, setPage }){
           :<div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:4}}>
             {mine.slice(0,8).map(c=>(
               <div key={c.id} style={{textAlign:'center',cursor:'pointer'}}
-                onClick={()=>setPage('communities')}>
+                onClick={()=>setPage({name:'communities',openCommunity:c})}>
                 <img src={"https://picsum.photos/seed/"+(c.seed||c.id)+"/40/40"} alt=""
                   style={{width:40,height:40,borderRadius:3,objectFit:'cover',
                     border:`1px solid ${BRD}`,display:'block'}}/>
@@ -853,7 +855,7 @@ function FriendsPage({ myId, setPage, toast }){
 }
 
 /* ── COMMUNITIES ── */
-function CommunitiesPage({ myId, toast }){
+function CommunitiesPage({ myId, toast, page }){
   const [all,setAll]=useState([])
   const [mine,setMine]=useState([])
   const [search,setSearch]=useState('')
@@ -861,7 +863,18 @@ function CommunitiesPage({ myId, toast }){
   const [posts,setPosts]=useState([])
   const [newPost,setNewPost]=useState('')
 
-  useEffect(()=>{getCommunities().then(setAll);getMyCommunities(myId).then(setMine)},[myId])
+  useEffect(()=>{
+    getCommunities().then(setAll)
+    getMyCommunities(myId).then(setMine)
+  },[myId])
+
+  // Open specific community if passed via page state
+  useEffect(()=>{
+    if(page?.openCommunity){
+      setActive(page.openCommunity)
+      getCommunityPosts(page.openCommunity.id).then(setPosts)
+    }
+  },[page?.openCommunity?.id])
   const myIds=new Set(mine.map(c=>c.id))
   const filtered=all.filter(c=>c.name.toLowerCase().includes(search.toLowerCase()))
 
@@ -1216,7 +1229,7 @@ export default function App(){
       case 'userprofile': return <ProfilePage myId={myId} userId={page.userId} setPage={navTo} toast={setToast}/>
       case 'scrapbook':   return <ScrapbookPage myId={myId} targetUserId={page?.userId||null} setPage={navTo} toast={setToast}/>
       case 'friends':     return <FriendsPage myId={myId} setPage={navTo} toast={setToast}/>
-      case 'communities': return <CommunitiesPage myId={myId} toast={setToast}/>
+      case 'communities': return <CommunitiesPage myId={myId} toast={setToast} page={page}/>
       case '__admin':     return <AdminCleanup setToast={setToast}/>
       case 'galeria':     return <GaleriaPage myId={myId} profile={profile} isOwn={true}/>
       case 'depoimentos': return <DepoimentosPage myId={myId} setPage={navTo}/>
