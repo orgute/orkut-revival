@@ -1115,37 +1115,33 @@ function AdminCleanup({ setToast }){
         await supabase.from('profiles').update({bio:'Olá! Estou de volta :)'}).eq('id',p.id)
       out.push(`✅ Bios: ${(profs||[]).length}`); setLog([...out])
 
-      // Count before
       const {count:before}=await supabase.from('communities').select('*',{count:'exact',head:true})
-      out.push(`📦 Total antes: ${before}`); setLog([...out])
+      out.push(`📦 Antes: ${before}`); setLog([...out])
 
-      // Strategy: delete ALL communities with 0 members AND members_count=0
-      // Our real seeded communities all have members_count > 0
-      // The bad imported ones all have members_count = 0
-      let totalDeleted=0, round=0
-      while(true){
+      // Delete zero-member communities in batches, stop when count stops decreasing
+      let totalDeleted=0, round=0, prevCount=before
+      while(round<600){
         round++
-        // Fetch batch of zero-member communities
-        const {data:batch}=await supabase.from('communities')
-          .select('id,name,members_count')
-          .eq('members_count', 0)
-          .limit(500)
-
-        if(!batch||batch.length===0) break
-
+        const {data:batch,error}=await supabase.from('communities')
+          .select('id').eq('members_count',0).limit(500)
+        if(error||!batch||batch.length===0){
+          out.push(`✅ Nada mais com 0 membros`); setLog([...out]); break
+        }
         const ids=batch.map(c=>c.id)
-        const {error}=await supabase.from('communities').delete().in('id',ids)
-        if(error){ out.push(`❌ ${error.message}`); break }
+        await supabase.from('communities').delete().in('id',ids)
         totalDeleted+=batch.length
-        out.push(`🗑 Round ${round}: +${batch.length} (total: ${totalDeleted})`)
-        setLog([...out])
-        if(round>=1000) break  // safety
+        if(round%10===0||batch.length<500){
+          const {count:cur}=await supabase.from('communities').select('*',{count:'exact',head:true})
+          out.push(`🗑 Round ${round}: total apagados ${totalDeleted}, restantes: ${cur}`)
+          setLog([...out])
+          if(cur===prevCount){ out.push('⛔ Sem progresso, parando'); break }
+          prevCount=cur
+          if(batch.length<500){ out.push('✅ Menos de 500 retornados, deve ter acabado'); break }
+        }
       }
-      out.push(`✅ Apagados: ${totalDeleted}`)
-
-      // Final count
+      out.push(`✅ Apagados total: ${totalDeleted}`)
       const {count:after}=await supabase.from('communities').select('*',{count:'exact',head:true})
-      out.push(`🏁 Restantes: ${after}`)
+      out.push(`🏁 Restantes final: ${after}`)
       setToast('Limpeza concluída!')
     }catch(e){ out.push(`❌ Erro: ${e.message}`) }
     setLog([...out]); setBusy(false)
