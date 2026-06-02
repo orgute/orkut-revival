@@ -437,11 +437,9 @@ function HomePage({ profile, myId, setPage }){
                 {label==='fotos'
                   ? <div style={{marginBottom:3,display:'flex',justifyContent:'center'}}>
                       <svg width="26" height="22" viewBox="0 0 26 22" fill="none">
-                        <rect x="1" y="5" width="24" height="16" rx="2.5" fill="none" stroke="#555577" strokeWidth="1.8"/>
-                        <circle cx="13" cy="13" r="4.5" fill="none" stroke="#555577" strokeWidth="1.8"/>
-                        <circle cx="13" cy="13" r="2" fill="#555577"/>
-                        <path d="M9 5l1.5-3h5L17 5" stroke="#555577" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
-                        <circle cx="21" cy="9" r="1.2" fill="#555577"/>
+                        <rect x="1" y="2" width="24" height="18" rx="2" fill="none" stroke="#2e7d32" strokeWidth="1.8"/>
+                        <path d="M1 14l6-5 5 5 4-4 9 7" stroke="#2e7d32" strokeWidth="1.6" strokeLinejoin="round" fill="none"/>
+                        <circle cx="8" cy="7" r="2.2" fill="none" stroke="#2e7d32" strokeWidth="1.6"/>
                       </svg>
                     </div>
                   : <div style={{fontSize:24,marginBottom:3}}
