@@ -270,7 +270,7 @@ function TopNav({ page, setPage, profile, pendingReqs, newRecados }){
               <div key={pg} onClick={()=>go(pg)} style={{
                 display:'inline-flex',alignItems:'center',height:'100%',
                 padding:'0 13px',cursor:'pointer',
-                fontFamily:'Arial,sans-serif',fontWeight:700,fontSize:13,
+                fontFamily:"'Trebuchet MS','Lucida Grande',sans-serif",fontWeight:700,fontSize:13,
                 color:WHITE,userSelect:'none',
                 background:cur===pg?'rgba(0,0,0,.28)':'transparent',
                 boxShadow:cur===pg?'inset 0 2px 4px rgba(0,0,0,.25)':'none',
@@ -305,8 +305,6 @@ function TopNav({ page, setPage, profile, pendingReqs, newRecados }){
                 minWidth:14,textAlign:'center',
               }}>{newRecados+pendingReqs}</span>}
             </span>
-            <span style={{cursor:'pointer',opacity:.85}} onClick={()=>signOut()}>Sair</span>
-
             {/* Hamburger — mobile only, hidden on desktop via minWidth */}
             <button className="mob-only" onClick={()=>setMenuOpen(o=>!o)} style={{
               background:'transparent',border:'none',color:WHITE,cursor:'pointer',
@@ -721,7 +719,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
     const file=e.target.files[0];if(!file)return
     setUploading(true)
     try{const url=await uploadAvatar(myId,file);await updateProfile(myId,{avatar_url:url});setProfile(p=>({...p,avatar_url:url}));toast('Foto atualizada!')}
-    catch(err){toast('Erro ao enviar')}
+    catch(err){toast('Erro: '+err.message); console.error('Avatar upload error:',err)}
     setUploading(false)
   }
   const handleFriend=async()=>{
@@ -1459,13 +1457,9 @@ function GaleriaPage({ myId, userId, setPage, openAlbumId }){
                     <button style={{...btnGh,flex:1,fontSize:11}} onClick={()=>setCreating(false)}>✕</button>
                   </div>
                 </div>
-                :<div style={{cursor:'pointer',border:`2px dashed ${BRD}`,borderRadius:3,
-                  background:'#f8f9fc',display:'flex',flexDirection:'column',
-                  alignItems:'center',justifyContent:'center',aspectRatio:'1',
-                  color:MUTED,fontSize:12,gap:4}}
-                  onClick={()=>setCreating(true)}>
-                  <span style={{fontSize:24,lineHeight:1}}>+</span>
-                  <span>novo álbum</span>
+                :<div style={{padding:'6px 0'}}>
+                  <button style={{...btnBl,padding:'6px 16px',fontSize:13}}
+                    onClick={()=>setCreating(true)}>+ novo álbum</button>
                 </div>
               )}
               {albums.map(a=>(
