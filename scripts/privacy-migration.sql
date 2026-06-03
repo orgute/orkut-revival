@@ -104,7 +104,7 @@ CREATE POLICY "community_posts_select" ON community_posts
 DROP POLICY IF EXISTS "community_posts_insert" ON community_posts;
 CREATE POLICY "community_posts_insert" ON community_posts
   FOR INSERT WITH CHECK (
-    auth.uid() = user_id AND
+    auth.uid() = author_id AND
     EXISTS (SELECT 1 FROM memberships WHERE community_id = community_posts.community_id AND user_id = auth.uid())
   );
 

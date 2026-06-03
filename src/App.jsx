@@ -655,6 +655,10 @@ function ProfilePage({ myId, userId, setPage, toast }){
     getDepoimentos(targetId).then(setDeps);setTDraft('');setTWrite(false);toast('Enviado!')
   }
   const af=(k,v)=>setDraft(p=>({...p,[k]:v.split(',').map(s=>s.trim()).filter(Boolean)}))
+  const mob=mob2  // must be before any early returns
+  const tag={display:'inline-flex',alignItems:'center',padding:'2px 10px',borderRadius:10,
+    border:`1px solid ${BRD}`,background:'#f0f4ff',fontSize:12,color:MUTED,marginRight:4,marginBottom:4}
+
   if(!profile)return <div style={{padding:20,color:MUTED,textAlign:'center'}}>Carregando…</div>
   // Non-friends see minimal profile
   if(!isOwn&&fStatus?.status!=='accepted'){
@@ -680,10 +684,6 @@ function ProfilePage({ myId, userId, setPage, toast }){
       </div>
     )
   }
-
-  const mob=mob2
-  const tag={display:'inline-flex',alignItems:'center',padding:'2px 10px',borderRadius:10,
-    border:`1px solid ${BRD}`,background:'#f0f4ff',fontSize:12,color:MUTED,marginRight:4,marginBottom:4}
 
   return (
     <div style={{maxWidth:980,margin:'0 auto',padding:'8px',
