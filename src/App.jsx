@@ -324,22 +324,43 @@ function TopNav({ page, setPage, profile, pendingReqs, newRecados }){
       </header>
 
       {/* Mobile dropdown menu */}
-      {menuOpen&&<div style={{position:'fixed',top:40,left:0,right:0,bottom:0,zIndex:199,
-        background:'rgba(0,0,0,.5)'}} onClick={()=>setMenuOpen(false)}>
-        <div style={{background:NAV_BG,display:'flex',flexDirection:'column'}}
+      {menuOpen&&<div style={{position:'fixed',top:0,left:0,right:0,bottom:0,zIndex:300,
+        background:'rgba(0,0,0,.3)'}} onClick={()=>setMenuOpen(false)}>
+        {/* Slide-in panel from right — image 3 style */}
+        <div style={{position:'absolute',top:0,right:0,bottom:0,width:'75%',maxWidth:320,
+          background:WHITE,boxShadow:'-4px 0 20px rgba(0,0,0,.2)',
+          display:'flex',flexDirection:'column'}}
           onClick={e=>e.stopPropagation()}>
+          {/* Header: user + close */}
+          <div style={{padding:'18px 20px',borderBottom:`1px solid ${BRD}`,
+            display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <span style={{width:10,height:10,borderRadius:'50%',background:'#4caf50',display:'inline-block'}}/>
+              <span style={{fontWeight:700,fontSize:15,color:TEXT}}>{profile?.name?.split(' ')[0]||'…'}</span>
+            </div>
+            <span style={{fontSize:20,cursor:'pointer',color:MUTED,lineHeight:1}}
+              onClick={()=>setMenuOpen(false)}>✕</span>
+          </div>
+          {/* Nav links */}
           {links.map(([label,pg])=>(
             <div key={pg} onClick={()=>go(pg)} style={{
-              padding:'14px 20px',fontSize:15,fontWeight:700,fontFamily:'Arial,sans-serif',
-              color:WHITE,borderBottom:'1px solid rgba(255,255,255,.1)',cursor:'pointer',
-              background:cur===pg?'rgba(0,0,0,.3)':'transparent',
+              padding:'16px 20px',fontSize:15,cursor:'pointer',
+              color:cur===pg?BLUE:BLUE,
+              fontWeight:cur===pg?700:400,
+              borderBottom:`1px solid ${BRD}`,
+              background:cur===pg?'#f0f4ff':'transparent',
               display:'flex',justifyContent:'space-between',alignItems:'center',
             }}>
               {label}
               {pg==='friends'&&pendingReqs>0&&<span style={{background:PINK,color:WHITE,
-                borderRadius:10,padding:'1px 7px',fontSize:11,fontWeight:700}}>{pendingReqs}</span>}
+                borderRadius:10,padding:'1px 8px',fontSize:11,fontWeight:700}}>{pendingReqs}</span>}
             </div>
           ))}
+          {/* Logout at bottom */}
+          <div style={{marginTop:'auto',padding:'16px 20px',borderTop:`1px solid ${BRD}`,
+            fontSize:14,color:MUTED,cursor:'pointer'}} onClick={()=>signOut()}>
+            Sair
+          </div>
         </div>
       </div>}
     </>
@@ -508,40 +529,74 @@ function HomePage({ profile, myId, setPage }){
       gridTemplateColumns:mob?'1fr':'210px 1fr 230px',
       gap:8,alignItems:'flex-start'}}>
 
-      {/* LEFT COL — photo + name + status + nav */}
+      {/* LEFT COL — desktop: stacked photo+nav / mobile: side-by-side */}
       <div>
-        <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden',marginBottom:6}}>
-          <div style={{lineHeight:0,borderBottom:`1px solid ${BRD}`,cursor:'pointer'}}
-            onClick={()=>setPage('profile')}>
-            <img src={profile?.avatar_url||("https://api.dicebear.com/9.x/personas/svg?seed="+(profile?.name||'u'))}
-              alt={profile?.name||''}
-              style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block'}}
-              onError={e=>{e.target.src="https://api.dicebear.com/9.x/personas/svg?seed=u"}}/>
+        {mob
+          /* ── MOBILE: photo left, name+links right (image 1 style) ── */
+          ?<div style={{display:'grid',gridTemplateColumns:'110px 1fr',gap:8,marginBottom:8}}>
+            {/* Photo */}
+            <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
+              overflow:'hidden',cursor:'pointer'}} onClick={()=>setPage('profile')}>
+              <img src={profile?.avatar_url||("https://api.dicebear.com/9.x/personas/svg?seed="+(profile?.name||'u'))}
+                alt={profile?.name||''}
+                style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block'}}
+                onError={e=>{e.target.src="https://api.dicebear.com/9.x/personas/svg?seed=u"}}/>
+              <div style={{padding:'5px 8px'}}>
+                <div style={{fontWeight:700,fontSize:13,color:PINK,marginBottom:2}}>{profile?.name||'…'}</div>
+                <div style={{fontSize:11,color:'#4caf50'}}>● disponível</div>
+              </div>
+            </div>
+            {/* Nav links card */}
+            <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
+              <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,
+                padding:'4px 8px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontWeight:700,fontSize:12,color:TEXT}}>perfil</span>
+                <span style={{fontSize:11,color:BLUE,cursor:'pointer'}}
+                  onClick={()=>setPage('profile')}>editar</span>
+              </div>
+              {[['scrapbook','scrapbook'],['fotos','galeria'],['amigos','friends'],
+                ['comunidades','communities'],['depoimentos','depoimentos']].map(([label,pg])=>(
+                <div key={label} onClick={()=>setPage(pg)} style={{
+                  padding:'9px 10px',fontSize:14,cursor:'pointer',
+                  color:BLUE,borderBottom:`1px solid ${BRD}`,
+                }}>{label}</div>
+              ))}
+            </div>
           </div>
-          <div style={{padding:'8px 10px'}}>
-            <div style={{fontWeight:700,fontSize:14,color:PINK,cursor:'pointer',marginBottom:3}}
-              onClick={()=>setPage('profile')}>{profile?.name||'…'}</div>
-            <div style={{fontSize:12,color:'#4caf50'}}>● disponível</div>
-          </div>
-        </div>
-        {/* Nav panel — light blue header, links list */}
-        <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
-          <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,
-            padding:'4px 8px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-            <span style={{fontWeight:700,fontSize:12,color:TEXT}}>perfil</span>
-            <span style={{fontSize:11,color:BLUE,cursor:'pointer',textDecoration:'underline'}}
-              onClick={()=>setPage('profile')}>editar</span>
-          </div>
-          {[['scrapbook','scrapbook'],['fotos','galeria'],['amigos','friends'],
-            ['comunidades','communities'],['depoimentos','depoimentos']].map(([label,pg])=>(
-            <div key={label} onClick={()=>pg&&setPage(pg)} style={{
-              padding:'5px 10px',fontSize:13,
-              cursor:pg?'pointer':'default',
-              color:BLUE,
-              borderBottom:`1px solid ${BRD}`,
-            }}>{label}</div>
-          ))}
-        </div>
+          /* ── DESKTOP: stacked as before ── */
+          :<>
+            <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
+              overflow:'hidden',marginBottom:6}}>
+              <div style={{lineHeight:0,borderBottom:`1px solid ${BRD}`,cursor:'pointer'}}
+                onClick={()=>setPage('profile')}>
+                <img src={profile?.avatar_url||("https://api.dicebear.com/9.x/personas/svg?seed="+(profile?.name||'u'))}
+                  alt={profile?.name||''}
+                  style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block'}}
+                  onError={e=>{e.target.src="https://api.dicebear.com/9.x/personas/svg?seed=u"}}/>
+              </div>
+              <div style={{padding:'8px 10px'}}>
+                <div style={{fontWeight:700,fontSize:14,color:PINK,cursor:'pointer',marginBottom:3}}
+                  onClick={()=>setPage('profile')}>{profile?.name||'…'}</div>
+                <div style={{fontSize:12,color:'#4caf50'}}>● disponível</div>
+              </div>
+            </div>
+            <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
+              <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,
+                padding:'4px 8px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontWeight:700,fontSize:12,color:TEXT}}>perfil</span>
+                <span style={{fontSize:11,color:BLUE,cursor:'pointer',textDecoration:'underline'}}
+                  onClick={()=>setPage('profile')}>editar</span>
+              </div>
+              {[['scrapbook','scrapbook'],['fotos','galeria'],['amigos','friends'],
+                ['comunidades','communities'],['depoimentos','depoimentos']].map(([label,pg])=>(
+                <div key={label} onClick={()=>pg&&setPage(pg)} style={{
+                  padding:'5px 10px',fontSize:13,cursor:pg?'pointer':'default',
+                  color:BLUE,borderBottom:`1px solid ${BRD}`,
+                }}>{label}</div>
+              ))}
+            </div>
+          </>
+        }
       </div>
 
       {/* CENTER — welcome panel */}
