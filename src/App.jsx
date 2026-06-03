@@ -5,7 +5,9 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getDepoimentos, sendDepoimento, getCommunities, getMyCommunities,
   joinCommunity, leaveCommunity, getCommunityPosts, createCommunityPost,
   getMessages, sendMessage, recordVisit, getVisitors, uploadAvatar,
-  searchUsers, validateInviteCode, useInviteCode, getMyInvites, getMemberNumber } from './lib/supabase.js'
+  searchUsers, validateInviteCode, useInviteCode, getMyInvites, getMemberNumber,
+  getSignedUrl, uploadPhoto, getAlbums, createAlbum, deleteAlbum,
+  getAlbumPhotos, addPhotoToAlbum, deletePhoto, getNovidades } from './lib/supabase.js'
 
 /* ── Design tokens matching screenshot exactly ── */
 const NAV_BG  = '#1a2e5a'   // dark navy nav
@@ -389,89 +391,67 @@ function RightSidebar({ myId, setPage }){
   )
 }
 
-/* ── NOVIDADES — chronological feed of friends' recent posts ── */
+/* ── NOVIDADES — friends' recent album uploads (stories-as-albums) ── */
 function Novidades({ myId, setPage }){
   const [items,setItems]=useState([])
   const [loading,setLoading]=useState(true)
+  const [avatars,setAvatars]=useState({})
 
   useEffect(()=>{
-    async function load(){
-      // Get friends
-      const friends = await getFriends(myId)
-      if(!friends.length){ setLoading(false); return }
-      const friendIds = friends.map(f=>f.id)
-
-      // Get recent scraps/recados FROM friends (they posted on someone)
-      const {data:scraps}=await supabase.from('recados')
-        .select('id,text,created_at,from:profiles!from_id(id,name,avatar_url),to:profiles!to_id(id,name)')
-        .in('from_id',friendIds)
-        .order('created_at',{ascending:false})
-        .limit(20)
-
-      // Get recent community posts from friends
-      const {data:cposts}=await supabase.from('community_posts')
-        .select('id,text,created_at,author:profiles!user_id(id,name,avatar_url),community:communities(id,name,seed)')
-        .in('user_id',friendIds)
-        .order('created_at',{ascending:false})
-        .limit(10)
-
-      // Merge and sort
-      const feed=[
-        ...(scraps||[]).map(s=>({...s,type:'scrap'})),
-        ...(cposts||[]).map(p=>({...p,type:'post'})),
-      ].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,15)
-
-      setItems(feed)
+    getNovidades(myId).then(async data=>{
+      setItems(data)
+      // Resolve signed URLs for avatars
+      const urls={}
+      for(const item of data){
+        const path=item.author?.avatar_url
+        if(path&&!urls[path]) urls[path]=await getSignedUrl(path)
+      }
+      setAvatars(urls)
       setLoading(false)
-    }
-    load()
+    })
   },[myId])
 
-  if(loading) return null
-  if(!items.length) return null
+  if(loading||!items.length) return null
+
+  const isRecent=(dateStr)=>Date.now()-new Date(dateStr)<24*3600*1000
 
   return (
     <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
       overflow:'hidden',marginBottom:8}}>
       <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,
         padding:'5px 10px',fontWeight:700,fontSize:12,color:TEXT}}>
-        novidades dos amigos
+        novidades
       </div>
-      <div>
-        {items.map((item,i)=>(
+      {items.map((item,i)=>{
+        const fresh=isRecent(item.created_at)
+        const authorPath=item.author?.avatar_url
+        return (
           <div key={item.id} style={{display:'flex',gap:10,padding:'9px 12px',
-            borderBottom:i<items.length-1?`1px solid ${BRD}`:'none',alignItems:'flex-start'}}>
-            <div style={{cursor:'pointer',flexShrink:0}}
-              onClick={()=>setPage({name:'userprofile',userId:item.type==='scrap'?item.from.id:item.author.id})}>
-              <Av src={item.type==='scrap'?item.from.avatar_url:item.author.avatar_url}
-                size={30} name={item.type==='scrap'?item.from.name:item.author.name} radius="3px"/>
+            borderBottom:i<items.length-1?`1px solid ${BRD}`:'none',alignItems:'center',
+            background:fresh?'#fffef0':'transparent'}}>
+            <div style={{cursor:'pointer',flexShrink:0,position:'relative'}}
+              onClick={()=>setPage({name:'userprofile',userId:item.author.id})}>
+              <Av src={avatars[authorPath]||authorPath} size={32} name={item.author.name} radius="3px"/>
+              {fresh&&<span style={{position:'absolute',top:-3,right:-3,fontSize:9}}>✨</span>}
             </div>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:12,color:TEXT,lineHeight:1.5}}>
-                {item.type==='scrap'
-                  ?<><span style={{fontWeight:700,color:BLUE,cursor:'pointer'}}
-                      onClick={()=>setPage({name:'userprofile',userId:item.from.id})}>{item.from.name}</span>
-                    {' escreveu um recado para '}
-                    <span style={{fontWeight:700,color:BLUE,cursor:'pointer'}}
-                      onClick={()=>setPage({name:'userprofile',userId:item.to.id})}>{item.to.name}</span>
-                  </>
-                  :<><span style={{fontWeight:700,color:BLUE,cursor:'pointer'}}
-                      onClick={()=>setPage({name:'userprofile',userId:item.author.id})}>{item.author.name}</span>
-                    {' postou em '}
-                    <span style={{fontWeight:700,color:BLUE,cursor:'pointer'}}
-                      onClick={()=>setPage({name:'communities',openCommunity:item.community})}>{item.community?.name}</span>
-                  </>
-                }
+                <span style={{fontWeight:700,color:BLUE,cursor:'pointer'}}
+                  onClick={()=>setPage({name:'userprofile',userId:item.author.id})}>{item.author.name}</span>
+                {' adicionou '}<strong>{item.count}</strong>{' foto'}{item.count!==1?'s':''}{' ao álbum '}
+                <span style={{fontWeight:700,color:BLUE,cursor:'pointer'}}
+                  onClick={()=>setPage({name:'galeria',userId:item.author.id,albumId:item.album.id})}>
+                  {item.album.name}
+                </span>
               </div>
-              <div style={{fontSize:12,color:MUTED,marginTop:2,overflow:'hidden',
-                textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.text}</div>
               <div style={{fontSize:10,color:MUTED,marginTop:2}}>
                 {new Date(item.created_at).toLocaleDateString('pt-BR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+                {fresh&&<span style={{color:'#b8860b',marginLeft:6,fontWeight:600}}>novo</span>}
               </div>
             </div>
           </div>
-        ))}
-      </div>
+        )
+      })}
     </div>
   )
 }
@@ -676,6 +656,30 @@ function ProfilePage({ myId, userId, setPage, toast }){
   }
   const af=(k,v)=>setDraft(p=>({...p,[k]:v.split(',').map(s=>s.trim()).filter(Boolean)}))
   if(!profile)return <div style={{padding:20,color:MUTED,textAlign:'center'}}>Carregando…</div>
+  // Non-friends see minimal profile
+  if(!isOwn&&fStatus?.status!=='accepted'){
+    return (
+      <div style={{maxWidth:980,margin:'0 auto',padding:'8px',
+        display:'grid',gridTemplateColumns:mob?'1fr':'210px 1fr 230px',gap:8}}>
+        <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
+          <div style={{lineHeight:0}}><img src={profile.avatar_url||("https://api.dicebear.com/9.x/personas/svg?seed="+profile.name)}
+            alt={profile.name} style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block'}}/></div>
+          <div style={{padding:'8px 10px'}}>
+            <div style={{fontWeight:700,fontSize:14,color:PINK}}>{profile.name}</div>
+          </div>
+        </div>
+        <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,padding:20,textAlign:'center'}}>
+          <div style={{fontWeight:700,fontSize:16,color:TEXT,marginBottom:8}}>{profile.name}</div>
+          <div style={{fontSize:13,color:MUTED,marginBottom:16,lineHeight:1.6}}>
+            Este perfil é privado.<br/>Adicione como amigo para ver fotos, recados e mais.
+          </div>
+          <button style={{...btnBl,padding:'8px 20px'}} onClick={handleFriend}>
+            {!fStatus?'+ Adicionar amigo':fStatus.status==='pending'&&fStatus.requester_id===myId?'Pedido enviado…':'Aceitar pedido'}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   const mob=mob2
   const tag={display:'inline-flex',alignItems:'center',padding:'2px 10px',borderRadius:10,
@@ -1209,39 +1213,69 @@ function CommunitiesPage({ myId, toast, page }){
   )
 }
 
-/* ── GALERIA — albums style matching image 1 ── */
-function GaleriaPage({ myId, profile, isOwn }){
+/* ── GALERIA — private albums backed by Supabase ── */
+function GaleriaPage({ myId, userId, setPage, openAlbumId }){
+  const isOwn=!userId||userId===myId
+  const targetId=userId||myId
   const [albums,setAlbums]=useState([])
   const [activeAlbum,setActiveAlbum]=useState(null)
+  const [photos,setPhotos]=useState([])
+  const [signedPhotos,setSignedPhotos]=useState({})
   const [uploading,setUploading]=useState(false)
-  const [newAlbumName,setNewAlbumName]=useState('')
   const [creating,setCreating]=useState(false)
+  const [newName,setNewName]=useState('')
+  const [loading,setLoading]=useState(true)
 
-  const storageKey='albums_'+myId
+  const loadAlbums=()=>getAlbums(targetId).then(a=>{setAlbums(a);setLoading(false)})
+  useEffect(()=>{loadAlbums()},[targetId])
+
+  // Open specific album if passed via navigation
   useEffect(()=>{
-    try{ setAlbums(JSON.parse(localStorage.getItem(storageKey)||'[]')) }catch(e){}
-  },[myId])
-  const saveAlbums=(a)=>{ setAlbums(a); localStorage.setItem(storageKey,JSON.stringify(a)) }
+    if(openAlbumId&&albums.length){
+      const a=albums.find(x=>x.id===openAlbumId)
+      if(a) openAlbum(a)
+    }
+  },[openAlbumId,albums.length])
 
-  const createAlbum=()=>{
-    if(!newAlbumName.trim())return
-    const a={id:Date.now(),name:newAlbumName.trim(),photos:[],created:new Date().toISOString()}
-    saveAlbums([...albums,a]); setNewAlbumName(''); setCreating(false); setActiveAlbum(a)
+  const openAlbum=async(album)=>{
+    setActiveAlbum(album)
+    const ps=await getAlbumPhotos(album.id)
+    setPhotos(ps)
+    // Get signed URLs for all photos
+    const urls={}
+    for(const p of ps){
+      urls[p.id]=await getSignedUrl(p.storage_path)
+    }
+    setSignedPhotos(urls)
+  }
+
+  const handleCreate=async()=>{
+    if(!newName.trim())return
+    const album=await createAlbum(myId,newName.trim())
+    setNewName('');setCreating(false)
+    await loadAlbums()
+    openAlbum(album)
   }
 
   const handleUpload=async(e)=>{
-    const files=[...e.target.files]; if(!files.length||!activeAlbum)return
+    const files=[...e.target.files];if(!files.length||!activeAlbum)return
     setUploading(true)
-    const uploaded=[]
     for(const file of files){
-      const reader=new FileReader()
-      const dataUrl=await new Promise(res=>{reader.onload=e=>res(e.target.result);reader.readAsDataURL(file)})
-      uploaded.push({id:Date.now()+Math.random(),url:dataUrl,name:file.name})
+      const path=await uploadPhoto(myId,file)
+      await addPhotoToAlbum(myId,activeAlbum.id,path,'')
     }
-    const updated=albums.map(a=>a.id===activeAlbum.id?{...a,photos:[...a.photos,...uploaded]}:a)
-    saveAlbums(updated); setActiveAlbum(updated.find(a=>a.id===activeAlbum.id)); setUploading(false)
+    await openAlbum(activeAlbum)
+    await loadAlbums()
+    setUploading(false)
   }
 
+  const handleDeletePhoto=async(photoId,storagePath)=>{
+    await deletePhoto(photoId)
+    await supabase.storage.from('avatars').remove([storagePath])
+    setPhotos(p=>p.filter(x=>x.id!==photoId))
+  }
+
+  // ── Album detail view ───────────────────────────────────────
   if(activeAlbum) return (
     <div style={{maxWidth:980,margin:'0 auto',padding:'8px'}}>
       <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
@@ -1250,19 +1284,32 @@ function GaleriaPage({ myId, profile, isOwn }){
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             <span style={{fontSize:12,color:BLUE,cursor:'pointer'}} onClick={()=>setActiveAlbum(null)}>← álbuns</span>
             <span style={{fontWeight:700,fontSize:14,color:TEXT}}>{activeAlbum.name}</span>
-            <span style={{fontSize:11,color:MUTED}}>({activeAlbum.photos.length} fotos)</span>
+            <span style={{fontSize:11,color:MUTED}}>({photos.length} fotos)</span>
           </div>
           {isOwn&&<label style={{...btnBl,padding:'3px 12px',fontSize:11,cursor:'pointer'}}>
             {uploading?'Enviando…':'+ adicionar fotos'}
-            <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={handleUpload}/>
+            <input type="file" accept="image/*,video/*" multiple style={{display:'none'}} onChange={handleUpload}/>
           </label>}
         </div>
-        {activeAlbum.photos.length===0
-          ?<div style={{padding:'40px',textAlign:'center',color:MUTED,fontSize:13}}>Nenhuma foto ainda. Clique em "+ adicionar fotos".</div>
-          :<div style={{padding:10,display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:8}}>
-            {activeAlbum.photos.map(p=>(
-              <div key={p.id} style={{borderRadius:2,overflow:'hidden',border:`1px solid ${BRD}`,aspectRatio:'1'}}>
-                <img src={p.url} alt={p.name} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+        {photos.length===0
+          ?<div style={{padding:'40px',textAlign:'center',color:MUTED,fontSize:13}}>
+            {isOwn?'Nenhuma foto ainda. Clique em "+ adicionar fotos".':'Nenhuma foto neste álbum.'}
+          </div>
+          :<div style={{padding:10,display:'grid',
+            gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:8}}>
+            {photos.map(p=>(
+              <div key={p.id} style={{position:'relative',borderRadius:2,overflow:'hidden',
+                border:`1px solid ${BRD}`,aspectRatio:'1',background:'#f0f0f0'}}>
+                {signedPhotos[p.id]
+                  ?<img src={signedPhotos[p.id]} alt=""
+                      style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+                  :<div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',
+                      justifyContent:'center',color:MUTED,fontSize:11}}>…</div>
+                }
+                {isOwn&&<button onClick={()=>handleDeletePhoto(p.id,p.storage_path)}
+                  style={{position:'absolute',top:4,right:4,background:'rgba(0,0,0,.5)',
+                    color:WHITE,border:'none',borderRadius:2,cursor:'pointer',
+                    fontSize:10,padding:'2px 5px'}}>✕</button>}
               </div>
             ))}
           </div>}
@@ -1270,42 +1317,44 @@ function GaleriaPage({ myId, profile, isOwn }){
     </div>
   )
 
+  // ── Album list ──────────────────────────────────────────────
   return (
     <div style={{maxWidth:980,margin:'0 auto',padding:'8px'}}>
       <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
         <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'6px 12px',
           fontWeight:700,fontSize:14,color:TEXT}}>
-          álbuns de {profile?.name||'…'}
+          álbuns de {isOwn?'mim':targetId}
         </div>
         <div style={{padding:'12px 14px'}}>
           {isOwn&&<div style={{marginBottom:12}}>
             {creating
               ?<div style={{display:'flex',gap:8,alignItems:'center'}}>
-                <input autoFocus style={{...inp,width:200}} value={newAlbumName}
-                  onChange={e=>setNewAlbumName(e.target.value)}
-                  onKeyDown={e=>e.key==='Enter'&&createAlbum()} placeholder="Nome do álbum"/>
-                <button style={btnBl} onClick={createAlbum}>criar</button>
+                <input autoFocus style={{...inp,width:200}} value={newName}
+                  onChange={e=>setNewName(e.target.value)}
+                  onKeyDown={e=>e.key==='Enter'&&handleCreate()} placeholder="Nome do álbum"/>
+                <button style={btnBl} onClick={handleCreate}>criar</button>
                 <button style={btnGh} onClick={()=>setCreating(false)}>cancelar</button>
               </div>
               :<button style={btnBl} onClick={()=>setCreating(true)}>criar álbum</button>}
           </div>}
-          {albums.length===0
-            ?<div style={{fontSize:13,color:MUTED}}>Nenhum álbum.</div>
+          {loading?<div style={{color:MUTED,fontSize:13}}>Carregando…</div>
+          :albums.length===0
+            ?<div style={{fontSize:13,color:MUTED}}>Nenhum álbum ainda.</div>
             :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:10}}>
               {albums.map(a=>(
                 <div key={a.id} style={{cursor:'pointer',border:`1px solid ${BRD}`,
-                  borderRadius:3,overflow:'hidden',background:'#f8f9fc'}} onClick={()=>setActiveAlbum(a)}>
+                  borderRadius:3,overflow:'hidden',background:'#f8f9fc'}}
+                  onClick={()=>openAlbum(a)}>
                   <div style={{aspectRatio:'1',background:'#e8edf8',display:'flex',
-                    alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
-                    {a.photos.length>0
-                      ?<img src={a.photos[0].url} alt={a.name}
-                          style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
-                      :<span style={{fontSize:32}}>🖼️</span>}
+                    alignItems:'center',justifyContent:'center',fontSize:32}}>
+                    🖼️
                   </div>
                   <div style={{padding:'6px 8px'}}>
                     <div style={{fontSize:12,fontWeight:600,color:TEXT,overflow:'hidden',
                       textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.name}</div>
-                    <div style={{fontSize:10,color:MUTED}}>{a.photos.length} fotos</div>
+                    <div style={{fontSize:10,color:MUTED}}>
+                      {a.photo_count?.[0]?.count||0} fotos
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1465,7 +1514,7 @@ export default function App(){
       case 'friends':     return <FriendsPage myId={myId} setPage={navTo} toast={setToast}/>
       case 'communities': return <CommunitiesPage myId={myId} toast={setToast} page={page}/>
       case '__admin':     return <AdminCleanup setToast={setToast}/>
-      case 'galeria':     return <GaleriaPage myId={myId} profile={profile} isOwn={true}/>
+      case 'galeria':     return <GaleriaPage myId={myId} userId={page?.userId||null} setPage={navTo} openAlbumId={page?.albumId||null}/>
       case 'depoimentos': return <DepoimentosPage myId={myId} setPage={navTo}/>
       default:            return <HomePage profile={profile} myId={myId} setPage={navTo}/>
     }

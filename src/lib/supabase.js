@@ -233,3 +233,103 @@ export async function getMemberNumber(userId) {
   const idx = data.findIndex(p => p.id === userId)
   return idx >= 0 ? idx + 1 : null
 }
+
+/* ── Private storage — signed URLs ─────────────────────────── */
+export async function getSignedUrl(path) {
+  if (!path) return null
+  // Already a full URL (old public avatars) — return as-is for backward compat
+  if (path.startsWith('http')) return path
+  const { data } = await supabase.storage
+    .from('avatars')
+    .createSignedUrl(path, 3600) // 1 hour
+  return data?.signedUrl || null
+}
+
+export async function uploadPhoto(userId, file) {
+  const ext = file.name.split('.').pop().toLowerCase()
+  const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+  const { error } = await supabase.storage
+    .from('avatars')
+    .upload(path, file, { upsert: false, contentType: file.type })
+  if (error) throw error
+  return path  // return storage path, not URL
+}
+
+/* ── Albums ──────────────────────────────────────────────────── */
+export async function getAlbums(userId) {
+  const { data } = await supabase
+    .from('albums')
+    .select('id, name, created_at, photo_count:album_photos(count)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+  return data || []
+}
+
+export async function createAlbum(userId, name) {
+  const { data, error } = await supabase
+    .from('albums')
+    .insert({ user_id: userId, name })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteAlbum(albumId) {
+  await supabase.from('albums').delete().eq('id', albumId)
+}
+
+export async function getAlbumPhotos(albumId) {
+  const { data } = await supabase
+    .from('album_photos')
+    .select('id, storage_path, caption, created_at')
+    .eq('album_id', albumId)
+    .order('created_at', { ascending: false })
+  return data || []
+}
+
+export async function addPhotoToAlbum(userId, albumId, storagePath, caption) {
+  const { data, error } = await supabase
+    .from('album_photos')
+    .insert({ user_id: userId, album_id: albumId, storage_path: storagePath, caption })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deletePhoto(photoId) {
+  await supabase.from('album_photos').delete().eq('id', photoId)
+}
+
+/* ── Novidades (friends' recent album activity) ─────────────── */
+export async function getNovidades(userId) {
+  const friends = await getFriends(userId)
+  if (!friends.length) return []
+  const friendIds = friends.map(f => f.id)
+
+  // Recent album photos from friends (last 7 days)
+  const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
+  const { data: photos } = await supabase
+    .from('album_photos')
+    .select(`
+      id, created_at, storage_path,
+      album:albums(id, name, user_id),
+      author:profiles!user_id(id, name, avatar_url)
+    `)
+    .in('user_id', friendIds)
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(30)
+
+  // Group by album + author + day
+  const grouped = {}
+  for (const p of photos || []) {
+    const key = `${p.album.id}-${p.created_at.slice(0, 10)}`
+    if (!grouped[key]) grouped[key] = { ...p, count: 0, isNew: true }
+    grouped[key].count++
+  }
+  return Object.values(grouped).sort((a, b) =>
+    new Date(b.created_at) - new Date(a.created_at)
+  )
+}
