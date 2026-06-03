@@ -1357,32 +1357,74 @@ function GaleriaPage({ myId, userId, setPage, openAlbumId }){
           álbuns de {isOwn?'mim':targetId}
         </div>
         <div style={{padding:'12px 14px'}}>
-          {isOwn&&<div style={{marginBottom:12}}>
-            {creating
-              ?<div style={{display:'flex',gap:8,alignItems:'center'}}>
-                <input autoFocus style={{...inp,width:200}} value={newName}
-                  onChange={e=>setNewName(e.target.value)}
-                  onKeyDown={e=>e.key==='Enter'&&handleCreate()} placeholder="Nome do álbum"/>
-                <button style={btnBl} onClick={handleCreate}>criar</button>
-                <button style={btnGh} onClick={()=>setCreating(false)}>cancelar</button>
-              </div>
-              :<button style={btnBl} onClick={()=>setCreating(true)}>criar álbum</button>}
+          {/* Quick upload strip — no album needed */}
+          {isOwn&&<div style={{marginBottom:14,padding:'10px 12px',
+            background:'#f0f4ff',borderRadius:3,border:`1px solid ${BRD}`,
+            display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
+            <div>
+              <div style={{fontSize:13,fontWeight:700,color:TEXT,marginBottom:2}}>Publicar fotos/vídeos</div>
+              <div style={{fontSize:11,color:MUTED}}>Vai direto para "Minhas fotos"</div>
+            </div>
+            <label style={{...btnPk,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}>
+              + adicionar
+              <input type="file" accept="image/*,video/*" multiple style={{display:'none'}}
+                onChange={async(e)=>{
+                  const files=[...e.target.files]; if(!files.length) return
+                  // Get or create default "Minhas fotos" album
+                  let defaultAlbum = albums.find(a=>a.name==='Minhas fotos')
+                  if(!defaultAlbum){
+                    defaultAlbum = await createAlbum(myId,'Minhas fotos')
+                    await loadAlbums()
+                  }
+                  setActiveAlbum(defaultAlbum)
+                  setUploading(true)
+                  for(const file of files){
+                    const path=await uploadPhoto(myId,file)
+                    await addPhotoToAlbum(myId,defaultAlbum.id,path,'')
+                  }
+                  await openAlbum(defaultAlbum)
+                  await loadAlbums()
+                  setUploading(false)
+                }}/>
+            </label>
           </div>}
-          {loading?<div style={{color:MUTED,fontSize:13}}>Carregando…</div>
-          :albums.length===0
-            ?<div style={{fontSize:13,color:MUTED}}>Nenhum álbum ainda.</div>
-            :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:10}}>
+
+          {/* Albums grid */}
+          {loading
+            ?<div style={{color:MUTED,fontSize:13}}>Carregando…</div>
+            :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:10}}>
+              {/* Create new album card */}
+              {isOwn&&(creating
+                ?<div style={{border:`1px solid ${BLUE}`,borderRadius:3,padding:10,background:'#f0f4ff'}}>
+                  <input autoFocus style={{...inp,marginBottom:7}} value={newName}
+                    onChange={e=>setNewName(e.target.value)}
+                    onKeyDown={e=>e.key==='Enter'&&handleCreate()} placeholder="Nome do álbum"/>
+                  <div style={{display:'flex',gap:6}}>
+                    <button style={{...btnBl,flex:1,fontSize:11}} onClick={handleCreate}>criar</button>
+                    <button style={{...btnGh,flex:1,fontSize:11}} onClick={()=>setCreating(false)}>✕</button>
+                  </div>
+                </div>
+                :<div style={{cursor:'pointer',border:`2px dashed ${BRD}`,borderRadius:3,
+                  background:'#f8f9fc',display:'flex',flexDirection:'column',
+                  alignItems:'center',justifyContent:'center',aspectRatio:'1',
+                  color:MUTED,fontSize:12,gap:4}}
+                  onClick={()=>setCreating(true)}>
+                  <span style={{fontSize:24,lineHeight:1}}>+</span>
+                  <span>novo álbum</span>
+                </div>
+              )}
               {albums.map(a=>(
                 <div key={a.id} style={{cursor:'pointer',border:`1px solid ${BRD}`,
-                  borderRadius:3,overflow:'hidden',background:'#f8f9fc'}}
+                  borderRadius:3,overflow:'hidden',background:'#f8f9fc',
+                  boxShadow:a.name==='Minhas fotos'?`0 0 0 2px ${PINK}`:'none'}}
                   onClick={()=>openAlbum(a)}>
                   <div style={{aspectRatio:'1',background:'#e8edf8',display:'flex',
-                    alignItems:'center',justifyContent:'center',fontSize:32}}>
-                    🖼️
+                    alignItems:'center',justifyContent:'center',fontSize:32,overflow:'hidden'}}>
+                    {a.name==='Minhas fotos'?'📷':'🖼️'}
                   </div>
                   <div style={{padding:'6px 8px'}}>
-                    <div style={{fontSize:12,fontWeight:600,color:TEXT,overflow:'hidden',
-                      textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.name}</div>
+                    <div style={{fontSize:12,fontWeight:600,color:a.name==='Minhas fotos'?PINK:TEXT,
+                      overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.name}</div>
                     <div style={{fontSize:10,color:MUTED}}>
                       {a.photo_count?.[0]?.count||0} fotos
                     </div>
