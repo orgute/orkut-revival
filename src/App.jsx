@@ -222,57 +222,91 @@ function AuthScreen({ onAuth }){
   )
 }
 
-/* ── TOP NAV — exact match screenshot ── */
+/* ── TOP NAV — desktop unchanged, mobile hamburger ── */
 function TopNav({ page, setPage, profile, pendingReqs }){
-  const [search,setSearch]=useState('')
-  const [results,setResults]=useState([])
-  const [show,setShow]=useState(false)
-  const doSearch=useCallback(async(q)=>{
-    if(q.length<2){setResults([]);return}
-    setResults(await searchUsers(q));setShow(true)
-  },[])
-  useEffect(()=>{const t=setTimeout(()=>doSearch(search),300);return()=>clearTimeout(t)},[search])
+  const [menuOpen,setMenuOpen]=useState(false)
   const cur=typeof page==='string'?page:page?.name
   const links=[['Início','home'],['Perfil','profile'],['Recados','scrapbook'],
                ['Amigos','friends'],['Comunidades','communities']]
+  const go=(pg)=>{ setPage(pg); setMenuOpen(false) }
+
   return (
-    <header style={{background:NAV_BG,position:'sticky',top:0,zIndex:200,height:40,
-      display:'flex',alignItems:'center',boxShadow:'0 1px 3px rgba(0,0,0,.3)'}}>
-      <div style={{maxWidth:980,margin:'0 auto',width:'100%',height:'100%',
-        display:'flex',alignItems:'center',padding:'0 10px',gap:0}}>
-        <div onClick={()=>setPage('home')} style={{marginRight:14,flexShrink:0}}>
-          <NavLogo/>
+    <>
+      <header style={{background:NAV_BG,position:'sticky',top:0,zIndex:200,height:40,
+        display:'flex',alignItems:'center',boxShadow:'0 1px 3px rgba(0,0,0,.3)'}}>
+        <div style={{maxWidth:980,margin:'0 auto',width:'100%',height:'100%',
+          display:'flex',alignItems:'center',padding:'0 10px',gap:0}}>
+          <div onClick={()=>go('home')} style={{marginRight:14,flexShrink:0,cursor:'pointer'}}>
+            <NavLogo/>
+          </div>
+
+          {/* Desktop nav */}
+          <nav className="desk-only" style={{display:'flex',alignItems:'center',height:'100%',
+}}>
+            {links.map(([label,pg])=>(
+              <div key={pg} onClick={()=>go(pg)} style={{
+                display:'inline-flex',alignItems:'center',height:'100%',
+                padding:'0 13px',cursor:'pointer',
+                fontFamily:'Arial,sans-serif',fontWeight:700,fontSize:13,
+                color:WHITE,userSelect:'none',
+                background:cur===pg?'rgba(0,0,0,.28)':'transparent',
+                boxShadow:cur===pg?'inset 0 2px 4px rgba(0,0,0,.25)':'none',
+                position:'relative',
+              }}>
+                {label}
+                {pg==='friends'&&pendingReqs>0&&(
+                  <span style={{position:'absolute',top:4,right:2,background:PINK,color:WHITE,
+                    borderRadius:10,padding:'0 4px',fontSize:9,fontWeight:700,lineHeight:'15px'}}>
+                    {pendingReqs}</span>
+                )}
+              </div>
+            ))}
+          </nav>
+
+          {/* Right side */}
+          <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:10,fontSize:11,color:WHITE}}>
+            <span style={{display:'flex',alignItems:'center',gap:4}}>
+              <span style={{width:8,height:8,borderRadius:'50%',background:'#4caf50',display:'inline-block'}}/>
+              <span style={{cursor:'pointer'}} onClick={()=>go('profile')}>{profile?.name?.split(' ')[0]||'…'}</span>
+            </span>
+            <span style={{cursor:'pointer',opacity:.85}} onClick={()=>signOut()}>Sair</span>
+
+            {/* Hamburger — mobile only, hidden on desktop via minWidth */}
+            <button className="mob-only" onClick={()=>setMenuOpen(o=>!o)} style={{
+              background:'transparent',border:'none',color:WHITE,cursor:'pointer',
+              padding:'4px',display:'flex',flexDirection:'column',gap:4,
+            }} aria-label="menu">
+              <span style={{width:20,height:2,background:WHITE,borderRadius:1,display:'block',
+                transform:menuOpen?'rotate(45deg) translate(4px,4px)':'none',transition:'all .2s'}}/>
+              <span style={{width:20,height:2,background:WHITE,borderRadius:1,display:'block',
+                opacity:menuOpen?0:1,transition:'all .2s'}}/>
+              <span style={{width:20,height:2,background:WHITE,borderRadius:1,display:'block',
+                transform:menuOpen?'rotate(-45deg) translate(4px,-4px)':'none',transition:'all .2s'}}/>
+            </button>
+          </div>
         </div>
-        <nav style={{display:'flex',alignItems:'center',height:'100%'}}>
+      </header>
+
+      {/* Mobile dropdown menu */}
+      {menuOpen&&<div style={{position:'fixed',top:40,left:0,right:0,bottom:0,zIndex:199,
+        background:'rgba(0,0,0,.5)'}} onClick={()=>setMenuOpen(false)}>
+        <div style={{background:NAV_BG,display:'flex',flexDirection:'column'}}
+          onClick={e=>e.stopPropagation()}>
           {links.map(([label,pg])=>(
-            <div key={pg} onClick={()=>setPage(pg)} style={{
-              display:'inline-flex',alignItems:'center',height:'100%',
-              padding:'0 13px',cursor:'pointer',
-              fontFamily:'Arial,sans-serif',fontWeight:700,fontSize:13,
-              color:WHITE,userSelect:'none',
-              background:cur===pg?'rgba(0,0,0,.28)':'transparent',
-              boxShadow:cur===pg?'inset 0 2px 4px rgba(0,0,0,.25)':'none',
-              position:'relative',
+            <div key={pg} onClick={()=>go(pg)} style={{
+              padding:'14px 20px',fontSize:15,fontWeight:700,fontFamily:'Arial,sans-serif',
+              color:WHITE,borderBottom:'1px solid rgba(255,255,255,.1)',cursor:'pointer',
+              background:cur===pg?'rgba(0,0,0,.3)':'transparent',
+              display:'flex',justifyContent:'space-between',alignItems:'center',
             }}>
               {label}
-              {pg==='friends'&&pendingReqs>0&&(
-                <span style={{position:'absolute',top:4,right:2,background:PINK,color:WHITE,
-                  borderRadius:10,padding:'0 4px',fontSize:9,fontWeight:700,lineHeight:'15px'}}>
-                  {pendingReqs}</span>
-              )}
+              {pg==='friends'&&pendingReqs>0&&<span style={{background:PINK,color:WHITE,
+                borderRadius:10,padding:'1px 7px',fontSize:11,fontWeight:700}}>{pendingReqs}</span>}
             </div>
           ))}
-        </nav>
-        <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:10,fontSize:11,color:WHITE}}>
-
-          <span style={{display:'flex',alignItems:'center',gap:4}}>
-            <span style={{display:'inline-block',width:8,height:8,borderRadius:'50%',background:'#4caf50'}}/>
-            <span style={{cursor:'pointer'}} onClick={()=>setPage('profile')}>{profile?.name?.split(' ')[0]||'…'}</span>
-          </span>
-          <span style={{cursor:'pointer',opacity:.85}} onClick={()=>signOut()}>Logout</span>
         </div>
-      </div>
-    </header>
+      </div>}
+    </>
   )
 }
 
@@ -341,6 +375,93 @@ function RightSidebar({ myId, setPage }){
           </div>}
       </RightPanel>
     </aside>
+  )
+}
+
+/* ── NOVIDADES — chronological feed of friends' recent posts ── */
+function Novidades({ myId, setPage }){
+  const [items,setItems]=useState([])
+  const [loading,setLoading]=useState(true)
+
+  useEffect(()=>{
+    async function load(){
+      // Get friends
+      const friends = await getFriends(myId)
+      if(!friends.length){ setLoading(false); return }
+      const friendIds = friends.map(f=>f.id)
+
+      // Get recent scraps/recados FROM friends (they posted on someone)
+      const {data:scraps}=await supabase.from('recados')
+        .select('id,text,created_at,from:profiles!from_id(id,name,avatar_url),to:profiles!to_id(id,name)')
+        .in('from_id',friendIds)
+        .order('created_at',{ascending:false})
+        .limit(20)
+
+      // Get recent community posts from friends
+      const {data:cposts}=await supabase.from('community_posts')
+        .select('id,text,created_at,author:profiles!user_id(id,name,avatar_url),community:communities(id,name,seed)')
+        .in('user_id',friendIds)
+        .order('created_at',{ascending:false})
+        .limit(10)
+
+      // Merge and sort
+      const feed=[
+        ...(scraps||[]).map(s=>({...s,type:'scrap'})),
+        ...(cposts||[]).map(p=>({...p,type:'post'})),
+      ].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,15)
+
+      setItems(feed)
+      setLoading(false)
+    }
+    load()
+  },[myId])
+
+  if(loading) return null
+  if(!items.length) return null
+
+  return (
+    <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
+      overflow:'hidden',marginBottom:8}}>
+      <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,
+        padding:'5px 10px',fontWeight:700,fontSize:12,color:TEXT}}>
+        novidades dos amigos
+      </div>
+      <div>
+        {items.map((item,i)=>(
+          <div key={item.id} style={{display:'flex',gap:10,padding:'9px 12px',
+            borderBottom:i<items.length-1?`1px solid ${BRD}`:'none',alignItems:'flex-start'}}>
+            <div style={{cursor:'pointer',flexShrink:0}}
+              onClick={()=>setPage({name:'userprofile',userId:item.type==='scrap'?item.from.id:item.author.id})}>
+              <Av src={item.type==='scrap'?item.from.avatar_url:item.author.avatar_url}
+                size={30} name={item.type==='scrap'?item.from.name:item.author.name} radius="3px"/>
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:12,color:TEXT,lineHeight:1.5}}>
+                {item.type==='scrap'
+                  ?<><span style={{fontWeight:700,color:BLUE,cursor:'pointer'}}
+                      onClick={()=>setPage({name:'userprofile',userId:item.from.id})}>{item.from.name}</span>
+                    {' escreveu um recado para '}
+                    <span style={{fontWeight:700,color:BLUE,cursor:'pointer'}}
+                      onClick={()=>setPage({name:'userprofile',userId:item.to.id})}>{item.to.name}</span>
+                  </>
+                  :<><span style={{fontWeight:700,color:BLUE,cursor:'pointer'}}
+                      onClick={()=>setPage({name:'userprofile',userId:item.author.id})}>{item.author.name}</span>
+                    {' postou em '}
+                    <span style={{fontWeight:700,color:BLUE,cursor:'pointer'}}
+                      onClick={()=>setPage({name:'communities',openCommunity:item.community})}>{item.community?.name}</span>
+                  </>
+                }
+              </div>
+              <div style={{fontSize:12,color:MUTED,marginTop:2,overflow:'hidden',
+                textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.text}</div>
+              <div style={{fontSize:10,color:MUTED,marginTop:2}}>
+                {new Date(item.created_at).toLocaleDateString('pt-BR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -459,6 +580,9 @@ function HomePage({ profile, myId, setPage }){
             <div><strong>Fortuna do dia:</strong> {fortune}</div>
           </div>
         </div>
+        {/* Novidades — friends' recent activity */}
+        <Novidades myId={myId} setPage={setPage}/>
+
         {/* Friend suggestions — screenshot style: grey square avatars */}
         <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden',marginTop:8}}>
           <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,
