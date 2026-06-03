@@ -20,6 +20,17 @@ const BLUE    = '#2a4b8d'
 const RH_BG   = 'linear-gradient(180deg,#e8edf8 0%,#d8e0f0 100%)'
 const RH_BRD  = '#b0b8d0'
 
+/* ── Responsive hook ── */
+function useIsMobile(){ 
+  const [mob,setMob]=useState(()=>typeof window!=='undefined'&&window.innerWidth<=600)
+  useEffect(()=>{
+    const h=()=>setMob(window.innerWidth<=600)
+    window.addEventListener('resize',h)
+    return()=>window.removeEventListener('resize',h)
+  },[])
+  return mob
+}
+
 /* ── Shared styles ── */
 const inp  = { width:'100%', border:`1px solid ${BRD}`, borderRadius:2, padding:'4px 7px',
                fontSize:12, fontFamily:'inherit', color:TEXT, background:WHITE,
@@ -487,9 +498,12 @@ function HomePage({ profile, myId, setPage }){
     { emoji:'✉️',  color:'#757575', label:'mensagens',      count:0,          pg:null },
   ]
 
+  const mob=useIsMobile()
   return (
     <div style={{maxWidth:980,margin:'0 auto',padding:'8px',
-      display:'grid',gridTemplateColumns:'210px 1fr 230px',gap:8,alignItems:'flex-start'}}>
+      display:'grid',
+      gridTemplateColumns:mob?'1fr':'210px 1fr 230px',
+      gap:8,alignItems:'flex-start'}}>
 
       {/* LEFT COL — photo + name + status + nav */}
       <div>
@@ -663,14 +677,17 @@ function ProfilePage({ myId, userId, setPage, toast }){
   const af=(k,v)=>setDraft(p=>({...p,[k]:v.split(',').map(s=>s.trim()).filter(Boolean)}))
   if(!profile)return <div style={{padding:20,color:MUTED,textAlign:'center'}}>Carregando…</div>
 
+  const mob=mob2
   const tag={display:'inline-flex',alignItems:'center',padding:'2px 10px',borderRadius:10,
     border:`1px solid ${BRD}`,background:'#f0f4ff',fontSize:12,color:MUTED,marginRight:4,marginBottom:4}
 
   return (
     <div style={{maxWidth:980,margin:'0 auto',padding:'8px',
-      display:'grid',gridTemplateColumns:'210px 1fr 230px',gap:8,alignItems:'flex-start'}}>
-      {/* Left */}
-      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
+      display:'grid',
+      gridTemplateColumns:mob?'1fr':'210px 1fr 230px',
+      gap:8,alignItems:'flex-start'}}>
+      {/* Left — hidden on mobile */}
+      {!mob&&<div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
         <div style={{lineHeight:0,borderBottom:`1px solid ${BRD}`}}>
           <img src={profile.avatar_url||("https://api.dicebear.com/9.x/personas/svg?seed="+(profile.name||'u'))}
             alt={profile.name} style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block'}}/>
@@ -692,7 +709,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
             </div>
           ))}
         </div>
-      </div>
+      </div>}
 
       {/* Center */}
       <div>
@@ -905,8 +922,8 @@ function ProfilePage({ myId, userId, setPage, toast }){
         </div>}
       </div>
 
-      {/* Right */}
-      <RightSidebar myId={myId} setPage={setPage}/>
+      {/* Right — hidden on mobile */}
+      {!mob&&<RightSidebar myId={myId} setPage={setPage}/>}
     </div>
   )
 }

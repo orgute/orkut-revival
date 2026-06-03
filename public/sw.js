@@ -1,4 +1,4 @@
-const CACHE = 'revival-v1'
+const CACHE = 'revival-v2'
 const SHELL = ['/', '/index.html']
 
 self.addEventListener('install', e => {
