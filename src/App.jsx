@@ -248,7 +248,7 @@ function TopNav({ page, setPage, profile, pendingReqs }){
             <div key={pg} onClick={()=>setPage(pg)} style={{
               display:'inline-flex',alignItems:'center',height:'100%',
               padding:'0 13px',cursor:'pointer',
-              fontFamily:'"Helvetica Neue",Helvetica,Arial,sans-serif',fontWeight:900,fontSize:13,
+              fontFamily:'Arial,sans-serif',fontWeight:700,fontSize:13,
               color:WHITE,userSelect:'none',
               background:cur===pg?'rgba(0,0,0,.28)':'transparent',
               boxShadow:cur===pg?'inset 0 2px 4px rgba(0,0,0,.25)':'none',
