@@ -92,14 +92,15 @@ function NavLogo(){
 function Av({ src, size, name, radius }){
   size=size||36; radius=radius!==undefined?radius:'50%'
   const fb="https://api.dicebear.com/9.x/personas/svg?seed="+encodeURIComponent(name||'u')
-  const [url,setUrl]=useState(src||fb)
+  const [url,setUrl]=useState(fb)
 
   useEffect(()=>{
+    let cancelled=false
     if(!src){ setUrl(fb); return }
-    // Already a full URL (dicebear, old public avatars) — use as-is
-    if(src.startsWith('http')){ setUrl(src); return }
-    // Storage path — get signed URL
-    getSignedUrl(src).then(u=>setUrl(u||fb))
+    if(src.startsWith('http')){ setUrl(src+'?t='+Date.now()); return }
+    // Storage path — get fresh signed URL every time src changes
+    getSignedUrl(src).then(u=>{ if(!cancelled) setUrl(u ? u+'?t='+Date.now() : fb) })
+    return()=>{ cancelled=true }
   },[src])
 
   return <img src={url} alt={name||''} width={size} height={size}
@@ -718,7 +719,15 @@ function ProfilePage({ myId, userId, setPage, toast }){
   const handleAvatar=async(e)=>{
     const file=e.target.files[0];if(!file)return
     setUploading(true)
-    try{const url=await uploadAvatar(myId,file);await updateProfile(myId,{avatar_url:url});setProfile(p=>({...p,avatar_url:url}));toast('Foto atualizada!')}
+    try{
+      const path=await uploadAvatar(myId,file)
+      await updateProfile(myId,{avatar_url:path})
+      // Re-fetch profile to get the saved path and trigger Av re-render
+      const fresh=await getProfile(myId)
+      setProfile(fresh)
+      setDraft(fresh)
+      toast('Foto atualizada!')
+    }
     catch(err){toast('Erro: '+err.message); console.error('Avatar upload error:',err)}
     setUploading(false)
   }
