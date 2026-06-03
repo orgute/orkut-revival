@@ -1043,7 +1043,7 @@ function ScrapbookPage({ myId, targetUserId, setPage, toast }){
       <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
         <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'6px 12px',
           fontWeight:700,fontSize:14,color:TEXT}}>
-          recados de {isOwn?'mim':targetProfile?.name||'…'}
+          {isOwn?'meus recados':`recados de ${targetProfile?.name||'…'}`}
         </div>
         {isOwn&&<div style={{padding:'10px 12px',borderBottom:`1px solid ${BRD}`}}>
           <textarea style={tarea} value={text} onChange={e=>setText(e.target.value)} placeholder="Deixar um recado…"/>
@@ -1109,9 +1109,14 @@ function FriendsPage({ myId, setPage, toast }){
           fontWeight:700,fontSize:14,color:TEXT}}>amigos</div>
         <div style={{display:'flex',borderBottom:`1px solid ${BRD}`}}>
           {[['amigos','meus amigos'],['pedidos','pedidos recebidos'],['enviados','pedidos enviados']].map(([t,l])=>(
-            <div key={t} onClick={()=>setTab(t)} style={{padding:'7px 14px',cursor:'pointer',fontSize:12,
-              fontWeight:tab===t?700:400,color:tab===t?BLUE:MUTED,
-              borderBottom:tab===t?`2px solid ${BLUE}`:'2px solid transparent',boxSizing:'border-box'}}>{l}</div>
+            <div key={t} onClick={()=>setTab(t)} style={{
+              padding:'8px 16px',cursor:'pointer',fontSize:13,
+              fontWeight:tab===t?700:400,
+              color:tab===t?BLUE:MUTED,
+              borderBottom:tab===t?`3px solid ${BLUE}`:'3px solid transparent',
+              borderRight:t!=='enviados'?`1px solid ${BRD}`:'none',
+              boxSizing:'border-box',background:tab===t?WHITE:'#f0f4ff',
+            }}>{l}</div>
           ))}
         </div>
         <div style={{padding:'12px 14px'}}>

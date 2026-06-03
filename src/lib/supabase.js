@@ -186,11 +186,15 @@ export async function getVisitors(profileId) {
 }
 
 export async function uploadAvatar(userId, file) {
-  const ext  = file.name.split('.').pop().toLowerCase()
+  // Derive extension from MIME type (handles iOS HEIC, etc.)
+  const mimeToExt = { 'image/jpeg':'jpg','image/jpg':'jpg','image/png':'png',
+    'image/gif':'gif','image/webp':'webp','image/heic':'heic','image/heif':'heif' }
+  const ext = mimeToExt[file.type] || file.name.split('.').pop().toLowerCase() || 'jpg'
   const path = `${userId}/avatar.${ext}`
-  const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+  const { error } = await supabase.storage
+    .from('avatars')
+    .upload(path, file, { upsert: true, contentType: file.type || 'image/jpeg' })
   if (error) throw error
-  // Bucket is private — return storage path, Av component resolves signed URL
   return path
 }
 
