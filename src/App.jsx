@@ -5,7 +5,7 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getDepoimentos, sendDepoimento, getCommunities, getMyCommunities,
   joinCommunity, leaveCommunity, getCommunityPosts, createCommunityPost,
   getMessages, sendMessage, recordVisit, getVisitors, uploadAvatar,
-  searchUsers, validateInviteCode, useInviteCode, getMyInvites } from './lib/supabase.js'
+  searchUsers, validateInviteCode, useInviteCode, getMyInvites, getMemberNumber } from './lib/supabase.js'
 
 /* ── Design tokens matching screenshot exactly ── */
 const NAV_BG  = '#1a2e5a'   // dark navy nav
@@ -504,13 +504,14 @@ function ProfilePage({ myId, userId, setPage, toast }){
   const [invites,setInvites]=useState([])
   const [showInvites,setShowInvites]=useState(false)
   const [tab,setTab]=useState('social')
+  const [memberNum,setMemberNum]=useState(null)
 
   useEffect(()=>{
     if(!targetId)return
     getProfile(targetId).then(p=>{setProfile(p);setDraft(p||{})})
     getDepoimentos(targetId).then(setDeps)
     getRecados(targetId).then(setScraps)
-    if(isOwn) getMyInvites(myId).then(setInvites)
+    if(isOwn){ getMyInvites(myId).then(setInvites); getMemberNumber(targetId).then(setMemberNum) }
     if(!isOwn){recordVisit(myId,targetId);getFriendshipStatus(myId,targetId).then(setFStatus)}
   },[targetId])
 
@@ -730,6 +731,16 @@ function ProfilePage({ myId, userId, setPage, toast }){
             </div>}
           </div>
         </div>
+
+        {/* Member number watermark — barely visible, people discover it */}
+        {isOwn&&memberNum&&<div style={{
+          textAlign:'center',padding:'18px 0 4px',
+          fontSize:10,color:'rgba(42,75,141,0.12)',
+          letterSpacing:4,userSelect:'none',fontFamily:'monospace',
+          fontWeight:400,
+        }}>
+          {String(memberNum).padStart(9,'0')}
+        </div>}
 
         {/* Invites panel — own profile only */}
         {isOwn&&<div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,

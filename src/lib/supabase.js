@@ -222,3 +222,14 @@ export async function getMyInvites(userId) {
     .order('created_at', { ascending: true })
   return data || []
 }
+
+export async function getMemberNumber(userId) {
+  // Get rank of this user by signup date
+  const { data } = await supabase
+    .from('profiles')
+    .select('id, created_at')
+    .order('created_at', { ascending: true })
+  if (!data) return null
+  const idx = data.findIndex(p => p.id === userId)
+  return idx >= 0 ? idx + 1 : null
+}

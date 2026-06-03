@@ -1,0 +1,18 @@
+{
+  "name": "Revival",
+  "short_name": "Revival",
+  "description": "Uma comunidade exclusiva para conexões reais",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#dce3f0",
+  "theme_color": "#1a2e5a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
