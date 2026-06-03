@@ -88,11 +88,21 @@ function NavLogo(){
   )
 }
 
-/* ── Avatar ── */
+/* ── Avatar — resolves signed URLs for private storage ── */
 function Av({ src, size, name, radius }){
   size=size||36; radius=radius!==undefined?radius:'50%'
   const fb="https://api.dicebear.com/9.x/personas/svg?seed="+encodeURIComponent(name||'u')
-  return <img src={src||fb} alt={name||''} width={size} height={size}
+  const [url,setUrl]=useState(src||fb)
+
+  useEffect(()=>{
+    if(!src){ setUrl(fb); return }
+    // Already a full URL (dicebear, old public avatars) — use as-is
+    if(src.startsWith('http')){ setUrl(src); return }
+    // Storage path — get signed URL
+    getSignedUrl(src).then(u=>setUrl(u||fb))
+  },[src])
+
+  return <img src={url} alt={name||''} width={size} height={size}
     onError={e=>{e.target.src=fb}}
     style={{borderRadius:radius,objectFit:'cover',flexShrink:0,display:'block',
             border:`1px solid ${BRD}`}}/>
@@ -236,7 +246,7 @@ function AuthScreen({ onAuth }){
 }
 
 /* ── TOP NAV — desktop unchanged, mobile hamburger ── */
-function TopNav({ page, setPage, profile, pendingReqs }){
+function TopNav({ page, setPage, profile, pendingReqs, newRecados }){
   const [menuOpen,setMenuOpen]=useState(false)
   const cur=typeof page==='string'?page:page?.name
   const links=[['Início','home'],['Perfil','profile'],['Recados','scrapbook'],
@@ -281,6 +291,19 @@ function TopNav({ page, setPage, profile, pendingReqs }){
             <span style={{display:'flex',alignItems:'center',gap:4}}>
               <span style={{width:8,height:8,borderRadius:'50%',background:'#4caf50',display:'inline-block'}}/>
               <span style={{cursor:'pointer'}} onClick={()=>go('profile')}>{profile?.name?.split(' ')[0]||'…'}</span>
+            </span>
+            {/* Notification bell */}
+            <span style={{position:'relative',cursor:'pointer'}} onClick={()=>go('scrapbook')} title="Recados">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M8 1a5 5 0 0 1 5 5v3l1.5 2H1.5L3 9V6a5 5 0 0 1 5-5z" stroke="white" strokeWidth="1.4" fill="none"/>
+                <path d="M6 13a2 2 0 0 0 4 0" stroke="white" strokeWidth="1.4" fill="none"/>
+              </svg>
+              {(newRecados>0||pendingReqs>0)&&<span style={{
+                position:'absolute',top:-4,right:-5,
+                background:PINK,color:WHITE,borderRadius:10,
+                padding:'0 4px',fontSize:9,fontWeight:700,lineHeight:'14px',
+                minWidth:14,textAlign:'center',
+              }}>{newRecados+pendingReqs}</span>}
             </span>
             <span style={{cursor:'pointer',opacity:.85}} onClick={()=>signOut()}>Sair</span>
 
@@ -748,6 +771,14 @@ function ProfilePage({ myId, userId, setPage, toast }){
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5" stroke={MUTED} strokeWidth="1.4" fill="none"/></svg>
                 fãs <strong>0</strong>
               </span>
+              {invites.length>0&&<span style={{display:'flex',alignItems:'center',gap:4,
+                color:MUTED,fontSize:11,opacity:.75}} title="convites usados">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <rect x="1" y="3" width="10" height="7" rx="1" stroke={MUTED} strokeWidth="1.2" fill="none"/>
+                  <path d="M1 5l5 3 5-3" stroke={MUTED} strokeWidth="1.2" fill="none"/>
+                </svg>
+                {invites.filter(i=>i.used_by).length}/{invites.length} convites
+              </span>}
             </div>
             {/* Ratings */}
             <div style={{display:'flex',gap:14,fontSize:12,color:MUTED,alignItems:'center',flexWrap:'wrap'}}>
@@ -1473,6 +1504,7 @@ export default function App(){
   const [profile,setProfile]=useState(null)
   const [page,setPage]=useState('home')
   const [pendingReqs,setPendingReqs]=useState(0)
+  const [newRecados,setNewRecados]=useState(0)
   const [toast,setToast]=useState('')
 
   useEffect(()=>{
@@ -1487,6 +1519,10 @@ export default function App(){
     const uid=session.user.id
     getProfile(uid).then(setProfile)
     getFriendRequests(uid).then(r=>setPendingReqs(r.length))
+    supabase.from('recados').select('id',{count:'exact',head:true})
+      .eq('to_id',uid)
+      .gte('created_at',new Date(Date.now()-48*3600*1000).toISOString())
+      .then(({count})=>setNewRecados(count||0))
   },[session])
 
   if(session===undefined)return(
@@ -1523,7 +1559,7 @@ export default function App(){
   return (
     <div style={{fontFamily:"'Trebuchet MS','Lucida Grande',sans-serif",
       background:BG,minHeight:'100vh',color:TEXT}}>
-      <TopNav page={page} setPage={navTo} profile={profile} pendingReqs={pendingReqs}/>
+      <TopNav page={page} setPage={navTo} profile={profile} pendingReqs={pendingReqs} newRecados={newRecados}/>
       {renderPage()}
       <footer style={{textAlign:'center',padding:'14px 0 20px',fontSize:11,color:MUTED,
         borderTop:`1px solid ${BRD}`,marginTop:8}}>
