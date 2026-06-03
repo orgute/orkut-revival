@@ -655,7 +655,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
     getDepoimentos(targetId).then(setDeps);setTDraft('');setTWrite(false);toast('Enviado!')
   }
   const af=(k,v)=>setDraft(p=>({...p,[k]:v.split(',').map(s=>s.trim()).filter(Boolean)}))
-  const mob=mob2  // must be before any early returns
+  const mob=useIsMobile()  // must be before any early returns
   const tag={display:'inline-flex',alignItems:'center',padding:'2px 10px',borderRadius:10,
     border:`1px solid ${BRD}`,background:'#f0f4ff',fontSize:12,color:MUTED,marginRight:4,marginBottom:4}
 
