@@ -186,7 +186,6 @@ export async function getVisitors(profileId) {
 }
 
 export async function uploadAvatar(userId, file) {
-  // Derive extension from MIME type (handles iOS HEIC, etc.)
   const mimeToExt = { 'image/jpeg':'jpg','image/jpg':'jpg','image/png':'png',
     'image/gif':'gif','image/webp':'webp','image/heic':'heic','image/heif':'heif' }
   const ext = mimeToExt[file.type] || file.name.split('.').pop().toLowerCase() || 'jpg'
@@ -195,7 +194,9 @@ export async function uploadAvatar(userId, file) {
     .from('avatars')
     .upload(path, file, { upsert: true, contentType: file.type || 'image/jpeg' })
   if (error) throw error
-  return path
+  // Use public URL for avatars (profile photos are meant to be seen)
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+  return data.publicUrl
 }
 
 /* ── Invites ─────────────────────────────────────────────────── */
