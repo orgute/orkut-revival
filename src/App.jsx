@@ -10,7 +10,7 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getAlbumPhotos, addPhotoToAlbum, deletePhoto, getNovidades } from './lib/supabase.js'
 
 /* ── Design tokens matching screenshot exactly ── */
-const NAV_BG  = '#1a2e5a'   // dark navy nav
+const NAV_BG  = '#2a3f6f'   // navy, one notch lighter
 const PINK    = '#e8197d'   // orkut pink
 const BG      = '#dce3f0'   // page background blue-grey
 const WHITE   = '#ffffff'
@@ -311,6 +311,10 @@ function TopNav({ page, setPage, profile, pendingReqs, newRecados }){
                 minWidth:14,textAlign:'center',
               }}>{newRecados+pendingReqs}</span>}
             </span>
+            {/* Sair — desktop only */}
+            <span className="desk-only" style={{cursor:'pointer',opacity:.85,
+              fontFamily:F_UI,fontSize:11,color:WHITE}}
+              onClick={()=>signOut()}>Sair</span>
             {/* Hamburger — mobile only, hidden on desktop via minWidth */}
             <button className="mob-only" onClick={()=>setMenuOpen(o=>!o)} style={{
               background:'transparent',border:'none',color:WHITE,cursor:'pointer',
@@ -541,10 +545,13 @@ function HomePage({ profile, myId, setPage }){
             {/* Photo */}
             <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
               overflow:'hidden',cursor:'pointer'}} onClick={()=>setPage('profile')}>
+              <div style={{padding:4,background:WHITE}}>
               <img src={profile?.avatar_url||("https://api.dicebear.com/9.x/personas/svg?seed="+(profile?.name||'u'))}
                 alt={profile?.name||''}
-                style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block'}}
+                style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block',
+                  boxShadow:'0 0 0 2px white, 0 0 0 3px #c8d0e0'}}
                 onError={e=>{e.target.src="https://api.dicebear.com/9.x/personas/svg?seed=u"}}/>
+              </div>
               <div style={{padding:'5px 8px'}}>
                 <div style={{fontWeight:700,fontSize:13,color:PINK,marginBottom:2}}>{profile?.name||'…'}</div>
                 <div style={{fontSize:11,color:'#4caf50'}}>● disponível</div>
@@ -571,11 +578,13 @@ function HomePage({ profile, myId, setPage }){
           :<>
             <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
               overflow:'hidden',marginBottom:6}}>
-              <div style={{lineHeight:0,borderBottom:`1px solid ${BRD}`,cursor:'pointer'}}
+              <div style={{padding:6,background:WHITE,cursor:'pointer',
+                borderBottom:`1px solid ${BRD}`}}
                 onClick={()=>setPage('profile')}>
                 <img src={profile?.avatar_url||("https://api.dicebear.com/9.x/personas/svg?seed="+(profile?.name||'u'))}
                   alt={profile?.name||''}
-                  style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block'}}
+                  style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block',
+                    boxShadow:'0 0 0 3px white, 0 0 0 4px #c8d0e0'}}
                   onError={e=>{e.target.src="https://api.dicebear.com/9.x/personas/svg?seed=u"}}/>
               </div>
               <div style={{padding:'8px 10px'}}>
@@ -782,9 +791,10 @@ function ProfilePage({ myId, userId, setPage, toast }){
       gap:8,alignItems:'flex-start'}}>
       {/* Left — hidden on mobile */}
       {!mob&&<div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
-        <div style={{lineHeight:0,borderBottom:`1px solid ${BRD}`}}>
+        <div style={{padding:6,background:WHITE,borderBottom:`1px solid ${BRD}`}}>
           <img src={profile.avatar_url||("https://api.dicebear.com/9.x/personas/svg?seed="+(profile.name||'u'))}
-            alt={profile.name} style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block'}}/>
+            alt={profile.name} style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block',
+              boxShadow:'0 0 0 3px white, 0 0 0 4px #c8d0e0'}}/>
         </div>
         <div style={{padding:'8px 10px 4px'}}>
           <div style={{fontWeight:700,fontSize:14,color:PINK,marginBottom:2}}>{profile.name}</div>
