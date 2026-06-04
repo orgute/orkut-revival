@@ -33,14 +33,19 @@ function useIsMobile(){
   return mob
 }
 
+/* ── Font schema (2000s era accuracy) ── */
+const F_UI  = "Verdana,'DejaVu Sans',Geneva,sans-serif"   // menus, labels, fields
+const F_BTN = "Tahoma,'DejaVu Sans Condensed',Arial,sans-serif"  // buttons
+const F_NUM = "Arial,'Helvetica Neue',sans-serif"           // numbers, metadata
+
 /* ── Shared styles ── */
 const inp  = { width:'100%', border:`1px solid ${BRD}`, borderRadius:2, padding:'4px 7px',
-               fontSize:12, fontFamily:'inherit', color:TEXT, background:WHITE,
+               fontSize:12, fontFamily:F_UI, color:TEXT, background:WHITE,
                outline:'none', boxSizing:'border-box' }
 const tarea= { ...inp, resize:'vertical', minHeight:70 }
-const btnBl= { cursor:'pointer', border:'none', fontFamily:'inherit', borderRadius:2,
+const btnBl= { cursor:'pointer', border:'none', fontFamily:F_BTN, borderRadius:2,
                fontWeight:700, background:BLUE, color:WHITE, padding:'5px 14px', fontSize:12 }
-const btnPk= { ...btnBl, background:PINK }
+const btnPk= { ...btnBl, fontFamily:F_BTN, background:PINK }
 const btnGh= { cursor:'pointer', fontFamily:'inherit', borderRadius:2, fontWeight:400,
                background:'transparent', border:`1px solid ${BRD}`, color:MUTED,
                padding:'4px 10px', fontSize:11 }
@@ -271,7 +276,7 @@ function TopNav({ page, setPage, profile, pendingReqs, newRecados }){
               <div key={pg} onClick={()=>go(pg)} style={{
                 display:'inline-flex',alignItems:'center',height:'100%',
                 padding:'0 13px',cursor:'pointer',
-                fontFamily:"'Trebuchet MS','Lucida Grande',sans-serif",fontWeight:700,fontSize:13,
+                fontFamily:F_UI,fontWeight:700,fontSize:12,
                 color:WHITE,userSelect:'none',
                 background:cur===pg?'rgba(0,0,0,.28)':'transparent',
                 boxShadow:cur===pg?'inset 0 2px 4px rgba(0,0,0,.25)':'none',
@@ -343,7 +348,7 @@ function TopNav({ page, setPage, profile, pendingReqs, newRecados }){
           {/* Nav links */}
           {links.map(([label,pg])=>(
             <div key={pg} onClick={()=>go(pg)} style={{
-              padding:'16px 20px',fontSize:15,cursor:'pointer',
+              padding:'16px 20px',fontSize:14,fontFamily:F_UI,cursor:'pointer',
               color:cur===pg?BLUE:BLUE,
               fontWeight:cur===pg?700:400,
               borderBottom:`1px solid ${BRD}`,
@@ -628,7 +633,7 @@ function HomePage({ profile, myId, setPage }){
             {icons.map(({emoji,color,label,count,pg})=>(
               <div key={label} style={{textAlign:'center',cursor:pg?'pointer':'default',minWidth:60}}
                 onClick={()=>pg&&setPage(pg)}>
-                <div style={{fontSize:11,fontWeight:700,color:BLUE,marginBottom:2}}>{count}</div>
+                <div style={{fontSize:11,fontWeight:700,color:BLUE,marginBottom:2,fontFamily:F_NUM}}>{count}</div>
                 <div style={{height:32,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:3}}>
                   {label==='fotos'
                     ? <svg width="26" height="22" viewBox="0 0 26 22" fill="none">
@@ -819,19 +824,19 @@ function ProfilePage({ myId, userId, setPage, toast }){
             <div style={{display:'flex',gap:14,fontSize:12,color:TEXT,marginBottom:8,flexWrap:'wrap',alignItems:'center'}}>
               <span style={{display:'flex',alignItems:'center',gap:4}}>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="10" rx="1.5" stroke={MUTED} strokeWidth="1.4" fill="none"/><line x1="1" y1="5" x2="13" y2="5" stroke={MUTED} strokeWidth="1.2"/></svg>
-                recados <strong>{scraps.length}</strong>
+                recados <strong style={{fontFamily:F_NUM}}>{scraps.length}</strong>
               </span>
               <span style={{display:'flex',alignItems:'center',gap:4}}>
                 <svg width="14" height="12" viewBox="0 0 14 12" fill="none"><rect x="0.5" y="1" width="13" height="10" rx="1.5" stroke={MUTED} strokeWidth="1.4" fill="none"/><path d="M0.5 8l3.5-3 3 3 2.5-2.5 5 4" stroke={MUTED} strokeWidth="1.2" strokeLinejoin="round" fill="none"/><circle cx="4" cy="4.5" r="1.2" fill="none" stroke={MUTED} strokeWidth="1.2"/></svg>
-                fotos <strong>0</strong>
+                fotos <strong style={{fontFamily:F_NUM}}>0</strong>
               </span>
               <span style={{display:'flex',alignItems:'center',gap:4}}>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5" stroke={MUTED} strokeWidth="1.2" fill="none"/></svg>
-                vídeos <strong>0</strong>
+                vídeos <strong style={{fontFamily:F_NUM}}>0</strong>
               </span>
               <span style={{display:'flex',alignItems:'center',gap:4}}>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5" stroke={MUTED} strokeWidth="1.4" fill="none"/></svg>
-                fãs <strong>0</strong>
+                fãs <strong style={{fontFamily:F_NUM}}>0</strong>
               </span>
               {invites.length>0&&<span style={{display:'flex',alignItems:'center',gap:4,
                 color:MUTED,fontSize:11,opacity:.75}} title="convites usados">
@@ -1662,7 +1667,7 @@ export default function App(){
   }
 
   return (
-    <div style={{fontFamily:"'Trebuchet MS','Lucida Grande',sans-serif",
+    <div style={{fontFamily:F_UI,
       background:BG,minHeight:'100vh',color:TEXT}}>
       <TopNav page={page} setPage={navTo} profile={profile} pendingReqs={pendingReqs} newRecados={newRecados}/>
       {renderPage()}
