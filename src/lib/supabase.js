@@ -81,6 +81,13 @@ export async function getFriendRequests(userId) {
   return data || []
 }
 
+export async function getSentRequests(userId) {
+  const { data } = await supabase.from('friendships')
+    .select(`id,addressee:profiles!friendships_addressee_id_fkey(id,name,avatar_url)`)
+    .eq('requester_id', userId).eq('status','pending')
+  return data || []
+}
+
 export async function sendFriendRequest(requesterId, addresseeId) {
   const { error } = await supabase.from('friendships')
     .insert({ requester_id: requesterId, addressee_id: addresseeId, status: 'pending' })

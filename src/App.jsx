@@ -8,7 +8,8 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   searchUsers, validateInviteCode, useInviteCode, getMyInvites, getMemberNumber,
   getSignedUrl, uploadPhoto, getAlbums, createAlbum, deleteAlbum,
   getAlbumPhotos, addPhotoToAlbum, deletePhoto, getNovidades,
-  getFotosFeed, getPhotoComments, addPhotoComment, deletePhotoComment } from './lib/supabase.js'
+  getFotosFeed, getPhotoComments, addPhotoComment, deletePhotoComment,
+  getSentRequests } from './lib/supabase.js'
 
 /* ── Design tokens matching screenshot exactly ── */
 const NAV_BG  = '#2a3f6f'   // navy, one notch lighter
@@ -712,6 +713,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
   const [fStatus,setFStatus]=useState(null)
   const [uploading,setUploading]=useState(false)
   const [scraps,setScraps]=useState([])
+  const [photoCount,setPhotoCount]=useState(0)
   const [invites,setInvites]=useState([])
   const [showInvites,setShowInvites]=useState(false)
   const [tab,setTab]=useState('social')
@@ -840,7 +842,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
               </span>
               <span style={{display:'flex',alignItems:'center',gap:4}}>
                 <svg width="14" height="12" viewBox="0 0 14 12" fill="none"><rect x="0.5" y="1" width="13" height="10" rx="1.5" stroke={MUTED} strokeWidth="1.4" fill="none"/><path d="M0.5 8l3.5-3 3 3 2.5-2.5 5 4" stroke={MUTED} strokeWidth="1.2" strokeLinejoin="round" fill="none"/><circle cx="4" cy="4.5" r="1.2" fill="none" stroke={MUTED} strokeWidth="1.2"/></svg>
-                fotos <strong style={{fontFamily:F_NUM}}>0</strong>
+                fotos <strong style={{fontFamily:F_NUM}}>{photoCount}</strong>
               </span>
               <span style={{display:'flex',alignItems:'center',gap:4}}>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5" stroke={MUTED} strokeWidth="1.2" fill="none"/></svg>
@@ -1171,12 +1173,17 @@ function FriendsPage({ myId, setPage, toast }){
   const [tab,setTab]=useState('amigos')
   const [friends,setFriends]=useState([])
   const [requests,setRequests]=useState([])
+  const [sent,setSent]=useState([])
   const [chatF,setChatF]=useState(null)
   const [messages,setMessages]=useState([])
   const [chatInput,setChatInput]=useState('')
   const chatRef=useRef()
 
-  const load=()=>{getFriends(myId).then(setFriends);getFriendRequests(myId).then(setRequests)}
+  const load=()=>{
+    getFriends(myId).then(setFriends)
+    getFriendRequests(myId).then(setRequests)
+    getSentRequests(myId).then(setSent)
+  }
   useEffect(()=>{load()},[myId])
   useEffect(()=>{
     const ch=supabase.channel('fr-'+myId)
@@ -1238,7 +1245,17 @@ function FriendsPage({ myId, setPage, toast }){
                 <button style={{...btnGh,padding:'3px 10px',fontSize:11}} onClick={()=>respond(r.id,false)}>recusar</button>
               </div>
             )))}
-          {tab==='enviados'&&<div style={{color:MUTED,fontSize:13}}>Nada por aqui.</div>}
+          {tab==='enviados'&&(sent.length===0
+            ?<div style={{color:MUTED,fontSize:13,fontFamily:F_UI}}>Nenhum pedido enviado ainda.</div>
+            :sent.map(s=>(
+              <div key={s.id} style={{display:'flex',alignItems:'center',gap:10,
+                padding:'8px 0',borderBottom:`1px solid ${BRD}`}}>
+                <Av src={s.addressee.avatar_url} size={36} name={s.addressee.name} radius="50%"/>
+                <div style={{flex:1,fontFamily:F_UI,fontSize:13,color:TEXT}}>{s.addressee.name}</div>
+                <span style={{fontSize:11,fontFamily:F_UI,color:MUTED,fontStyle:'italic'}}>aguardando…</span>
+              </div>
+            ))
+          )}
         </div>
         <div style={{padding:'10px 14px',borderTop:`1px solid ${BRD}`}}>
           <div style={{fontWeight:700,fontSize:13,color:TEXT,marginBottom:8,fontFamily:F_UI}}>buscar pessoas</div>
