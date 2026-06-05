@@ -366,7 +366,7 @@ export async function getNovidades(userId) {
 export async function getFotosFeed(userId, page = 0, pageSize = 10) {
   const friends = await getFriends(userId)
   if (!friends.length) return []
-  const friendIds = [userId, ...friends.map(f => f.id)]
+  const friendIds = friends.map(f => f.id)  // exclude self
 
   const { data } = await supabase
     .from('album_photos')
