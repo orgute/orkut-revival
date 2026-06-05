@@ -130,6 +130,22 @@ export async function getDepoimentos(profileId) {
   return data || []
 }
 
+export async function getPendingDepoimentos(userId) {
+  const { data } = await supabase.from('depoimentos')
+    .select('id,text,created_at,from:profiles!depoimentos_from_id_fkey(id,name,avatar_url)')
+    .eq('to_id', userId).eq('approved', false)
+    .order('created_at', { ascending: false })
+  return data || []
+}
+
+export async function approveDepoimento(id) {
+  await supabase.from('depoimentos').update({ approved: true }).eq('id', id)
+}
+
+export async function rejectDepoimento(id) {
+  await supabase.from('depoimentos').delete().eq('id', id)
+}
+
 export async function sendDepoimento(fromId, toId, text) {
   const { error } = await supabase.from('depoimentos').insert({ from_id: fromId, to_id: toId, text })
   if (error) throw error

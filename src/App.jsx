@@ -9,7 +9,7 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getSignedUrl, uploadPhoto, getAlbums, createAlbum, deleteAlbum,
   getAlbumPhotos, addPhotoToAlbum, deletePhoto, getNovidades,
   getFotosFeed, getPhotoComments, addPhotoComment, deletePhotoComment,
-  getSentRequests } from './lib/supabase.js'
+  getSentRequests, getPendingDepoimentos, approveDepoimento, rejectDepoimento } from './lib/supabase.js'
 
 /* ── Design tokens matching screenshot exactly ── */
 const NAV_BG  = '#2a3f6f'   // navy, one notch lighter
@@ -393,16 +393,18 @@ function RightPanel({ title, children }){
 }
 
 /* ── RIGHT SIDEBAR ── */
-function RightSidebar({ myId, setPage }){
+function RightSidebar({ myId, viewId, setPage }){
+  const isOwnSidebar = !viewId || viewId===myId
+  const targetSidebarId = viewId || myId
   const [friends,setFriends]=useState([])
   const [mine,setMine]=useState([])
   useEffect(()=>{
-    getFriends(myId).then(setFriends)
-    getMyCommunities(myId).then(setMine)
-  },[myId])
+    getFriends(targetSidebarId).then(setFriends)
+    getMyCommunities(targetSidebarId).then(setMine)
+  },[targetSidebarId])
   return (
     <aside style={{width:230,flexShrink:0}}>
-      <RightPanel title={`meus amigos (${friends.length})`}>
+      <RightPanel title={`${isOwnSidebar?'meus ':' '}amigos (${friends.length})`}>
         {friends.length===0?(
           <>
             <input placeholder="buscar amigos" style={{...inp,marginBottom:7,fontSize:11}}/>
@@ -424,7 +426,7 @@ function RightSidebar({ myId, setPage }){
           </>
         )}
       </RightPanel>
-      <RightPanel title={`minhas comunidades (${mine.length})`}>
+      <RightPanel title={`${isOwnSidebar?'minhas ':' '}comunidades (${mine.length})`}>
         {mine.length===0
           ?<div style={{fontSize:12,color:MUTED}}>Sem comunidades.</div>
           :<div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:4}}>
@@ -708,6 +710,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
   const [editing,setEditing]=useState(false)
   const [draft,setDraft]=useState({})
   const [deps,setDeps]=useState([])
+  const [pendingDeps,setPendingDeps]=useState([])
   const [tWrite,setTWrite]=useState(false)
   const [tDraft,setTDraft]=useState('')
   const [fStatus,setFStatus]=useState(null)
@@ -723,6 +726,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
     if(!targetId)return
     getProfile(targetId).then(p=>{setProfile(p);setDraft(p||{})})
     getDepoimentos(targetId).then(setDeps)
+    if(!userId||userId===myId) getPendingDepoimentos(myId).then(setPendingDeps)
     getRecados(targetId).then(setScraps)
     if(isOwn){ getMyInvites(myId).then(setInvites); getMemberNumber(targetId).then(setMemberNum) }
     if(!isOwn){recordVisit(myId,targetId);getFriendshipStatus(myId,targetId).then(setFStatus)}
@@ -755,7 +759,8 @@ function ProfilePage({ myId, userId, setPage, toast }){
   const submitDep=async()=>{
     if(!tDraft.trim())return
     await sendDepoimento(myId,targetId,tDraft)
-    getDepoimentos(targetId).then(setDeps);setTDraft('');setTWrite(false);toast('Enviado!')
+    getDepoimentos(targetId).then(setDeps)
+    if(!userId||userId===myId) getPendingDepoimentos(myId).then(setPendingDeps);setTDraft('');setTWrite(false);toast('Enviado!')
   }
   const af=(k,v)=>setDraft(p=>({...p,[k]:v.split(',').map(s=>s.trim()).filter(Boolean)}))
   const mob=useIsMobile()  // must be before any early returns
@@ -834,15 +839,17 @@ function ProfilePage({ myId, userId, setPage, toast }){
                 {!isOwn&&<button style={btnPk} onClick={()=>setPage({name:'scrapbook',userId:targetId})}>✉ recado</button>}
               </div>
             </div>
-            {/* Stats row */}
+            {/* Stats row — clickable to friend's pages */}
             <div style={{display:'flex',gap:14,fontSize:12,color:TEXT,marginBottom:8,flexWrap:'wrap',alignItems:'center'}}>
-              <span style={{display:'flex',alignItems:'center',gap:4}}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="10" rx="1.5" stroke={MUTED} strokeWidth="1.4" fill="none"/><line x1="1" y1="5" x2="13" y2="5" stroke={MUTED} strokeWidth="1.2"/></svg>
-                recados <strong style={{fontFamily:F_NUM}}>{scraps.length}</strong>
+              <span style={{display:'flex',alignItems:'center',gap:4,cursor:'pointer'}}
+                onClick={()=>setPage({name:'scrapbook',userId:targetId})}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="10" rx="1.5" stroke={BLUE} strokeWidth="1.4" fill="none"/><line x1="1" y1="5" x2="13" y2="5" stroke={BLUE} strokeWidth="1.2"/></svg>
+                <span style={{color:BLUE,textDecoration:'underline'}}>recados</span> <strong style={{fontFamily:F_NUM}}>{scraps.length}</strong>
               </span>
-              <span style={{display:'flex',alignItems:'center',gap:4}}>
-                <svg width="14" height="12" viewBox="0 0 14 12" fill="none"><rect x="0.5" y="1" width="13" height="10" rx="1.5" stroke={MUTED} strokeWidth="1.4" fill="none"/><path d="M0.5 8l3.5-3 3 3 2.5-2.5 5 4" stroke={MUTED} strokeWidth="1.2" strokeLinejoin="round" fill="none"/><circle cx="4" cy="4.5" r="1.2" fill="none" stroke={MUTED} strokeWidth="1.2"/></svg>
-                fotos <strong style={{fontFamily:F_NUM}}>{photoCount}</strong>
+              <span style={{display:'flex',alignItems:'center',gap:4,cursor:'pointer'}}
+                onClick={()=>setPage({name:'galeria',userId:targetId})}>
+                <svg width="14" height="12" viewBox="0 0 14 12" fill="none"><rect x="0.5" y="1" width="13" height="10" rx="1.5" stroke={BLUE} strokeWidth="1.4" fill="none"/><path d="M0.5 8l3.5-3 3 3 2.5-2.5 5 4" stroke={BLUE} strokeWidth="1.2" strokeLinejoin="round" fill="none"/><circle cx="4" cy="4.5" r="1.2" fill="none" stroke={BLUE} strokeWidth="1.2"/></svg>
+                <span style={{color:BLUE,textDecoration:'underline'}}>fotos</span> <strong style={{fontFamily:F_NUM}}>{photoCount}</strong>
               </span>
               <span style={{display:'flex',alignItems:'center',gap:4}}>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5" stroke={MUTED} strokeWidth="1.2" fill="none"/></svg>
@@ -966,6 +973,34 @@ function ProfilePage({ myId, userId, setPage, toast }){
                 </table>
             )}
             {tab==='depoimentos'&&<div style={{padding:'10px 14px'}}>
+              {/* Pending approval — only visible to profile owner */}
+              {isOwn&&pendingDeps.length>0&&<div style={{marginBottom:14,background:'#fffbea',
+                border:`1px solid #e8d87a`,borderRadius:3,padding:'10px 12px'}}>
+                <div style={{fontWeight:700,fontSize:12,color:'#8a6d00',marginBottom:8,fontFamily:F_UI}}>
+                  ⏳ aguardando sua aprovação ({pendingDeps.length})
+                </div>
+                {pendingDeps.map(d=>(
+                  <div key={d.id} style={{display:'flex',gap:10,padding:'7px 0',
+                    borderBottom:`1px solid #e8d87a`,alignItems:'flex-start'}}>
+                    <Av src={d.from.avatar_url} size={30} name={d.from.name} radius="3px"/>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:700,fontSize:12,color:BLUE,marginBottom:2,fontFamily:F_UI}}>{d.from.name}:</div>
+                      <div style={{fontSize:13,color:TEXT,lineHeight:1.5,fontFamily:F_UI}}>{d.text}</div>
+                    </div>
+                    <div style={{display:'flex',gap:6,flexShrink:0}}>
+                      <button style={{...btnBl,padding:'2px 8px',fontSize:11}} onClick={async()=>{
+                        await approveDepoimento(d.id)
+                        setPendingDeps(p=>p.filter(x=>x.id!==d.id))
+                        getDepoimentos(myId).then(setDeps)
+                      }}>✓ aprovar</button>
+                      <button style={{...btnGh,padding:'2px 8px',fontSize:11,color:'#cc0000',borderColor:'#cc0000'}} onClick={async()=>{
+                        await rejectDepoimento(d.id)
+                        setPendingDeps(p=>p.filter(x=>x.id!==d.id))
+                      }}>✕</button>
+                    </div>
+                  </div>
+                ))}
+              </div>}
               {deps.map(d=>(
                 <div key={d.id} style={{display:'flex',gap:10,padding:'8px 0',borderBottom:`1px solid ${BRD}`}}>
                   <Av src={d.from.avatar_url} size={32} name={d.from.name} radius="3px"/>
@@ -1039,7 +1074,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
       </div>
 
       {/* Right — hidden on mobile */}
-      {!mob&&<RightSidebar myId={myId} setPage={setPage}/>}
+      {!mob&&<RightSidebar myId={myId} viewId={targetId} setPage={setPage}/>}
     </div>
   )
 }
@@ -1834,6 +1869,37 @@ function FotosFeed({ myId, setPage }){
   )
 }
 
+/* ── INCOMING CHAT POPUP ── */
+function IncomingChatPopup({ chat, onOpen, onClose }){
+  useEffect(()=>{
+    const t=setTimeout(onClose, 8000)
+    return()=>clearTimeout(t)
+  },[])
+  return (
+    <div style={{position:'fixed',bottom:24,right:24,zIndex:9999,
+      background:WHITE,border:`1.5px solid ${BLUE}`,borderRadius:4,
+      boxShadow:'0 4px 20px rgba(0,0,0,.18)',overflow:'hidden',
+      width:280,fontFamily:F_UI}}>
+      <div style={{background:BLUE,padding:'8px 12px',display:'flex',
+        justifyContent:'space-between',alignItems:'center'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <Av src={chat.sender?.avatar_url} size={22} name={chat.sender?.name} radius="50%"/>
+          <span style={{color:WHITE,fontWeight:700,fontSize:12}}>{chat.sender?.name}</span>
+        </div>
+        <span style={{color:'rgba(255,255,255,.7)',cursor:'pointer',fontSize:14}}
+          onClick={onClose}>✕</span>
+      </div>
+      <div style={{padding:'10px 12px'}}>
+        <div style={{fontSize:13,color:TEXT,lineHeight:1.5,marginBottom:10,
+          overflow:'hidden',textOverflow:'ellipsis',display:'-webkit-box',
+          WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{chat.text}</div>
+        <button style={{...btnBl,width:'100%',padding:'6px',fontSize:12}}
+          onClick={onOpen}>💬 responder</button>
+      </div>
+    </div>
+  )
+}
+
 /* ── ADMIN CLEANUP (one-time use) ── */
 function AdminCleanup({ setToast }){
   const [log,setLog]=useState([])
@@ -1920,6 +1986,26 @@ export default function App(){
     window.addEventListener('keydown',onKey)
     return()=>{ subscription.unsubscribe(); window.removeEventListener('keydown',onKey) }
   },[])
+
+  // Global chat listener — pops up incoming messages
+  const [incomingChat,setIncomingChat]=useState(null)
+  useEffect(()=>{
+    if(!session?.user) return
+    const uid=session.user.id
+    const ch=supabase.channel('global-msgs-'+uid)
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',
+        filter:`to_id=eq.${uid}`},
+        async(payload)=>{
+          const msg=payload.new
+          // Get sender profile
+          const {data:sender}=await supabase.from('profiles')
+            .select('id,name,avatar_url').eq('id',msg.from_id).single()
+          setIncomingChat({sender, text:msg.text, id:msg.id})
+          setNewRecados(n=>n+1)
+        })
+      .subscribe()
+    return()=>supabase.removeChannel(ch)
+  },[session?.user?.id])
   useEffect(()=>{
     if(!session?.user)return
     const uid=session.user.id
@@ -1973,6 +2059,10 @@ export default function App(){
         © Recriado com ❤️ · Zero Monetização
       </footer>
       <Toast msg={toast} onDone={()=>setToast('')}/>
+      {incomingChat&&<IncomingChatPopup
+        chat={incomingChat}
+        onOpen={()=>{setPage('friends');setIncomingChat(null)}}
+        onClose={()=>setIncomingChat(null)}/>}
     </div>
   )
 }
