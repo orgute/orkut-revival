@@ -23,7 +23,11 @@
     <script type="module" src="/src/main.jsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
+          // Unregister all old service workers first to clear bad caches
+          const regs = await navigator.serviceWorker.getRegistrations()
+          for (const reg of regs) await reg.unregister()
+          // Register fresh
           navigator.serviceWorker.register('/sw.js')
         })
       }
