@@ -133,7 +133,7 @@ export async function getDepoimentos(profileId) {
 export async function getPendingDepoimentos(userId) {
   const { data } = await supabase.from('depoimentos')
     .select('id,text,created_at,from:profiles!depoimentos_from_id_fkey(id,name,avatar_url)')
-    .eq('to_id', userId).eq('approved', false)
+    .eq('to_id', userId).or('approved.eq.false,approved.is.null').not('text','is','null')
     .order('created_at', { ascending: false })
   return data || []
 }

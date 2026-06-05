@@ -513,6 +513,52 @@ function Novidades({ myId, setPage }){
   )
 }
 
+/* ── TESTIMONIALS BLOCK (home page) ── */
+function TestimonialsBlock({ myId, setPage }){
+  const [deps,setDeps]=useState([])
+  useEffect(()=>{
+    supabase.from('depoimentos')
+      .select('id,text,created_at,from:profiles!depoimentos_from_id_fkey(id,name,avatar_url)')
+      .eq('to_id',myId).eq('approved',true)
+      .order('created_at',{ascending:false}).limit(5)
+      .then(({data})=>setDeps(data||[]))
+  },[myId])
+
+  if(!deps.length) return null
+
+  return (
+    <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden',marginTop:8}}>
+      <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,
+        padding:'5px 10px',fontWeight:700,fontSize:12,color:TEXT,
+        display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <span>Testimonials</span>
+        <span style={{fontSize:11,color:MUTED,fontWeight:400}}>{deps.length}</span>
+      </div>
+      <div>
+        {deps.map((d,i)=>(
+          <div key={d.id} style={{display:'flex',gap:10,padding:'10px 12px',
+            borderBottom:i<deps.length-1?`1px solid ${BRD}`:'none',alignItems:'flex-start'}}>
+            <div style={{cursor:'pointer',flexShrink:0}}
+              onClick={()=>setPage({name:'userprofile',userId:d.from.id})}>
+              <Av src={d.from.avatar_url} size={32} name={d.from.name} radius="50%"/>
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontWeight:700,fontSize:12,fontFamily:F_UI,color:BLUE,
+                cursor:'pointer',marginBottom:2}}
+                onClick={()=>setPage({name:'userprofile',userId:d.from.id})}>{d.from.name}</div>
+              <div style={{fontSize:12,fontFamily:F_UI,color:TEXT,lineHeight:1.5,
+                fontStyle:'italic'}}>"{d.text}"</div>
+              <div style={{fontSize:10,fontFamily:F_UI,color:MUTED,marginTop:3}}>
+                {new Date(d.created_at).toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'})}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /* ── HOME PAGE — pixel match of screenshot ── */
 function HomePage({ profile, myId, setPage }){
   const [scrapCount,setScrapCount]=useState(0)
@@ -2026,6 +2072,19 @@ export default function App(){
       .eq('to_id',uid)
       .gte('created_at',new Date(Date.now()-48*3600*1000).toISOString())
       .then(({count})=>setNewRecados(count||0))
+    // Show popup for most recent unread message on login
+    supabase.from('messages')
+      .select('id,text,from_id,created_at')
+      .eq('to_id',uid)
+      .order('created_at',{ascending:false})
+      .limit(1)
+      .then(async({data})=>{
+        if(data&&data[0]){
+          const {data:sender}=await supabase.from('profiles')
+            .select('id,name,avatar_url').eq('id',data[0].from_id).single()
+          setIncomingChat({sender,text:data[0].text,id:data[0].id})
+        }
+      })
   },[session])
 
   if(session===undefined)return(
