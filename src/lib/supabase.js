@@ -404,3 +404,16 @@ export async function addPhotoComment(userId, photoId, text) {
 export async function deletePhotoComment(commentId) {
   await supabase.from('photo_comments').delete().eq('id', commentId)
 }
+
+/* ── Online status ───────────────────────────────────────────── */
+export async function updateLastSeen(userId) {
+  await supabase.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', userId)
+}
+
+export function getOnlineStatus(lastSeen) {
+  if (!lastSeen) return 'offline'
+  const diff = Date.now() - new Date(lastSeen).getTime()
+  if (diff < 5 * 60 * 1000)       return 'online'   // < 5 min → disponível
+  if (diff < 24 * 60 * 60 * 1000) return 'ausente'  // < 24h  → ausente
+  return 'offline'                                    // > 24h  → offline
+}
