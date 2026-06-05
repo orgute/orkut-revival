@@ -7,7 +7,8 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getMessages, sendMessage, recordVisit, getVisitors, uploadAvatar,
   searchUsers, validateInviteCode, useInviteCode, getMyInvites, getMemberNumber,
   getSignedUrl, uploadPhoto, getAlbums, createAlbum, deleteAlbum,
-  getAlbumPhotos, addPhotoToAlbum, deletePhoto, getNovidades } from './lib/supabase.js'
+  getAlbumPhotos, addPhotoToAlbum, deletePhoto, getNovidades,
+  getFotosFeed, getPhotoComments, addPhotoComment, deletePhotoComment } from './lib/supabase.js'
 
 /* ── Design tokens matching screenshot exactly ── */
 const NAV_BG  = '#2a3f6f'   // navy, one notch lighter
@@ -257,6 +258,7 @@ function TopNav({ page, setPage, profile, pendingReqs, newRecados }){
   const cur=typeof page==='string'?page:page?.name
   const links=[['Início','home'],['Perfil','profile'],['Recados','scrapbook'],
                ['Amigos','friends'],['Comunidades','communities']]
+  const mobileLinks=[...links,['Fotos Feed','fotosfeed']]
   const go=(pg)=>{ setPage(pg); setMenuOpen(false) }
 
   return (
@@ -350,7 +352,7 @@ function TopNav({ page, setPage, profile, pendingReqs, newRecados }){
               onClick={()=>setMenuOpen(false)}>✕</span>
           </div>
           {/* Nav links */}
-          {links.map(([label,pg])=>(
+          {mobileLinks.map(([label,pg])=>(
             <div key={pg} onClick={()=>go(pg)} style={{
               padding:'16px 20px',fontSize:14,fontFamily:F_UI,cursor:'pointer',
               color:cur===pg?BLUE:BLUE,
@@ -1548,6 +1550,206 @@ function DepoimentosPage({ myId, setPage }){
   )
 }
 
+/* ── FOTOS FEED — mobile chronological photo feed ── */
+function FotosFeed({ myId, setPage }){
+  const [photos,setPhotos]=useState([])
+  const [signedUrls,setSignedUrls]=useState({})
+  const [page,setFeedPage]=useState(0)
+  const [hasMore,setHasMore]=useState(true)
+  const [loading,setLoading]=useState(true)
+  const [loadingMore,setLoadingMore]=useState(false)
+  const [openComments,setOpenComments]=useState(null) // photoId
+  const [comments,setComments]=useState({})           // photoId → []
+  const [commentText,setCommentText]=useState('')
+  const PAGE_SIZE=10
+
+  const resolveUrls=async(items)=>{
+    const urls={}
+    for(const p of items){
+      if(!signedUrls[p.id]) urls[p.id]=await getSignedUrl(p.storage_path)
+    }
+    setSignedUrls(prev=>({...prev,...urls}))
+  }
+
+  const loadPage=async(pg,append=false)=>{
+    const data=await getFotosFeed(myId,pg,PAGE_SIZE)
+    if(append) setPhotos(prev=>[...prev,...data])
+    else setPhotos(data)
+    setHasMore(data.length===PAGE_SIZE)
+    await resolveUrls(data)
+    return data
+  }
+
+  useEffect(()=>{
+    loadPage(0).then(()=>setLoading(false))
+  },[myId])
+
+  const loadMore=async()=>{
+    setLoadingMore(true)
+    const next=page+1
+    await loadPage(next,true)
+    setFeedPage(next)
+    setLoadingMore(false)
+  }
+
+  const toggleComments=async(photoId)=>{
+    if(openComments===photoId){ setOpenComments(null); return }
+    setOpenComments(photoId)
+    if(!comments[photoId]){
+      const data=await getPhotoComments(photoId)
+      setComments(prev=>({...prev,[photoId]:data}))
+    }
+  }
+
+  const submitComment=async(photoId)=>{
+    if(!commentText.trim()) return
+    const c=await addPhotoComment(myId,photoId,commentText.trim())
+    setComments(prev=>({...prev,[photoId]:[...(prev[photoId]||[]),{
+      ...c, author:{id:myId, name:'Você', avatar_url:null}
+    }]}))
+    setCommentText('')
+  }
+
+  if(loading) return (
+    <div style={{padding:40,textAlign:'center',color:MUTED,fontFamily:F_UI}}>
+      Carregando…
+    </div>
+  )
+
+  if(!photos.length) return (
+    <div style={{maxWidth:600,margin:'0 auto',padding:20,textAlign:'center'}}>
+      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,padding:32}}>
+        <div style={{fontSize:32,marginBottom:12}}>🖼️</div>
+        <div style={{fontSize:14,color:TEXT,fontFamily:F_UI,marginBottom:6}}>Nenhuma foto ainda</div>
+        <div style={{fontSize:12,color:MUTED,fontFamily:F_UI}}>
+          Quando seus amigos postarem fotos, elas aparecerão aqui.
+        </div>
+      </div>
+    </div>
+  )
+
+  return (
+    <div style={{maxWidth:600,margin:'0 auto',padding:'8px'}}>
+      {photos.map(photo=>{
+        const url=signedUrls[photo.id]
+        const isOpen=openComments===photo.id
+        const photoComments=comments[photo.id]||[]
+        const isOwn=photo.author.id===myId
+
+        return (
+          <div key={photo.id} style={{
+            background:WHITE,border:`1px solid ${BRD}`,
+            borderRadius:3,marginBottom:12,overflow:'hidden',
+          }}>
+            {/* Post header */}
+            <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px'}}>
+              <div style={{cursor:'pointer',flexShrink:0}}
+                onClick={()=>setPage({name:'userprofile',userId:photo.author.id})}>
+                <Av src={photo.author.avatar_url} size={36} name={photo.author.name} radius="50%"/>
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:13,fontFamily:F_UI,color:BLUE,
+                  cursor:'pointer',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
+                  onClick={()=>setPage({name:'userprofile',userId:photo.author.id})}>
+                  {photo.author.name}
+                </div>
+                <div style={{fontSize:11,fontFamily:F_UI,color:MUTED}}>
+                  {photo.album?.name} · {new Date(photo.created_at).toLocaleDateString('pt-BR',{
+                    day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Photo — retro white frame */}
+            <div style={{
+              margin:'0 10px 10px',
+              padding:6,
+              background:WHITE,
+              boxShadow:'0 0 0 1px #e0e4ee, 2px 2px 6px rgba(0,0,0,.10)',
+              borderRadius:1,
+            }}>
+              {url
+                ?<img src={url} alt={photo.caption||''}
+                    style={{width:'100%',display:'block',borderRadius:1,
+                      maxHeight:480,objectFit:'cover'}}/>
+                :<div style={{width:'100%',height:200,background:'#f0f0f0',
+                    display:'flex',alignItems:'center',justifyContent:'center',
+                    color:MUTED,fontSize:12,fontFamily:F_UI}}>Carregando…</div>
+              }
+              {photo.caption&&<div style={{
+                fontSize:11,fontFamily:F_UI,color:MUTED,
+                marginTop:5,textAlign:'center',fontStyle:'italic',
+              }}>{photo.caption}</div>}
+            </div>
+
+            {/* Action bar */}
+            <div style={{
+              display:'flex',alignItems:'center',gap:16,
+              padding:'6px 14px 10px',borderTop:`1px solid ${BRD}`,
+            }}>
+              <button onClick={()=>toggleComments(photo.id)} style={{
+                ...btnGh,padding:'3px 10px',fontSize:11,fontFamily:F_BTN,
+                color:isOpen?BLUE:MUTED,borderColor:isOpen?BLUE:BRD,
+              }}>
+                💬 {photoComments.length>0?photoComments.length:''} comentários
+              </button>
+            </div>
+
+            {/* Comments section */}
+            {isOpen&&<div style={{borderTop:`1px solid ${BRD}`,background:'#f8f9fc'}}>
+              <div style={{padding:'8px 14px',maxHeight:240,overflowY:'auto'}}>
+                {photoComments.length===0
+                  ?<div style={{fontSize:12,fontFamily:F_UI,color:MUTED,padding:'4px 0'}}>
+                    Nenhum comentário ainda. Seja o primeiro!
+                  </div>
+                  :photoComments.map(c=>(
+                    <div key={c.id} style={{display:'flex',gap:8,marginBottom:8,alignItems:'flex-start'}}>
+                      <Av src={c.author?.avatar_url} size={26} name={c.author?.name} radius="50%"/>
+                      <div style={{flex:1,background:WHITE,borderRadius:2,
+                        padding:'5px 9px',border:`1px solid ${BRD}`}}>
+                        <div style={{fontSize:11,fontWeight:700,fontFamily:F_UI,
+                          color:BLUE,marginBottom:2}}>{c.author?.name}</div>
+                        <div style={{fontSize:12,fontFamily:F_UI,color:TEXT,lineHeight:1.5}}>{c.text}</div>
+                      </div>
+                    </div>
+                  ))
+                }
+              </div>
+              {/* Comment input */}
+              <div style={{display:'flex',gap:8,padding:'8px 14px',
+                borderTop:`1px solid ${BRD}`}}>
+                <input
+                  style={{...inp,flex:1,fontSize:12}}
+                  placeholder="Escrever um comentário…"
+                  value={commentText}
+                  onChange={e=>setCommentText(e.target.value)}
+                  onKeyDown={e=>e.key==='Enter'&&submitComment(photo.id)}/>
+                <button style={{...btnBl,padding:'4px 12px',fontSize:11}}
+                  onClick={()=>submitComment(photo.id)}>→</button>
+              </div>
+            </div>}
+          </div>
+        )
+      })}
+
+      {/* Paginated load more */}
+      {hasMore&&<div style={{textAlign:'center',padding:'8px 0 16px'}}>
+        <button style={{...btnGh,padding:'8px 24px',fontSize:13,fontFamily:F_BTN}}
+          onClick={loadMore} disabled={loadingMore}>
+          {loadingMore?'Carregando…':'ver mais fotos'}
+        </button>
+      </div>}
+      {!hasMore&&photos.length>0&&<div style={{
+        textAlign:'center',padding:'12px 0 20px',
+        fontSize:11,fontFamily:F_UI,color:MUTED,
+      }}>
+        Você está em dia com as fotos dos seus amigos 🎉
+      </div>}
+    </div>
+  )
+}
+
 /* ── ADMIN CLEANUP (one-time use) ── */
 function AdminCleanup({ setToast }){
   const [log,setLog]=useState([])
@@ -1670,6 +1872,7 @@ export default function App(){
       case 'friends':     return <FriendsPage myId={myId} setPage={navTo} toast={setToast}/>
       case 'communities': return <CommunitiesPage myId={myId} toast={setToast} page={page}/>
       case '__admin':     return <AdminCleanup setToast={setToast}/>
+      case 'fotosfeed':   return <FotosFeed myId={myId} setPage={navTo}/>
       case 'galeria':     return <GaleriaPage myId={myId} userId={page?.userId||null} setPage={navTo} openAlbumId={page?.albumId||null}/>
       case 'depoimentos': return <DepoimentosPage myId={myId} setPage={navTo}/>
       default:            return <HomePage profile={profile} myId={myId} setPage={navTo}/>

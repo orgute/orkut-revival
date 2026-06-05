@@ -338,3 +338,46 @@ export async function getNovidades(userId) {
     new Date(b.created_at) - new Date(a.created_at)
   )
 }
+
+/* ── Fotos Feed ──────────────────────────────────────────────── */
+export async function getFotosFeed(userId, page = 0, pageSize = 10) {
+  const friends = await getFriends(userId)
+  if (!friends.length) return []
+  const friendIds = [userId, ...friends.map(f => f.id)]
+
+  const { data } = await supabase
+    .from('album_photos')
+    .select(`
+      id, storage_path, caption, created_at,
+      album:albums(id, name),
+      author:profiles!user_id(id, name, avatar_url)
+    `)
+    .in('user_id', friendIds)
+    .order('created_at', { ascending: false })
+    .range(page * pageSize, (page + 1) * pageSize - 1)
+
+  return data || []
+}
+
+export async function getPhotoComments(photoId) {
+  const { data } = await supabase
+    .from('photo_comments')
+    .select('id, text, created_at, author:profiles!user_id(id, name, avatar_url)')
+    .eq('photo_id', photoId)
+    .order('created_at', { ascending: true })
+  return data || []
+}
+
+export async function addPhotoComment(userId, photoId, text) {
+  const { data, error } = await supabase
+    .from('photo_comments')
+    .insert({ user_id: userId, photo_id: photoId, text })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deletePhotoComment(commentId) {
+  await supabase.from('photo_comments').delete().eq('id', commentId)
+}
