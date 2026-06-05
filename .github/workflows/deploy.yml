@@ -32,24 +32,14 @@ jobs:
           VITE_SITE_URL: https://orkut-revival-app.vercel.app
         run: npm run build
 
-      - name: Get Vercel org ID
-        id: orgid
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: |
-          RESPONSE=$(curl -sf "https://api.vercel.com/v2/user" -H "Authorization: Bearer $VERCEL_TOKEN")
-          echo "response=$RESPONSE"
-          ORG_ID=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['user']['id'])")
-          echo "org_id=$ORG_ID" >> $GITHUB_OUTPUT
-          echo "Org ID: $ORG_ID"
-          echo "{\"projectId\":\"prj_R761hsgMIETeNW7bXMYolcfDSN0J\",\"orgId\":\"$ORG_ID\"}" > .vercel/project.json
-
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
 
       - name: Deploy to Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: |
           vercel deploy --prod --token=$VERCEL_TOKEN --yes
           echo "🌐 https://orkut-revival-app.vercel.app"
