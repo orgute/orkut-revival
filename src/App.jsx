@@ -98,10 +98,9 @@ function NavLogo(){
 }
 
 /* ── STATUS DOT ── */
-const STATUS_COLOR = { online:'#4caf50', ausente:'#d4a017', offline:'#e03131' }
-const STATUS_LABEL = { online:'disponível', ausente:'ausente', offline:'offline' }
-
 function StatusDot({ lastSeen, size=8, showLabel=true }){
+  const STATUS_COLOR = { online:'#4caf50', ausente:'#d4a017', offline:'#e03131' }
+  const STATUS_LABEL = { online:'disponível', ausente:'ausente', offline:'offline' }
   const status = getOnlineStatus(lastSeen)
   return (
     <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
