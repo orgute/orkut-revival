@@ -35,14 +35,10 @@ jobs:
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
 
-      - name: Link Vercel project
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: vercel link --yes --token=$VERCEL_TOKEN --project=orkut-revival
-
-      - name: Deploy to Vercel (production)
+      - name: Deploy to Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          vercel deploy --prod --prebuilt --token=$VERCEL_TOKEN --yes
-          echo "🌐 https://orkut-revival-app.vercel.app"
+          vercel deploy dist --prod --token=$VERCEL_TOKEN --yes \
+            --name=orkut-revival
+          echo "🌐 STABLE: https://orkut-revival-app.vercel.app"
