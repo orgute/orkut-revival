@@ -884,7 +884,15 @@ function ProfilePage({ myId, userId, setPage, toast }){
                 background:tab===t?PINK:'transparent',
                 color:tab===t?WHITE:MUTED,
                 borderRight:`1px solid ${BRD}`,
-              }}>{t}</div>
+                position:'relative',
+              }}>
+                {t}
+                {t==='depoimentos'&&isOwn&&pendingDeps.length>0&&<span style={{
+                  position:'absolute',top:3,right:3,
+                  background:'#e03131',color:WHITE,borderRadius:10,
+                  padding:'0 5px',fontSize:9,fontWeight:700,lineHeight:'14px',
+                }}>{pendingDeps.length}</span>}
+              </div>
             ))}
           </div>
 
@@ -1053,12 +1061,15 @@ function ProfilePage({ myId, userId, setPage, toast }){
               {invites.map(inv=>(
                 <div key={inv.id} style={{display:'flex',alignItems:'center',gap:8,
                   padding:'7px 10px',borderRadius:2,
-                  background:inv.used_by?'#f0f0f0':'#f0fff4',
-                  border:`1px solid ${inv.used_by?BRD:'#b0d8c0'}`}}>
+                  background:inv.used_by?'#f5f5f5':'#f0fff4',
+                  border:`1px solid ${inv.used_by?'#ddd':'#b0d8c0'}`,
+                  opacity:inv.used_by?0.55:1,
+                }}>
                   <span style={{fontFamily:'monospace',fontWeight:700,fontSize:14,
-                    color:inv.used_by?MUTED:BLUE,letterSpacing:2}}>{inv.code}</span>
+                    color:inv.used_by?'#aaa':BLUE,letterSpacing:2,
+                    textDecoration:inv.used_by?'line-through':'none'}}>{inv.code}</span>
                   {inv.used_by
-                    ?<span style={{fontSize:10,color:MUTED,marginLeft:'auto'}}>✓ usado</span>
+                    ?<span style={{fontSize:10,color:'#aaa',marginLeft:'auto'}}>✓ usado</span>
                     :<span style={{fontSize:10,color:'#2e7d32',marginLeft:'auto',cursor:'pointer'}}
                       onClick={()=>navigator.clipboard?.writeText(inv.code).then(()=>alert('Copiado!'))}>
                       📋 copiar
