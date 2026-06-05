@@ -719,27 +719,8 @@ function HomePage({ profile, myId, setPage }){
         {/* Novidades — friends' recent activity */}
         <Novidades myId={myId} setPage={setPage}/>
 
-        {/* Friend suggestions — screenshot style: grey square avatars */}
-        <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden',marginTop:8}}>
-          <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,
-            padding:'5px 10px',fontWeight:700,fontSize:12,color:TEXT}}>
-            sugestões de amigos
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,padding:'12px 14px'}}>
-            {['A','B','C','D'].map((letter)=>(
-              <div key={letter} style={{textAlign:'center',cursor:'pointer'}} title="Em breve">
-                <div style={{
-                  width:'100%',aspectRatio:'1',borderRadius:2,
-                  border:`1px solid ${BRD}`,background:'#e0e6f2',
-                  display:'flex',alignItems:'center',justifyContent:'center',
-                  fontSize:30,fontWeight:900,color:'#4a5a7a',marginBottom:5,
-                }}>{letter}</div>
-                <div style={{fontSize:11,color:TEXT,overflow:'hidden',
-                  textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{letter}.</div>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Testimonials */}
+        <TestimonialsBlock myId={myId} setPage={setPage}/>
       </div>
 
       {/* RIGHT COL */}
@@ -763,6 +744,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
   const [uploading,setUploading]=useState(false)
   const [scraps,setScraps]=useState([])
   const [photoCount,setPhotoCount]=useState(0)
+  const [scrapCount,setScrapCount]=useState(0)
   const [invites,setInvites]=useState([])
   const [showInvites,setShowInvites]=useState(false)
   const [tab,setTab]=useState('social')
@@ -890,7 +872,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
               <span style={{display:'flex',alignItems:'center',gap:4,cursor:'pointer'}}
                 onClick={()=>setPage({name:'scrapbook',userId:targetId})}>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="10" rx="1.5" stroke={BLUE} strokeWidth="1.4" fill="none"/><line x1="1" y1="5" x2="13" y2="5" stroke={BLUE} strokeWidth="1.2"/></svg>
-                <span style={{color:BLUE,textDecoration:'underline'}}>recados</span> <strong style={{fontFamily:F_NUM}}>{scraps.length}</strong>
+                <span style={{color:BLUE,textDecoration:'underline'}}>recados</span> <strong style={{fontFamily:F_NUM}}>{scrapCount}</strong>
               </span>
               <span style={{display:'flex',alignItems:'center',gap:4,cursor:'pointer'}}
                 onClick={()=>setPage({name:'galeria',userId:targetId})}>
@@ -1162,8 +1144,12 @@ function ScrapbookPage({ myId, targetUserId, setPage, toast }){
     <div style={{maxWidth:980,margin:'0 auto',padding:'8px'}}>
       <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
         <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'6px 12px',
-          fontWeight:700,fontSize:14,color:TEXT}}>
-          {isOwn?'meus recados':`recados de ${targetProfile?.name||'…'}`}
+          display:'flex',alignItems:'center',gap:10}}>
+          {!isOwn&&<span style={{fontSize:12,color:BLUE,cursor:'pointer',fontFamily:F_UI}}
+            onClick={()=>setPage({name:'userprofile',userId:targetUserId})}>← voltar</span>}
+          <span style={{fontWeight:700,fontSize:14,color:TEXT}}>
+            {isOwn?'meus recados':`recados de ${targetProfile?.name||'…'}`}
+          </span>
         </div>
         {isOwn&&<div style={{padding:'10px 12px',borderBottom:`1px solid ${BRD}`}}>
           <textarea style={tarea} value={text} onChange={e=>setText(e.target.value)} placeholder="Deixar um recado…"/>
@@ -1613,8 +1599,12 @@ function GaleriaPage({ myId, userId, setPage, openAlbumId }){
     <div style={{maxWidth:980,margin:'0 auto',padding:'8px'}}>
       <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
         <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'6px 12px',
-          fontWeight:700,fontSize:14,color:TEXT}}>
-          álbuns de {isOwn?'mim':targetId}
+          display:'flex',alignItems:'center',gap:10}}>
+          {!isOwn&&<span style={{fontSize:12,color:BLUE,cursor:'pointer',fontFamily:F_UI}}
+            onClick={()=>setPage({name:'userprofile',userId:userId})}>← voltar</span>}
+          <span style={{fontWeight:700,fontSize:14,color:TEXT}}>
+            álbuns de {isOwn?'mim':userId}
+          </span>
         </div>
         <div style={{padding:'12px 14px'}}>
           {/* Quick upload strip — no album needed */}
@@ -2057,7 +2047,8 @@ export default function App(){
           // Get sender profile
           const {data:sender}=await supabase.from('profiles')
             .select('id,name,avatar_url').eq('id',msg.from_id).single()
-          setIncomingChat({sender, text:msg.text, id:msg.id})
+          const ts=new Date().toISOString()
+          setIncomingChat({sender, text:msg.text, id:msg.id, ts})
           setNewRecados(n=>n+1)
         })
       .subscribe()
@@ -2072,17 +2063,19 @@ export default function App(){
       .eq('to_id',uid)
       .gte('created_at',new Date(Date.now()-48*3600*1000).toISOString())
       .then(({count})=>setNewRecados(count||0))
-    // Show popup for most recent unread message on login
+    // Show popup for unread messages — only ones newer than last dismissed
+    const lastSeen = sessionStorage.getItem('lastSeenMsg_'+uid) || '1970-01-01'
     supabase.from('messages')
       .select('id,text,from_id,created_at')
       .eq('to_id',uid)
+      .gt('created_at',lastSeen)
       .order('created_at',{ascending:false})
       .limit(1)
       .then(async({data})=>{
         if(data&&data[0]){
           const {data:sender}=await supabase.from('profiles')
             .select('id,name,avatar_url').eq('id',data[0].from_id).single()
-          setIncomingChat({sender,text:data[0].text,id:data[0].id})
+          setIncomingChat({sender,text:data[0].text,id:data[0].id,ts:data[0].created_at})
         }
       })
   },[session])
@@ -2131,8 +2124,14 @@ export default function App(){
       <Toast msg={toast} onDone={()=>setToast('')}/>
       {incomingChat&&<IncomingChatPopup
         chat={incomingChat}
-        onOpen={()=>{setPage('friends');setIncomingChat(null)}}
-        onClose={()=>setIncomingChat(null)}/>}
+        onOpen={()=>{
+          if(incomingChat.ts) sessionStorage.setItem('lastSeenMsg_'+myId,incomingChat.ts)
+          setNewRecados(0); setIncomingChat(null); setPage('friends')
+        }}
+        onClose={()=>{
+          if(incomingChat.ts) sessionStorage.setItem('lastSeenMsg_'+myId,incomingChat.ts)
+          setNewRecados(0); setIncomingChat(null)
+        }}/>}
     </div>
   )
 }
