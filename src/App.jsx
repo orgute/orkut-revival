@@ -1099,6 +1099,73 @@ function ScrapbookPage({ myId, targetUserId, setPage, toast }){
   )
 }
 
+/* ── SEARCH PEOPLE ── */
+function SearchPeople({ myId, setPage }){
+  const [query,setQuery]=useState('')
+  const [results,setResults]=useState([])
+  const [searching,setSearching]=useState(false)
+  const [friendStatuses,setFriendStatuses]=useState({})
+
+  useEffect(()=>{
+    if(query.length<2){ setResults([]); return }
+    setSearching(true)
+    const t=setTimeout(async()=>{
+      const data=await searchUsers(query)
+      // Exclude self
+      setResults(data.filter(u=>u.id!==myId))
+      setSearching(false)
+    },300)
+    return()=>clearTimeout(t)
+  },[query])
+
+  const sendRequest=async(userId)=>{
+    await sendFriendRequest(myId,userId)
+    setFriendStatuses(p=>({...p,[userId]:'pending'}))
+  }
+
+  return (
+    <div>
+      <div style={{position:'relative'}}>
+        <input style={{...inp,paddingRight:28}} value={query}
+          onChange={e=>setQuery(e.target.value)}
+          placeholder="buscar por nome…"/>
+        {searching&&<span style={{position:'absolute',right:8,top:'50%',
+          transform:'translateY(-50%)',fontSize:11,color:MUTED}}>…</span>}
+      </div>
+      {results.length>0&&<div style={{
+        border:`1px solid ${BRD}`,borderTop:'none',borderRadius:'0 0 3px 3px',
+        background:WHITE,maxHeight:240,overflowY:'auto'
+      }}>
+        {results.map(u=>(
+          <div key={u.id} style={{display:'flex',alignItems:'center',gap:10,
+            padding:'8px 12px',borderBottom:`1px solid ${BRD}`}}>
+            <div style={{cursor:'pointer',flexShrink:0}}
+              onClick={()=>setPage({name:'userprofile',userId:u.id})}>
+              <Av src={u.avatar_url} size={36} name={u.name} radius="50%"/>
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontWeight:700,fontSize:13,fontFamily:F_UI,color:BLUE,
+                cursor:'pointer',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
+                onClick={()=>setPage({name:'userprofile',userId:u.id})}>{u.name}</div>
+              {u.city&&<div style={{fontSize:11,fontFamily:F_UI,color:MUTED}}>{u.city}{u.country?`, ${u.country}`:''}</div>}
+            </div>
+            <button
+              style={{...btnBl,padding:'3px 10px',fontSize:11,flexShrink:0,
+                background:friendStatuses[u.id]==='pending'?MUTED:BLUE}}
+              disabled={friendStatuses[u.id]==='pending'}
+              onClick={()=>sendRequest(u.id)}>
+              {friendStatuses[u.id]==='pending'?'enviado':'+ adicionar'}
+            </button>
+          </div>
+        ))}
+      </div>}
+      {query.length>=2&&!searching&&results.length===0&&<div style={{
+        fontSize:12,fontFamily:F_UI,color:MUTED,padding:'8px 0'
+      }}>Nenhum resultado para "{query}"</div>}
+    </div>
+  )
+}
+
 /* ── FRIENDS ── */
 function FriendsPage({ myId, setPage, toast }){
   const [tab,setTab]=useState('amigos')
@@ -1174,8 +1241,8 @@ function FriendsPage({ myId, setPage, toast }){
           {tab==='enviados'&&<div style={{color:MUTED,fontSize:13}}>Nada por aqui.</div>}
         </div>
         <div style={{padding:'10px 14px',borderTop:`1px solid ${BRD}`}}>
-          <div style={{fontWeight:700,fontSize:13,color:TEXT,marginBottom:8}}>buscar pessoas</div>
-          <input style={inp} placeholder="buscar por nome…"/>
+          <div style={{fontWeight:700,fontSize:13,color:TEXT,marginBottom:8,fontFamily:F_UI}}>buscar pessoas</div>
+          <SearchPeople myId={myId} setPage={setPage}/>
         </div>
       </div>
       {chatF&&(
