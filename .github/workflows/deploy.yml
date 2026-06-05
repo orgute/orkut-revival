@@ -38,10 +38,8 @@ jobs:
       - name: Deploy to Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          DEPLOY_URL=$(vercel deploy --prod --token=$VERCEL_TOKEN --yes 2>&1 \
-            | grep -oE 'https://[a-z0-9_-]+\.vercel\.app' | tail -1)
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "🌐 STABLE: https://orkut-revival-app.vercel.app"
-          echo "🔗 PREVIEW: $DEPLOY_URL"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          vercel deploy --prod --token=$VERCEL_TOKEN --yes \
+            --scope=$VERCEL_PROJECT_ID
+          echo "🌐 https://orkut-revival-app.vercel.app"
