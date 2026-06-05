@@ -9,7 +9,8 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getSignedUrl, uploadPhoto, getAlbums, createAlbum, deleteAlbum,
   getAlbumPhotos, addPhotoToAlbum, deletePhoto, getNovidades,
   getFotosFeed, getPhotoComments, addPhotoComment, deletePhotoComment,
-  getSentRequests, getPendingDepoimentos, approveDepoimento, rejectDepoimento   updateLastSeen, getOnlineStatus,
+  getSentRequests, getPendingDepoimentos, approveDepoimento, rejectDepoimento,
+  updateLastSeen, getOnlineStatus,
 } from './lib/supabase.js'
 
 /* ── Design tokens matching screenshot exactly ── */
