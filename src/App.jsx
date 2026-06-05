@@ -403,7 +403,7 @@ function RightSidebar({ myId, viewId, setPage }){
     getMyCommunities(targetSidebarId).then(setMine)
   },[targetSidebarId])
   return (
-    <aside style={{width:230,flexShrink:0}}>
+    <aside style={{width:250,flexShrink:0}}>
       <RightPanel title={`${isOwnSidebar?'meus ':' '}amigos (${friends.length})`}>
         {friends.length===0?(
           <>
@@ -412,14 +412,14 @@ function RightSidebar({ myId, viewId, setPage }){
           </>
         ):(
           <>
-            <input placeholder="buscar amigos" style={{...inp,marginBottom:7,fontSize:11}}/>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:4}}>
-              {friends.slice(0,8).map(f=>(
+            <input placeholder="buscar amigos" style={{...inp,marginBottom:8,fontSize:11}}/>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
+              {friends.slice(0,6).map(f=>(
                 <div key={f.id} style={{textAlign:'center',cursor:'pointer'}}
                   onClick={()=>setPage({name:'userprofile',userId:f.id})}>
-                  <Av src={f.avatar_url} size={40} name={f.name} radius="3px"/>
-                  <div style={{fontSize:9,color:MUTED,marginTop:2,overflow:'hidden',
-                    textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name.split(' ')[0]}</div>
+                  <Av src={f.avatar_url} size={64} name={f.name} radius="3px"/>
+                  <div style={{fontSize:10,color:MUTED,marginTop:3,overflow:'hidden',
+                    textOverflow:'ellipsis',whiteSpace:'nowrap',fontFamily:F_UI}}>{f.name.split(' ')[0]}</div>
                 </div>
               ))}
             </div>
@@ -429,15 +429,15 @@ function RightSidebar({ myId, viewId, setPage }){
       <RightPanel title={`${isOwnSidebar?'minhas ':' '}comunidades (${mine.length})`}>
         {mine.length===0
           ?<div style={{fontSize:12,color:MUTED}}>Sem comunidades.</div>
-          :<div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:4}}>
-            {mine.slice(0,8).map(c=>(
+          :<div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
+            {mine.slice(0,6).map(c=>(
               <div key={c.id} style={{textAlign:'center',cursor:'pointer'}}
                 onClick={()=>setPage({name:'communities',openCommunity:c})}>
-                <img src={"https://picsum.photos/seed/"+(c.seed||c.id)+"/40/40"} alt=""
-                  style={{width:40,height:40,borderRadius:3,objectFit:'cover',
-                    border:`1px solid ${BRD}`,display:'block'}}/>
-                <div style={{fontSize:9,color:MUTED,marginTop:2,overflow:'hidden',
-                  textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                <img src={"https://picsum.photos/seed/"+(c.seed||c.id)+"/64/64"} alt=""
+                  style={{width:64,height:64,borderRadius:3,objectFit:'cover',
+                    border:`1px solid ${BRD}`,display:'block',margin:'0 auto'}}/>
+                <div style={{fontSize:10,color:MUTED,marginTop:3,overflow:'hidden',
+                  textOverflow:'ellipsis',whiteSpace:'nowrap',fontFamily:F_UI}}>
                   {(c.name||'').replace(/[♥❤★]/g,'').trim()}
                 </div>
               </div>
