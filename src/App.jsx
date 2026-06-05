@@ -790,6 +790,10 @@ function ProfilePage({ myId, userId, setPage, toast }){
     if(!isOwn){recordVisit(myId,targetId);getFriendshipStatus(myId,targetId).then(setFStatus);isFan(myId,targetId).then(setIAmFan)}
   },[targetId])
 
+  const toggleFan=async()=>{
+    if(iAmFan){await removeFan(myId,targetId);setIAmFan(false);setFanCount(n=>n-1)}
+    else{await addFan(myId,targetId);setIAmFan(true);setFanCount(n=>n+1)}
+  }
   const submitScrap=async()=>{
     if(!newScrap.trim()) return
     await sendRecado(myId, targetId, newScrap.trim())
@@ -941,10 +945,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
               </span>
               <span style={{display:'flex',alignItems:'center',gap:4,
                 cursor:!isOwn?'pointer':'default'}}
-                onClick={!isOwn?async()=>{
-                  if(iAmFan){await removeFan(myId,targetId);setIAmFan(false);setFanCount(n=>n-1)}
-                  else{await addFan(myId,targetId);setIAmFan(true);setFanCount(n=>n+1)}
-                }:undefined}>
+                onClick={!isOwn?toggleFan:undefined}>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill={!isOwn&&iAmFan?'#f5a623':'none'}>
                   <polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5"
                     stroke={!isOwn&&iAmFan?'#f5a623':MUTED} strokeWidth="1.4"/>
