@@ -887,8 +887,18 @@ function ProfilePage({ myId, userId, setPage, toast }){
               <div style={{display:'flex',gap:7}}>
                 {isOwn&&<><button style={btnBl} onClick={()=>setEditing(!editing)}>{editing?'cancelar':'editar perfil'}</button>
                   <label style={{...btnGh,cursor:'pointer'}}>trocar foto<input type="file" accept="image/*" style={{display:'none'}} onChange={handleAvatar}/></label></>}
-                {!isOwn&&<button style={fStatus?.status==='accepted'?btnGh:btnBl} onClick={handleFriend}>
-                  {!fStatus?'+ adicionar':fStatus.status==='pending'&&fStatus.requester_id===myId?'pedido enviado':'aceitar'}</button>}
+                {!isOwn&&(fStatus?.status==='accepted'
+                  ?<span style={{fontSize:12,fontFamily:F_UI,color:'#2e7d32',
+                      border:'1px solid #b0d8b0',borderRadius:2,padding:'4px 10px',
+                      background:'#f0fff4'}}>amigos</span>
+                  :fStatus?.status==='pending'
+                    ?<span style={{fontSize:12,fontFamily:F_UI,color:MUTED,
+                        border:`1px solid ${BRD}`,borderRadius:2,padding:'4px 10px',
+                        background:'#f8f9fc'}}>
+                        {fStatus.requester_id===myId?'pendente':'aceitar pedido'}
+                      </span>
+                    :<button style={btnBl} onClick={handleFriend}>adicionar</button>
+                )}
                 {!isOwn&&<button style={btnPk} onClick={()=>setPage({name:'scrapbook',userId:targetId})}>✉ recado</button>}
               </div>
             </div>
