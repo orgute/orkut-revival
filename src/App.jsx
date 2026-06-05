@@ -755,7 +755,14 @@ function ProfilePage({ myId, userId, setPage, toast }){
     getProfile(targetId).then(p=>{setProfile(p);setDraft(p||{})})
     getDepoimentos(targetId).then(setDeps)
     if(!userId||userId===myId) getPendingDepoimentos(myId).then(setPendingDeps)
-    getRecados(targetId).then(setScraps)
+    getRecados(targetId).then(d=>{ setScraps(d); setScrapCount(d.length) })
+    // Photo count — works for friends via are_friends() RLS
+    supabase.from('album_photos').select('id',{count:'exact',head:true})
+      .eq('user_id',targetId)
+      .then(({count,error})=>{
+        if(error) console.error('photo count:',error.message)
+        else setPhotoCount(count||0)
+      })
     if(isOwn){ getMyInvites(myId).then(setInvites); getMemberNumber(targetId).then(setMemberNum) }
     if(!isOwn){recordVisit(myId,targetId);getFriendshipStatus(myId,targetId).then(setFStatus)}
   },[targetId])
