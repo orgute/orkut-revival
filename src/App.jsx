@@ -1,3 +1,4 @@
+// v4 — online status + fans + inbox
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getFriends, getFriendRequests, sendFriendRequest, respondFriendRequest,
