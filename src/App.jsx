@@ -531,7 +531,7 @@ function TestimonialsBlock({ myId, setPage }){
       <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,
         padding:'5px 10px',fontWeight:700,fontSize:12,color:TEXT,
         display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-        <span>Testimonials</span>
+        <span>testimonials</span>
         <span style={{fontSize:11,color:MUTED,fontWeight:400}}>{deps.length}</span>
       </div>
       <div>
@@ -749,10 +749,12 @@ function ProfilePage({ myId, userId, setPage, toast }){
   const [showInvites,setShowInvites]=useState(false)
   const [tab,setTab]=useState('social')
   const [memberNum,setMemberNum]=useState(null)
+  const [newScrap,setNewScrap]=useState('')
+  const [scrapPrivacy,setScrapPrivacy]=useState('friends')
 
   useEffect(()=>{
     if(!targetId)return
-    getProfile(targetId).then(p=>{setProfile(p);setDraft(p||{})})
+    getProfile(targetId).then(p=>{setProfile(p);setDraft(p||{});if(p?.scrapbook_privacy) setScrapPrivacy(p.scrapbook_privacy)})
     getDepoimentos(targetId).then(setDeps)
     if(!userId||userId===myId) getPendingDepoimentos(myId).then(setPendingDeps)
     getRecados(targetId).then(d=>{ setScraps(d); setScrapCount(d.length) })
@@ -767,9 +769,25 @@ function ProfilePage({ myId, userId, setPage, toast }){
     if(!isOwn){recordVisit(myId,targetId);getFriendshipStatus(myId,targetId).then(setFStatus)}
   },[targetId])
 
+  const submitScrap=async()=>{
+    if(!newScrap.trim()) return
+    await sendRecado(myId, targetId, newScrap.trim())
+    setNewScrap('')
+    getRecados(targetId).then(d=>{setScraps(d);setScrapCount(d.length)})
+  }
+
   const save=async()=>{
     await updateProfile(myId,{name:draft.name,bio:draft.bio,city:draft.city,
       country:draft.country,gender:draft.gender,rel_status:draft.rel_status,
+      birthday:draft.birthday,interests:draft.interests,children:draft.children,
+      ethnicity:draft.ethnicity,humor:draft.humor,orientation:draft.orientation,
+      style:draft.style,smoking:draft.smoking,drinking:draft.drinking,pets:draft.pets,
+      living_with:draft.living_with,hometown:draft.hometown,website:draft.website,
+      passions:draft.passions,sports:draft.sports,activities:draft.activities,
+      fortune:draft.fortune,company:draft.company,job_title:draft.job_title,
+      professional_bio:draft.professional_bio,experience:draft.experience,
+      education:draft.education,skills:draft.skills,languages:draft.languages,
+      professional_interests:draft.professional_interests,
       musica:draft.musica||[],filmes:draft.filmes||[]})
     setProfile(draft);setEditing(false);toast('Perfil atualizado!')
   }
@@ -957,7 +975,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
                     <button style={btnGh} onClick={()=>setEditing(false)}>Cancelar</button>
                   </div>
                 </div>
-              : /* ── SOCIAL VIEW ── */
+              : /* ── SOCIAL VIEW — only populated fields ── */
                 <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
                   <tbody>
                     {[
@@ -968,15 +986,24 @@ function ProfilePage({ myId, userId, setPage, toast }){
                       ['moro com','living_with'],['cidade','city'],['país','country'],
                       ['cidade natal','hometown'],['página web','website'],['paixões','passions'],
                       ['esportes','sports'],['atividades','activities'],['fortune','fortune'],
-                    ].map(([l,k],i)=>(
+                    ].filter(([l,k])=>profile[k]&&String(profile[k]).trim()).map(([l,k],i)=>(
                       <tr key={k} style={{background:i%2===0?'#f8f9fc':WHITE}}>
                         <td style={{padding:'6px 16px',color:MUTED,width:170,fontWeight:600,textAlign:'right',
                           borderRight:`1px solid ${BRD}`,whiteSpace:'nowrap'}}>{l}:</td>
-                        <td style={{padding:'6px 16px',color:profile[k]?TEXT:MUTED}}>
-                          {profile[k]||'—'}
-                        </td>
+                        <td style={{padding:'6px 16px',color:TEXT}}>{profile[k]}</td>
                       </tr>
                     ))}
+                    {![
+                      'rel_status','birthday','gender','interests','bio','children',
+                      'ethnicity','humor','orientation','style','smoking','drinking','pets',
+                      'living_with','city','country','hometown','website','passions','sports',
+                      'activities','fortune'
+                    ].some(k=>profile[k]&&String(profile[k]).trim())&&(
+                      <tr><td colSpan={2} style={{padding:'14px 16px',color:MUTED,
+                        fontSize:12,fontStyle:'italic',textAlign:'center'}}>
+                        {isOwn?'Clique em "editar perfil" para preencher seu perfil.':'Nenhuma informação preenchida.'}
+                      </td></tr>
+                    )}
                   </tbody>
                 </table>
             )}
@@ -1005,13 +1032,20 @@ function ProfilePage({ myId, userId, setPage, toast }){
                       ['empresa','company'],['cargo','job_title'],['resumo profissional','professional_bio'],
                       ['experiência','experience'],['formação','education'],['habilidades','skills'],
                       ['idiomas','languages'],['interesses profissionais','professional_interests'],
-                    ].map(([l,k],i)=>(
+                    ].filter(([l,k])=>profile[k]&&String(profile[k]).trim()).map(([l,k],i)=>(
                       <tr key={k} style={{background:i%2===0?'#f8f9fc':WHITE}}>
                         <td style={{padding:'6px 16px',color:MUTED,width:170,fontWeight:600,textAlign:'right',
                           borderRight:`1px solid ${BRD}`,whiteSpace:'nowrap'}}>{l}:</td>
-                        <td style={{padding:'6px 16px',color:profile[k]?TEXT:MUTED}}>{profile[k]||'—'}</td>
+                        <td style={{padding:'6px 16px',color:TEXT}}>{profile[k]}</td>
                       </tr>
                     ))}
+                    {!['company','job_title','professional_bio','experience','education',
+                       'skills','languages','professional_interests'].some(k=>profile[k]&&String(profile[k]).trim())&&(
+                      <tr><td colSpan={2} style={{padding:'14px 16px',color:MUTED,
+                        fontSize:12,fontStyle:'italic',textAlign:'center'}}>
+                        {isOwn?'Clique em "editar perfil" para preencher seu informações profissionais.':'Nenhuma informação profissional preenchida.'}
+                      </td></tr>
+                    )}
                   </tbody>
                 </table>
             )}
@@ -1070,12 +1104,82 @@ function ProfilePage({ myId, userId, setPage, toast }){
         {/* Member number watermark — barely visible, people discover it */}
         {isOwn&&memberNum&&<div style={{
           textAlign:'center',padding:'18px 0 4px',
-          fontSize:10,color:'rgba(42,75,141,0.12)',
+          fontSize:11,color:'rgba(42,75,141,0.22)',
           letterSpacing:4,userSelect:'none',fontFamily:'monospace',
           fontWeight:400,
         }}>
           {String(memberNum).padStart(9,'0')}
         </div>}
+
+        {/* Scrapbook section — OG Orkut style ── */}
+        <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
+          overflow:'hidden',marginBottom:8}}>
+          <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,
+            padding:'5px 10px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <span style={{fontWeight:700,fontSize:13,color:TEXT,fontFamily:F_UI}}>
+              recados ({scrapCount})
+            </span>
+            {isOwn&&<select value={scrapPrivacy} onChange={async e=>{
+              setScrapPrivacy(e.target.value)
+              await updateProfile(myId,{scrapbook_privacy:e.target.value})
+            }} style={{fontSize:11,fontFamily:F_UI,border:`1px solid ${BRD}`,
+              borderRadius:2,padding:'2px 6px',color:MUTED,background:WHITE,cursor:'pointer'}}>
+              <option value="friends">só amigos</option>
+              <option value="friends_of_friends">amigos de amigos</option>
+            </select>}
+          </div>
+
+          {/* Write a scrap */}
+          {!isOwn&&<div style={{padding:'10px 12px',borderBottom:`1px solid ${BRD}`,
+            background:'#f8f9fc'}}>
+            <div style={{display:'flex',gap:8,alignItems:'flex-start'}}>
+              <textarea value={newScrap} onChange={e=>setNewScrap(e.target.value)}
+                style={{...inp,flex:1,resize:'vertical',minHeight:54,fontFamily:F_UI,fontSize:12}}
+                placeholder={`escrever um recado para ${profile.name}…`}/>
+              <button style={{...btnBl,padding:'6px 12px',fontSize:12,flexShrink:0}}
+                onClick={submitScrap}>enviar</button>
+            </div>
+          </div>}
+
+          {/* Scrap list */}
+          <div>
+            {scraps.slice(0,5).map((s,i)=>(
+              <div key={s.id} style={{display:'flex',gap:10,padding:'9px 12px',
+                borderBottom:i<Math.min(scraps.length,5)-1?`1px solid ${BRD}`:'none',
+                alignItems:'flex-start'}}>
+                <div style={{cursor:'pointer',flexShrink:0}}
+                  onClick={()=>setPage({name:'userprofile',userId:s.from.id})}>
+                  <Av src={s.from.avatar_url} size={30} name={s.from.name} radius="3px"/>
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:12,color:BLUE,cursor:'pointer',
+                    marginBottom:2,fontFamily:F_UI}}
+                    onClick={()=>setPage({name:'userprofile',userId:s.from.id})}>
+                    {s.from.name}:
+                  </div>
+                  <div style={{fontSize:13,color:TEXT,lineHeight:1.5,fontFamily:F_UI,
+                    wordBreak:'break-word'}}>{s.text}</div>
+                  <div style={{fontSize:10,color:MUTED,marginTop:2,fontFamily:F_UI}}>
+                    {new Date(s.created_at).toLocaleDateString('pt-BR',{
+                      day:'numeric',month:'short',year:'numeric',
+                      hour:'2-digit',minute:'2-digit'})}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {scraps.length===0&&<div style={{padding:'14px 12px',color:MUTED,
+              fontSize:12,fontStyle:'italic',fontFamily:F_UI}}>
+              Nenhum recado ainda.
+            </div>}
+            {scraps.length>5&&<div style={{padding:'7px 12px',borderTop:`1px solid ${BRD}`,
+              textAlign:'right'}}>
+              <span style={{fontSize:12,color:BLUE,cursor:'pointer',fontFamily:F_UI}}
+                onClick={()=>setPage({name:'scrapbook',userId:targetId})}>
+                ver todos os {scraps.length} recados →
+              </span>
+            </div>}
+          </div>
+        </div>
 
         {/* Invites panel — own profile only */}
         {isOwn&&<div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
