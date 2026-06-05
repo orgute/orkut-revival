@@ -9,7 +9,9 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getSignedUrl, uploadPhoto, getAlbums, createAlbum, deleteAlbum,
   getAlbumPhotos, addPhotoToAlbum, deletePhoto, getNovidades,
   getFotosFeed, getPhotoComments, addPhotoComment, deletePhotoComment,
-  getSentRequests, getPendingDepoimentos, approveDepoimento, rejectDepoimento } from './lib/supabase.js'
+  getSentRequests, getPendingDepoimentos, approveDepoimento, rejectDepoimento,
+  updateLastSeen, getOnlineStatus, getFanCount, isFan, addFan, removeFan,
+  getMessageThreads } from './lib/supabase.js'
 
 /* ── Design tokens matching screenshot exactly ── */
 const NAV_BG  = '#2a3f6f'   // navy, one notch lighter
@@ -92,6 +94,22 @@ function NavLogo(){
         fontFamily="'Nunito Black','Nunito','Montserrat','Arial Rounded MT Bold',Arial,sans-serif"
         fontSize={h} fontWeight="900" fill="#ff00aa" mask={"url(#"+mid+")"} letterSpacing="-1">Orkut</text>
     </svg>
+  )
+}
+
+/* ── STATUS DOT ── */
+function StatusDot({ lastSeen, size=8 }){
+  const status = getOnlineStatus(lastSeen)
+  const COLOR = { online:'#4caf50', ausente:'#e6a817', offline:'#e03131' }
+  const LABEL = { online:'disponível', ausente:'ausente', offline:'offline' }
+  return (
+    <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
+      <span style={{width:size,height:size,borderRadius:'50%',
+        background:COLOR[status],display:'inline-block',flexShrink:0}}/>
+      <span style={{fontSize:size+3,color:COLOR[status],fontFamily:F_UI}}>
+        {LABEL[status]}
+      </span>
+    </span>
   )
 }
 
@@ -429,14 +447,14 @@ function RightSidebar({ myId, viewId, setPage }){
       <RightPanel title={`${isOwnSidebar?'minhas ':' '}comunidades (${mine.length})`}>
         {mine.length===0
           ?<div style={{fontSize:12,color:MUTED}}>Sem comunidades.</div>
-          :<div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:4}}>
-            {mine.slice(0,8).map(c=>(
+          :<div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
+            {mine.slice(0,6).map(c=>(
               <div key={c.id} style={{textAlign:'center',cursor:'pointer'}}
                 onClick={()=>setPage({name:'communities',openCommunity:c})}>
-                <img src={"https://picsum.photos/seed/"+(c.seed||c.id)+"/40/40"} alt=""
-                  style={{width:40,height:40,borderRadius:3,objectFit:'cover',
-                    border:`1px solid ${BRD}`,display:'block'}}/>
-                <div style={{fontSize:9,color:MUTED,marginTop:2,overflow:'hidden',
+                <img src={"https://picsum.photos/seed/"+(c.seed||c.id)+"/58/58"} alt=""
+                  style={{width:58,height:58,borderRadius:3,objectFit:'cover',
+                    border:`1px solid ${BRD}`,display:'block',marginLeft:'auto',marginRight:'auto'}}/>
+                <div style={{fontSize:10,color:MUTED,marginTop:4,overflow:'hidden',
                   textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                   {(c.name||'').replace(/[♥❤★]/g,'').trim()}
                 </div>
@@ -577,8 +595,8 @@ function HomePage({ profile, myId, setPage }){
     { emoji:'✏️',  color:'#e8700a', label:'scraps',       count:scrapCount, pg:'scrapbook' },
     { emoji:'📷',  color:'#555577', label:'fotos',         count:0,          pg:'galeria' },
     { emoji:'🏷️',  color:'#e8700a', label:'fotos de mim',  count:0,          pg:null },
-    { emoji:'⭐',  color:'#f5a623', label:'fãs',            count:0,          pg:null },
-    { emoji:'✉️',  color:'#757575', label:'mensagens',      count:0,          pg:null },
+    { emoji:'⭐',  color:'#f5a623', label:'fãs',            count:fanCount,    pg:null },
+    { emoji:'✉️',  color:'#757575', label:'mensagens',      count:0,          pg:'inbox' },
   ]
 
   const mob=useIsMobile()
@@ -605,7 +623,7 @@ function HomePage({ profile, myId, setPage }){
               </div>
               <div style={{padding:'5px 8px'}}>
                 <div style={{fontWeight:700,fontSize:13,color:PINK,marginBottom:2}}>{profile?.name||'…'}</div>
-                <div style={{fontSize:11,color:'#4caf50'}}>● disponível</div>
+                <StatusDot lastSeen={profile?.last_seen} size={7}/>
               </div>
             </div>
             {/* Nav links card */}
@@ -641,7 +659,7 @@ function HomePage({ profile, myId, setPage }){
               <div style={{padding:'8px 10px'}}>
                 <div style={{fontWeight:700,fontSize:14,color:PINK,cursor:'pointer',marginBottom:3}}
                   onClick={()=>setPage('profile')}>{profile?.name||'…'}</div>
-                <div style={{fontSize:12,color:'#4caf50'}}>● disponível</div>
+                <StatusDot lastSeen={profile?.last_seen} size={7}/>
               </div>
             </div>
             <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
@@ -751,6 +769,8 @@ function ProfilePage({ myId, userId, setPage, toast }){
   const [memberNum,setMemberNum]=useState(null)
   const [newScrap,setNewScrap]=useState('')
   const [scrapPrivacy,setScrapPrivacy]=useState('friends')
+  const [fanCount,setFanCount]=useState(0)
+  const [iAmFan,setIAmFan]=useState(false)
 
   useEffect(()=>{
     if(!targetId)return
@@ -766,7 +786,8 @@ function ProfilePage({ myId, userId, setPage, toast }){
         else setPhotoCount(count||0)
       })
     if(isOwn){ getMyInvites(myId).then(setInvites); getMemberNumber(targetId).then(setMemberNum) }
-    if(!isOwn){recordVisit(myId,targetId);getFriendshipStatus(myId,targetId).then(setFStatus)}
+    getFanCount(targetId).then(setFanCount)
+    if(!isOwn){recordVisit(myId,targetId);getFriendshipStatus(myId,targetId).then(setFStatus);isFan(myId,targetId).then(setIAmFan)}
   },[targetId])
 
   const submitScrap=async()=>{
@@ -918,9 +939,18 @@ function ProfilePage({ myId, userId, setPage, toast }){
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5" stroke={MUTED} strokeWidth="1.2" fill="none"/></svg>
                 vídeos <strong style={{fontFamily:F_NUM}}>0</strong>
               </span>
-              <span style={{display:'flex',alignItems:'center',gap:4}}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5" stroke={MUTED} strokeWidth="1.4" fill="none"/></svg>
-                fãs <strong style={{fontFamily:F_NUM}}>0</strong>
+              <span style={{display:'flex',alignItems:'center',gap:4,
+                cursor:!isOwn?'pointer':'default'}}
+                onClick={!isOwn?async()=>{
+                  if(iAmFan){await removeFan(myId,targetId);setIAmFan(false);setFanCount(n=>n-1)}
+                  else{await addFan(myId,targetId);setIAmFan(true);setFanCount(n=>n+1)}
+                }:undefined}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill={!isOwn&&iAmFan?'#f5a623':'none'}>
+                  <polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5"
+                    stroke={!isOwn&&iAmFan?'#f5a623':MUTED} strokeWidth="1.4"/>
+                </svg>
+                <span style={{color:!isOwn?BLUE:TEXT,textDecoration:!isOwn?'underline':'none'}}>fãs</span>
+                <strong style={{fontFamily:F_NUM}}>{fanCount}</strong>
               </span>
               {invites.length>0&&<span style={{display:'flex',alignItems:'center',gap:4,
                 color:MUTED,fontSize:11,opacity:.75}} title="convites usados">
@@ -1837,6 +1867,74 @@ function DepoimentosPage({ myId, setPage }){
   )
 }
 
+/* ── INBOX PAGE ── */
+function InboxPage({ myId, setPage }){
+  const [threads,setThreads]=useState([])
+  const [loading,setLoading]=useState(true)
+  const [avatarUrls,setAvatarUrls]=useState({})
+
+  useEffect(()=>{
+    getMessageThreads(myId).then(async data=>{
+      setThreads(data)
+      const urls={}
+      for(const t of data){
+        const path=t.partner?.avatar_url
+        if(path&&!urls[path]) urls[path]=await getSignedUrl(path)
+      }
+      setAvatarUrls(urls)
+      setLoading(false)
+    })
+  },[myId])
+
+  return (
+    <div style={{maxWidth:700,margin:'0 auto',padding:'8px'}}>
+      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
+        <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'6px 12px',
+          fontWeight:700,fontSize:14,color:TEXT,fontFamily:F_UI}}>
+          mensagens
+        </div>
+        {loading?<div style={{padding:20,color:MUTED,fontFamily:F_UI,fontSize:13}}>Carregando…</div>
+        :threads.length===0
+          ?<div style={{padding:24,textAlign:'center',color:MUTED,fontFamily:F_UI,fontSize:13}}>
+            Nenhuma mensagem ainda.
+          </div>
+          :threads.map((t,i)=>{
+            const path=t.partner?.avatar_url
+            const url=avatarUrls[path]||path
+            const status=getOnlineStatus(t.partner?.last_seen)
+            const COLOR={online:'#4caf50',ausente:'#e6a817',offline:'#e03131'}
+            return (
+              <div key={t.partnerId} style={{display:'flex',gap:12,padding:'12px 14px',
+                borderBottom:i<threads.length-1?`1px solid ${BRD}`:'none',
+                cursor:'pointer',alignItems:'center'}}
+                onClick={()=>setPage({name:'userprofile',userId:t.partnerId})}>
+                <div style={{position:'relative',flexShrink:0}}>
+                  <Av src={url} size={44} name={t.partner?.name} radius="50%"/>
+                  <span style={{position:'absolute',bottom:1,right:1,width:10,height:10,
+                    borderRadius:'50%',background:COLOR[status],
+                    border:'2px solid white',display:'block'}}/>
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:13,fontFamily:F_UI,color:BLUE,
+                    marginBottom:2}}>{t.partner?.name}</div>
+                  <div style={{fontSize:12,fontFamily:F_UI,color:MUTED,
+                    overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                    {t.lastMsg.from_id===myId?'Você: ':''}{t.lastMsg.text}
+                  </div>
+                </div>
+                <div style={{fontSize:10,fontFamily:F_UI,color:MUTED,flexShrink:0,textAlign:'right'}}>
+                  {new Date(t.lastMsg.created_at).toLocaleDateString('pt-BR',{
+                    day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+                </div>
+              </div>
+            )
+          })
+        }
+      </div>
+    </div>
+  )
+}
+
 /* ── FOTOS FEED — mobile chronological photo feed ── */
 function FotosFeed({ myId, setPage }){
   const [photos,setPhotos]=useState([])
@@ -2155,6 +2253,14 @@ export default function App(){
     return()=>{ subscription.unsubscribe(); window.removeEventListener('keydown',onKey) }
   },[])
 
+  // Update last_seen on load and every 5 minutes while active
+  useEffect(()=>{
+    if(!myId) return
+    updateLastSeen(myId)
+    const t=setInterval(()=>updateLastSeen(myId), 5*60*1000)
+    return()=>clearInterval(t)
+  },[myId])
+
   // Global chat listener — pops up incoming messages
   const [incomingChat,setIncomingChat]=useState(null)
   useEffect(()=>{
@@ -2227,6 +2333,7 @@ export default function App(){
       case 'communities': return <CommunitiesPage myId={myId} toast={setToast} page={page}/>
       case '__admin':     return <AdminCleanup setToast={setToast}/>
       case 'fotosfeed':   return <FotosFeed myId={myId} setPage={navTo}/>
+      case 'inbox':       return <InboxPage myId={myId} setPage={navTo}/>
       case 'galeria':     return <GaleriaPage myId={myId} userId={page?.userId||null} setPage={navTo} openAlbumId={page?.albumId||null}/>
       case 'depoimentos': return <DepoimentosPage myId={myId} setPage={navTo}/>
       default:            return <HomePage profile={profile} myId={myId} setPage={navTo}/>

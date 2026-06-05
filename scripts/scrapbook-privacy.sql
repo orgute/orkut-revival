@@ -48,3 +48,21 @@ CREATE POLICY "recados_insert" ON recados
   );
 
 SELECT 'Scrapbook privacy migration complete' as status;
+
+-- ── last_seen on profiles ─────────────────────────────────────
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS last_seen timestamptz;
+
+-- ── Fans table ────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS fans (
+  id      uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  fan_id  uuid REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  star_id uuid REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(fan_id, star_id)
+);
+ALTER TABLE fans ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "fans_select" ON fans FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "fans_insert" ON fans FOR INSERT WITH CHECK (auth.uid() = fan_id);
+CREATE POLICY "fans_delete" ON fans FOR DELETE USING (auth.uid() = fan_id);
+
+SELECT 'last_seen + fans table ready' as status;
