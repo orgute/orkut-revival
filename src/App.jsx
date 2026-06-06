@@ -141,44 +141,63 @@ const GRID_PHOTOS = [
 ]
 
 function WhoGrid(){
-  // Row 1: 3 photos
-  // Row 2: text center cell only (full width)
-  // Row 3: 3 photos
-  const pinkBg='#f0a8c0'; const blueBg='#dce3f0'
-  const top=[0,1,2]; const bot=[3,4,5]
-  const bgs=[pinkBg,blueBg,pinkBg,blueBg,pinkBg,blueBg]
+  // Mosaic: alternating pink/light squares, faces cropped close
+  // Exactly like OG image: 4x4 grid with some empty pink squares
+  // Photos: mix of people including diverse faces
+  const photos = [
+    "https://randomuser.me/api/portraits/men/32.jpg",
+    "https://randomuser.me/api/portraits/women/44.jpg",
+    "https://randomuser.me/api/portraits/men/22.jpg",
+    "https://randomuser.me/api/portraits/women/68.jpg",
+    "https://randomuser.me/api/portraits/women/26.jpg",
+    "https://randomuser.me/api/portraits/women/41.jpg",
+    "https://randomuser.me/api/portraits/men/75.jpg",
+    "https://randomuser.me/api/portraits/women/85.jpg",
+  ]
+  // 4x4 grid: P=pink empty, F=face photo, T=text center
+  // Pattern matches image 2: P F P F / F P F P / P T T P / F P F P
+  const PINK='#f0a8c0'; const LIGHT='#dce8f0'; const NONE='transparent'
+  const cells = [
+    {type:'p',bg:PINK}, {type:'f',idx:0}, {type:'p',bg:PINK}, {type:'f',idx:1},
+    {type:'f',idx:2},   {type:'p',bg:PINK}, {type:'f',idx:3}, {type:'p',bg:LIGHT},
+    {type:'p',bg:LIGHT},{type:'t'},{type:'t2'},{type:'p',bg:PINK},
+    {type:'f',idx:4},   {type:'p',bg:PINK}, {type:'f',idx:5}, {type:'p',bg:LIGHT},
+  ]
   return (
-    <div style={{width:'100%',maxWidth:300,margin:'0 auto'}}>
-      {/* Top row */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:4,marginBottom:4}}>
-        {top.map(i=>(
-          <div key={i} style={{aspectRatio:'1',background:bgs[i],overflow:'hidden',borderRadius:2}}>
-            <img src={GRID_PHOTOS[i]} alt="" style={{width:'100%',height:'100%',objectFit:'cover',
-              filter:'grayscale(20%)',display:'block'}} onError={e=>{e.target.style.display='none'}}/>
-          </div>
-        ))}
-      </div>
-      {/* Middle text row */}
-      <div style={{padding:'10px 0',textAlign:'center',background:'transparent'}}>
-        <span style={{fontSize:15,fontWeight:700,fontFamily:F_UI,color:'#2a3f6f',letterSpacing:.5}}>
-          <span style={{color:PINK}}>Q</span>uem{' '}
-          <span style={{color:PINK}}>V</span>ocê{' '}
-          <span style={{color:PINK}}>C</span>onhece?
-        </span>
-      </div>
-      {/* Bottom row */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:4,marginTop:4}}>
-        {bot.map(i=>(
-          <div key={i} style={{aspectRatio:'1',background:bgs[i],overflow:'hidden',borderRadius:2}}>
-            <img src={GRID_PHOTOS[i]} alt="" style={{width:'100%',height:'100%',objectFit:'cover',
-              filter:'grayscale(20%)',display:'block'}} onError={e=>{e.target.style.display='none'}}/>
-          </div>
-        ))}
+    <div style={{width:'100%',maxWidth:280,margin:'0 auto',position:'relative'}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:3}}>
+        {cells.map((c,i)=>{
+          if(c.type==='p') return (
+            <div key={i} style={{aspectRatio:'1',background:c.bg,borderRadius:1}}/>
+          )
+          if(c.type==='f') return (
+            <div key={i} style={{aspectRatio:'1',overflow:'hidden',borderRadius:1,background:PINK}}>
+              <img src={photos[c.idx]} alt="" style={{width:'100%',height:'100%',
+                objectFit:'cover',objectPosition:'center top',
+                filter:'grayscale(15%) contrast(1.05)',display:'block'}}
+                onError={e=>{e.target.parentElement.style.background=PINK; e.target.style.display='none'}}/>
+            </div>
+          )
+          if(c.type==='t') return (
+            <div key={i} style={{aspectRatio:'1',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <span style={{fontSize:10,fontWeight:700,fontFamily:F_UI,color:'#1a2e5a',textAlign:'center',lineHeight:1.4}}>
+                <span style={{color:PINK,fontSize:11}}>Q</span>uem
+              </span>
+            </div>
+          )
+          if(c.type==='t2') return (
+            <div key={i} style={{aspectRatio:'1',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <span style={{fontSize:10,fontWeight:700,fontFamily:F_UI,color:'#1a2e5a',textAlign:'center',lineHeight:1.4}}>
+                <span style={{color:PINK,fontSize:11}}>V</span>ocê <span style={{color:PINK,fontSize:11}}>C</span>onhece?
+              </span>
+            </div>
+          )
+          return null
+        })}
       </div>
     </div>
   )
 }
-
 async function moderateText(text){
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{
@@ -227,7 +246,7 @@ function GuestbookTab(){
         <div style={{fontWeight:700,fontSize:14,color:PINK,fontFamily:F_UI,marginBottom:8}}>Elton Vilela</div>
         <div style={{fontSize:13,color:TEXT,fontFamily:F_UI,lineHeight:1.8,maxWidth:440,margin:'0 auto'}}>
           Olá! Esta página foi criada com IA por diversão e nostalgia. O que você achou?
-          O que adicionaria? Na versão para celular já tem uma novidade, já encontrou?
+          O que adicionaria? Na versão para celular tem uma novidade, já encontrou?
           Deixe sua sugestão aqui. 😊
         </div>
         <div style={{fontSize:11,color:MUTED,fontFamily:F_UI,marginTop:10,fontStyle:'italic'}}>
@@ -235,7 +254,7 @@ function GuestbookTab(){
         </div>
       </div>
       <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,padding:'16px 20px',marginBottom:20}}>
-        <div style={{fontWeight:700,fontSize:13,color:TEXT,fontFamily:F_UI,marginBottom:12}}>deixe sua nota</div>
+        <div style={{fontWeight:700,fontSize:13,color:TEXT,fontFamily:F_UI,marginBottom:12}}>deixe seu recado</div>
         <input style={{...inp,marginBottom:8}} placeholder="Nome *" value={name}
           onChange={e=>setName(e.target.value)} maxLength={60}/>
         <div style={{position:'relative',marginBottom:8}}>
@@ -380,7 +399,7 @@ function AuthScreen({ onAuth }){
     </div>
 
   return (
-    <div style={{minHeight:'100vh',background:BG,fontFamily:F_UI}}>
+    <div style={{minHeight:'100vh',background:BG,fontFamily:F_UI,display:'flex',flexDirection:'column'}}>
       {/* Top tab bar */}
       <div style={{background:WHITE,borderBottom:`1px solid ${BRD}`}}>
         <div style={{maxWidth:880,margin:'0 auto',padding:'0 24px',
@@ -397,12 +416,12 @@ function AuthScreen({ onAuth }){
               </div>
             ))}
           </div>
-          <OFadeLogo size={26} id="tl2"/>
+
         </div>
       </div>
 
       {authTab==='guestbook'
-        ?<div style={{paddingTop:28}}><GuestbookTab/>{/* Footer */}
+        ?<div style={{paddingTop:28,flex:1,display:'flex',flexDirection:'column'}}><GuestbookTab/>{/* Footer */}
 <div style={{textAlign:'center',padding:'14px 0 20px',fontSize:11,color:MUTED,
   borderTop:`1px solid ${BRD}`,marginTop:8,fontFamily:F_UI}}>
   ⚠️ Aviso: Reviva a nostalgia com conexões verdadeiras. &nbsp;·&nbsp;
@@ -425,8 +444,8 @@ function AuthScreen({ onAuth }){
             <WhoGrid/>
           </div>
           <div style={{flex:'0 0 310px',minWidth:260}}>
-            <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
-              padding:'18px 20px',boxShadow:'0 1px 4px rgba(0,0,0,.08)'}}>
+            <div style={{background:'#e8edf7',border:`1px solid #c8d0e0`,borderRadius:3,
+              padding:'18px 20px',boxShadow:'0 1px 4px rgba(0,0,0,.06)'}}>
               {mode==='login'?LoginForm:SignupForm}
             </div>
           </div>
@@ -434,11 +453,11 @@ function AuthScreen({ onAuth }){
       }
 
       {/* Footer */}
-      <div style={{textAlign:'center',padding:'14px 0 20px',fontSize:11,color:MUTED,
-        borderTop:`1px solid ${BRD}`,marginTop:8,fontFamily:F_UI}}>
+      <footer style={{textAlign:'center',padding:'12px 0 16px',fontSize:11,color:MUTED,
+        borderTop:`1px solid ${BRD}`,marginTop:'auto',fontFamily:F_UI}}>
         ⚠️ Aviso: Reviva a nostalgia com conexões verdadeiras. &nbsp;·&nbsp;
         © Recriado por IA com ❤️
-      </div>
+      </footer>
     </div>
   )
 }
