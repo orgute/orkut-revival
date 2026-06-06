@@ -602,12 +602,14 @@ function TopNav({ page, setPage, profile, pendingReqs, newRecados }){
 }
 
 /* ── RIGHT PANEL — matches screenshot style exactly ── */
-function RightPanel({ title, children }){
+function RightPanel({ title, children, onTitleClick }){
   return (
     <div style={{background:WHITE,border:`1px solid ${RH_BRD}`,borderRadius:3,
       marginBottom:10,overflow:'hidden'}}>
       <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,
-        padding:'5px 10px',fontWeight:700,fontSize:13,color:TEXT}}>
+        padding:'5px 10px',fontWeight:700,fontSize:13,color:TEXT,
+        cursor:onTitleClick?'pointer':'default'}}
+        onClick={onTitleClick}>
         {title}
       </div>
       <div style={{padding:'8px 10px'}}>{children}</div>
@@ -627,7 +629,8 @@ function RightSidebar({ myId, viewId, setPage }){
   },[targetSidebarId])
   return (
     <aside style={{width:250,flexShrink:0}}>
-      <RightPanel title={`${isOwnSidebar?'meus ':' '}amigos (${friends.length})`}>
+      <RightPanel title={`${isOwnSidebar?'meus ':' '}amigos (${friends.length})`}
+        onTitleClick={isOwnSidebar?()=>setPage('friends'):undefined}>
         {friends.length===0?(
           <>
             <input placeholder="buscar amigos" style={{...inp,marginBottom:7,fontSize:11}}/>
@@ -649,7 +652,8 @@ function RightSidebar({ myId, viewId, setPage }){
           </>
         )}
       </RightPanel>
-      <RightPanel title={`${isOwnSidebar?'minhas ':' '}comunidades (${mine.length})`}>
+      <RightPanel title={`${isOwnSidebar?'minhas ':' '}comunidades (${mine.length})`}
+        onTitleClick={isOwnSidebar?()=>setPage('communities'):undefined}>
         {mine.length===0
           ?<div style={{fontSize:12,color:MUTED}}>Sem comunidades.</div>
           :<div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
@@ -936,8 +940,20 @@ function HomePage({ profile, myId, setPage }){
           </div>
           {/* Stats line */}
           <div style={{fontSize:12,color:TEXT,lineHeight:1.9,borderTop:`1px solid ${BRD}`,paddingTop:10}}>
-            <div><strong>Visitas ao perfil:</strong> desde hoje: 0</div>
-            <div><strong>Visitantes recentes:</strong> —</div>
+            <div><strong>Visitas ao perfil:</strong> desde hoje: {visitCount}</div>
+            <div style={{display:'flex',alignItems:'center',gap:4,flexWrap:'wrap'}}>
+              <strong>Visitantes recentes:</strong>
+              {recentVisitors.length===0
+                ?<span style={{color:MUTED}}> —</span>
+                :recentVisitors.map(v=>(
+                  <span key={v.visitor?.id} style={{cursor:'pointer'}}
+                    title={v.visitor?.name}
+                    onClick={()=>setPage({name:'userprofile',userId:v.visitor?.id})}>
+                    <Av src={v.visitor?.avatar_url} size={20} name={v.visitor?.name} radius="50%"/>
+                  </span>
+                ))
+              }
+            </div>
             <div><strong>Fortuna do dia:</strong> {fortune}</div>
           </div>
         </div>
@@ -995,12 +1011,19 @@ function ProfilePage({ myId, userId, setPage, toast }){
     if(isOwn){ getMyInvites(myId).then(setInvites); getMemberNumber(targetId).then(setMemberNum) }
     getFanCount(targetId).then(setFanCount)
     if(!isOwn){recordVisit(myId,targetId);getFriendshipStatus(myId,targetId).then(setFStatus);getIsFan(myId,targetId).then(setIAmFan)}
+    getVisitors(targetId).then(v=>{
+      const today=new Date().toDateString()
+      setVisitCount(v.filter(x=>new Date(x.visited_at).toDateString()===today).length)
+      setRecentVisitors(v.slice(0,5))
+    })
   },[targetId])
 
   const toggleFan=async()=>{
     if(iAmFan){ await removeFan(myId,targetId); setIAmFan(false); setFanCount(n=>n-1) }
     else { await addFan(myId,targetId); setIAmFan(true); setFanCount(n=>n+1) }
   }
+  const [visitCount,setVisitCount]=useState(0)
+  const [recentVisitors,setRecentVisitors]=useState([])
   const [profileReplyOpen,setProfileReplyOpen]=useState(null)
   const [profileReplyText,setProfileReplyText]=useState('')
   const postProfileReply=async(toId,toName)=>{
@@ -2811,16 +2834,7 @@ export default function App(){
         © Recriado com ❤️ por IA · Zero Monetização
       </footer>
       <Toast msg={toast} onDone={()=>setToast('')}/>
-      {incomingChat&&<IncomingChatPopup
-        chat={incomingChat}
-        onOpen={()=>{
-          if(incomingChat.ts) localStorage.setItem('lastSeenMsg_'+myId,incomingChat.ts)
-          setNewRecados(0); setIncomingChat(null); setPage('friends')
-        }}
-        onClose={()=>{
-          if(incomingChat.ts) localStorage.setItem('lastSeenMsg_'+myId,incomingChat.ts)
-          setNewRecados(0); setIncomingChat(null)
-        }}/>}
+      {/* chat popup disabled — {incomingChat&&<IncomingChatPopup/>} */}
     </div>
   )
 }
