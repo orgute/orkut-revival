@@ -2181,7 +2181,6 @@ export default function App(){
     const uid=session.user.id
     getProfile(uid).then(setProfile)
     getFriendRequests(uid).then(r=>setPendingReqs(r.length))
-    updateLastSeen(uid)
     supabase.from('recados').select('id',{count:'exact',head:true})
       .eq('to_id',uid)
       .gte('created_at',new Date(Date.now()-48*3600*1000).toISOString())
