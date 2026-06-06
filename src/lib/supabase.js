@@ -417,3 +417,47 @@ export function getOnlineStatus(lastSeen) {
   if (diff < 24 * 60 * 60 * 1000) return 'ausente'  // < 24h  → ausente
   return 'offline'                                    // > 24h  → offline
 }
+
+/* ── Fãs ─────────────────────────────────────────────────────── */
+export async function getFanCount(userId) {
+  const { count } = await supabase.from('fans')
+    .select('id', { count: 'exact', head: true }).eq('star_id', userId)
+  return count || 0
+}
+
+export async function getIsFan(fanId, starId) {
+  const { data } = await supabase.from('fans')
+    .select('id').eq('fan_id', fanId).eq('star_id', starId).maybeSingle()
+  return !!data
+}
+
+export async function addFan(fanId, starId) {
+  await supabase.from('fans').insert({ fan_id: fanId, star_id: starId })
+}
+
+export async function removeFan(fanId, starId) {
+  await supabase.from('fans').delete().eq('fan_id', fanId).eq('star_id', starId)
+}
+
+/* ── Messages inbox ──────────────────────────────────────────── */
+export async function getMessageThreads(userId) {
+  const { data } = await supabase.from('messages')
+    .select('id,text,created_at,from_id,to_id')
+    .or(`from_id.eq.${userId},to_id.eq.${userId}`)
+    .order('created_at', { ascending: false })
+    .limit(200)
+  if (!data) return []
+  const threads = {}
+  for (const msg of data) {
+    const partnerId = msg.from_id === userId ? msg.to_id : msg.from_id
+    if (!threads[partnerId]) threads[partnerId] = { partnerId, lastMsg: msg }
+  }
+  const partnerIds = Object.keys(threads)
+  if (!partnerIds.length) return []
+  const { data: profiles } = await supabase.from('profiles')
+    .select('id,name,avatar_url').in('id', partnerIds)
+  for (const p of profiles || []) threads[p.id].partner = p
+  return Object.values(threads).sort(
+    (a, b) => new Date(b.lastMsg.created_at) - new Date(a.lastMsg.created_at)
+  )
+}

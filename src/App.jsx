@@ -10,6 +10,7 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getAlbumPhotos, addPhotoToAlbum, deletePhoto, getNovidades,
   getFotosFeed, getPhotoComments, addPhotoComment, deletePhotoComment,
   getSentRequests, getPendingDepoimentos, approveDepoimento, rejectDepoimento,
+  getFanCount, getIsFan, addFan, removeFan, getMessageThreads,
 } from './lib/supabase.js'
 
 /* ── Design tokens matching screenshot exactly ── */
@@ -578,8 +579,8 @@ function HomePage({ profile, myId, setPage }){
     { emoji:'✏️',  color:'#e8700a', label:'scraps',       count:scrapCount, pg:'scrapbook' },
     { emoji:'📷',  color:'#555577', label:'fotos',         count:0,          pg:'galeria' },
     { emoji:'🏷️',  color:'#e8700a', label:'fotos de mim',  count:0,          pg:null },
-    { emoji:'⭐',  color:'#f5a623', label:'fãs',            count:0,          pg:null },
-    { emoji:'✉️',  color:'#757575', label:'mensagens',      count:0,          pg:null },
+    { emoji:'⭐',  color:'#f5a623', label:'fãs',            count:homeFanCount, pg:null },
+    { emoji:'✉️',  color:'#757575', label:'mensagens',      count:0,          pg:'inbox' },
   ]
 
   const mob=useIsMobile()
@@ -746,6 +747,8 @@ function ProfilePage({ myId, userId, setPage, toast }){
   const [scraps,setScraps]=useState([])
   const [photoCount,setPhotoCount]=useState(0)
   const [scrapCount,setScrapCount]=useState(0)
+  const [fanCount,setFanCount]=useState(0)
+  const [iAmFan,setIAmFan]=useState(false)
   const [invites,setInvites]=useState([])
   const [showInvites,setShowInvites]=useState(false)
   const [tab,setTab]=useState('social')
@@ -767,9 +770,14 @@ function ProfilePage({ myId, userId, setPage, toast }){
         else setPhotoCount(count||0)
       })
     if(isOwn){ getMyInvites(myId).then(setInvites); getMemberNumber(targetId).then(setMemberNum) }
-    if(!isOwn){recordVisit(myId,targetId);getFriendshipStatus(myId,targetId).then(setFStatus)}
+    getFanCount(targetId).then(setFanCount)
+    if(!isOwn){recordVisit(myId,targetId);getFriendshipStatus(myId,targetId).then(setFStatus);getIsFan(myId,targetId).then(setIAmFan)}
   },[targetId])
 
+  const toggleFan=async()=>{
+    if(iAmFan){ await removeFan(myId,targetId); setIAmFan(false); setFanCount(n=>n-1) }
+    else { await addFan(myId,targetId); setIAmFan(true); setFanCount(n=>n+1) }
+  }
   const submitScrap=async()=>{
     if(!newScrap.trim()) return
     await sendRecado(myId, targetId, newScrap.trim())
@@ -919,9 +927,17 @@ function ProfilePage({ myId, userId, setPage, toast }){
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5" stroke={MUTED} strokeWidth="1.2" fill="none"/></svg>
                 vídeos <strong style={{fontFamily:F_NUM}}>0</strong>
               </span>
-              <span style={{display:'flex',alignItems:'center',gap:4}}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5" stroke={MUTED} strokeWidth="1.4" fill="none"/></svg>
-                fãs <strong style={{fontFamily:F_NUM}}>0</strong>
+              <span style={{display:'flex',alignItems:'center',gap:4,
+                cursor:!isOwn?'pointer':'default'}}
+                onClick={!isOwn?toggleFan:undefined}>
+                <svg width="14" height="14" viewBox="0 0 14 14"
+                  fill={!isOwn&&iAmFan?'#f5a623':'none'}>
+                  <polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5"
+                    stroke={!isOwn&&iAmFan?'#f5a623':MUTED} strokeWidth="1.4"/>
+                </svg>
+                <span style={{color:!isOwn?BLUE:TEXT,
+                  textDecoration:!isOwn?'underline':'none'}}>fãs</span>
+                <strong style={{fontFamily:F_NUM}}>{fanCount}</strong>
               </span>
               {invites.length>0&&<span style={{display:'flex',alignItems:'center',gap:4,
                 color:MUTED,fontSize:11,opacity:.75}} title="convites usados">
@@ -1838,6 +1854,57 @@ function DepoimentosPage({ myId, setPage }){
   )
 }
 
+/* ── INBOX PAGE ── */
+function InboxPage({ myId, setPage }){
+  const [threads,setThreads]=useState([])
+  const [loading,setLoading]=useState(true)
+
+  useEffect(()=>{
+    getMessageThreads(myId).then(data=>{
+      setThreads(data)
+      setLoading(false)
+    })
+  },[myId])
+
+  return (
+    <div style={{maxWidth:700,margin:'0 auto',padding:'8px'}}>
+      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
+        <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'6px 12px',
+          fontWeight:700,fontSize:14,color:TEXT,fontFamily:F_UI}}>
+          mensagens
+        </div>
+        {loading
+          ?<div style={{padding:20,color:MUTED,fontFamily:F_UI,fontSize:13}}>Carregando…</div>
+          :threads.length===0
+            ?<div style={{padding:24,textAlign:'center',color:MUTED,fontFamily:F_UI,fontSize:13}}>
+              Nenhuma mensagem ainda.
+            </div>
+            :threads.map((t,i)=>(
+              <div key={t.partnerId} onClick={()=>setPage({name:'userprofile',userId:t.partnerId})}
+                style={{display:'flex',gap:12,padding:'12px 14px',cursor:'pointer',
+                  alignItems:'center',borderBottom:i<threads.length-1?`1px solid ${BRD}`:'none',
+                  background:'transparent'}}>
+                <Av src={t.partner?.avatar_url} size={44} name={t.partner?.name} radius="50%"/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:13,fontFamily:F_UI,
+                    color:BLUE,marginBottom:2}}>{t.partner?.name}</div>
+                  <div style={{fontSize:12,fontFamily:F_UI,color:MUTED,
+                    overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                    {t.lastMsg.from_id===myId?'Você: ':''}{t.lastMsg.text}
+                  </div>
+                </div>
+                <div style={{fontSize:10,fontFamily:F_UI,color:MUTED,flexShrink:0}}>
+                  {new Date(t.lastMsg.created_at).toLocaleDateString('pt-BR',{
+                    day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+                </div>
+              </div>
+            ))
+        }
+      </div>
+    </div>
+  )
+}
+
 /* ── FOTOS FEED — mobile chronological photo feed ── */
 function FotosFeed({ myId, setPage }){
   const [photos,setPhotos]=useState([])
@@ -2228,6 +2295,7 @@ export default function App(){
       case 'communities': return <CommunitiesPage myId={myId} toast={setToast} page={page}/>
       case '__admin':     return <AdminCleanup setToast={setToast}/>
       case 'fotosfeed':   return <FotosFeed myId={myId} setPage={navTo}/>
+      case 'inbox':       return <InboxPage myId={myId} setPage={navTo}/>
       case 'galeria':     return <GaleriaPage myId={myId} userId={page?.userId||null} setPage={navTo} openAlbumId={page?.albumId||null}/>
       case 'depoimentos': return <DepoimentosPage myId={myId} setPage={navTo}/>
       default:            return <HomePage profile={profile} myId={myId} setPage={navTo}/>
