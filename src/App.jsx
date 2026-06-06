@@ -470,7 +470,7 @@ function AuthScreen({ onAuth }){
       <footer style={{textAlign:'center',padding:'12px 0 16px',fontSize:11,color:MUTED,
         borderTop:`1px solid ${BRD}`,marginTop:'auto',fontFamily:F_UI}}>
         ⚠️ Aviso: Reviva a nostalgia com conexões verdadeiras. &nbsp;·&nbsp;
-        © Recriado por IA com ❤️
+        © Recriado com ❤️ por IA
       </footer>
     </div>
   )
@@ -1401,7 +1401,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
 
           {/* Scrap list */}
           <div>
-            {scraps.slice(0,5).map((s,i)=>(
+            {scraps.slice(0,10).map((s,i)=>(
               <div key={s.id} style={{display:'flex',gap:10,padding:'9px 12px',
                 borderBottom:i<Math.min(scraps.length,5)-1?`1px solid ${BRD}`:'none',
                 alignItems:'flex-start'}}>
@@ -1439,7 +1439,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
               fontSize:12,fontStyle:'italic',fontFamily:F_UI}}>
               Nenhum recado ainda.
             </div>}
-            {scraps.length>5&&<div style={{padding:'7px 12px',borderTop:`1px solid ${BRD}`,
+            {scraps.length>10&&<div style={{padding:'7px 12px',borderTop:`1px solid ${BRD}`,
               textAlign:'right'}}>
               <span style={{fontSize:12,color:BLUE,cursor:'pointer',fontFamily:F_UI}}
                 onClick={()=>setPage({name:'scrapbook',userId:targetId})}>
@@ -2724,7 +2724,7 @@ export default function App(){
       .gte('created_at',new Date(Date.now()-48*3600*1000).toISOString())
       .then(({count})=>setNewRecados(count||0))
     // Show popup for unread messages — only ones newer than last dismissed
-    const lastSeen = sessionStorage.getItem('lastSeenMsg_'+uid) || '1970-01-01'
+    const lastSeen = localStorage.getItem('lastSeenMsg_'+uid) || '1970-01-01'
     supabase.from('messages')
       .select('id,text,from_id,created_at')
       .eq('to_id',uid)
@@ -2781,17 +2781,17 @@ export default function App(){
       {renderPage()}
       <footer style={{textAlign:'center',padding:'14px 0 20px',fontSize:11,color:MUTED,
         borderTop:`1px solid ${BRD}`,marginTop:8}}>
-        © Recriado com IA com ❤️ · Zero Monetização
+        © Recriado com ❤️ por IA · Zero Monetização
       </footer>
       <Toast msg={toast} onDone={()=>setToast('')}/>
       {incomingChat&&<IncomingChatPopup
         chat={incomingChat}
         onOpen={()=>{
-          if(incomingChat.ts) sessionStorage.setItem('lastSeenMsg_'+myId,incomingChat.ts)
+          if(incomingChat.ts) localStorage.setItem('lastSeenMsg_'+myId,incomingChat.ts)
           setNewRecados(0); setIncomingChat(null); setPage('friends')
         }}
         onClose={()=>{
-          if(incomingChat.ts) sessionStorage.setItem('lastSeenMsg_'+myId,incomingChat.ts)
+          if(incomingChat.ts) localStorage.setItem('lastSeenMsg_'+myId,incomingChat.ts)
           setNewRecados(0); setIncomingChat(null)
         }}/>}
     </div>
