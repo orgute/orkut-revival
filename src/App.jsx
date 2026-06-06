@@ -197,10 +197,12 @@ function WhoGrid(){
       <Row cells={topCells.slice(0,4)}/>
       <Row cells={topCells.slice(4,8)}/>
       <div style={{textAlign:'center',padding:'10px 0 8px'}}>
-        <span style={{fontSize:16,fontWeight:700,fontFamily:F_UI,color:'#1a2e5a',letterSpacing:.5}}>
-          <span style={{color:PINK}}>Q</span>uem{' '}
-          <span style={{color:PINK}}>V</span>ocê{' '}
-          <span style={{color:PINK}}>C</span>onhece?
+        <span style={{
+          fontSize:19,fontWeight:400,
+          fontFamily:"'EB Garamond','Garamond','Georgia','Times New Roman',serif",
+          color:'#111',letterSpacing:'0.03em',fontStyle:'italic',
+        }}>
+          quem v<span style={{fontStyle:'normal',fontWeight:600,fontSize:21}}>O</span>cê conhece?
         </span>
       </div>
       <Row cells={botCells.slice(0,4)}/>
