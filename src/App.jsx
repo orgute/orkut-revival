@@ -565,6 +565,7 @@ function TestimonialsBlock({ myId, setPage }){
 function HomePage({ profile, myId, setPage }){
   const [scrapCount,setScrapCount]=useState(0)
   const [comCount,setComCount]=useState(0)
+  const [homeFanCount,setHomeFanCount]=useState(0)
   const [fortune,setFortune]=useState('Tenha um ótimo dia!')
   const [editingFortune,setEditingFortune]=useState(false)
   const [fortuneDraft,setFortuneDraft]=useState('')
@@ -572,6 +573,7 @@ function HomePage({ profile, myId, setPage }){
     if(!myId)return
     getRecados(myId).then(r=>setScrapCount(r.length))
     getMyCommunities(myId).then(c=>setComCount(c.length))
+    getFanCount(myId).then(setHomeFanCount)
   },[myId])
 
   // Icon row — colored icons matching screenshot
