@@ -1001,6 +1001,14 @@ function ProfilePage({ myId, userId, setPage, toast }){
     if(iAmFan){ await removeFan(myId,targetId); setIAmFan(false); setFanCount(n=>n-1) }
     else { await addFan(myId,targetId); setIAmFan(true); setFanCount(n=>n+1) }
   }
+  const [profileReplyOpen,setProfileReplyOpen]=useState(null)
+  const [profileReplyText,setProfileReplyText]=useState('')
+  const postProfileReply=async(toId,toName)=>{
+    if(!profileReplyText.trim()) return
+    await sendRecado(myId,toId,profileReplyText.trim())
+    setProfileReplyOpen(null); setProfileReplyText('')
+    getRecados(targetId).then(d=>{setScraps(d);setScrapCount(d.length)})
+  }
   const submitScrap=async()=>{
     if(!newScrap.trim()) return
     await sendRecado(myId, targetId, newScrap.trim())
@@ -1424,7 +1432,10 @@ function ProfilePage({ myId, userId, setPage, toast }){
                         hour:'2-digit',minute:'2-digit'})}
                     </div>
                     {myId!==targetId&&<span style={{fontSize:11,color:BLUE,cursor:'pointer',fontFamily:F_UI}}
-                      onClick={()=>setPage({name:'scrapbook',userId:s.from.id})}>
+                      onClick={()=>{
+                        setProfileReplyOpen(profileReplyOpen===s.id?null:s.id)
+                        setProfileReplyText('')
+                      }}>
                       ↩ responder
                     </span>}
                     <span style={{fontSize:11,color:BLUE,cursor:'pointer',fontFamily:F_UI}}
@@ -1432,6 +1443,22 @@ function ProfilePage({ myId, userId, setPage, toast }){
                       ver conversa
                     </span>
                   </div>
+                  {profileReplyOpen===s.id&&<div style={{marginTop:8,background:'#f8f9fc',
+                    border:`1px solid ${BRD}`,borderRadius:3,padding:'8px 10px'}}>
+                    <textarea style={{...tarea,minHeight:52,fontSize:12}} value={profileReplyText}
+                      onChange={e=>setProfileReplyText(e.target.value)}
+                      placeholder={`responder para ${s.from.name}…`} autoFocus/>
+                    <div style={{display:'flex',gap:8,marginTop:6}}>
+                      <button style={{...btnBl,padding:'3px 12px',fontSize:11}}
+                        onClick={()=>postProfileReply(s.from.id,s.from.name)}>
+                        post scrap
+                      </button>
+                      <button style={{...btnGh,padding:'3px 10px',fontSize:11}}
+                        onClick={()=>{setProfileReplyOpen(null);setProfileReplyText('')}}>
+                        cancelar
+                      </button>
+                    </div>
+                  </div>}
                 </div>
               </div>
             ))}
