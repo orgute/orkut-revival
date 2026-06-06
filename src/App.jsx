@@ -871,7 +871,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
         </div>
         <div style={{padding:'8px 10px 4px'}}>
           <div style={{fontWeight:700,fontSize:14,color:PINK,marginBottom:2}}>{profile.name}</div>
-          <div style={{marginBottom:8}}><StatusDot lastSeen={profile?.last_seen} size={7}/></div>
+          <div style={{fontSize:12,color:'#4caf50',marginBottom:8}}>● disponível</div>
           {isOwn&&<label style={{...btnBl,display:'inline-block',cursor:'pointer',fontSize:11,padding:'3px 10px',marginBottom:4}}>
             {uploading?'…':'trocar foto'}
             <input type="file" accept="image/*" style={{display:'none'}} onChange={handleAvatar}/>
