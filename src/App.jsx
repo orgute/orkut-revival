@@ -10,7 +10,7 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getAlbumPhotos, addPhotoToAlbum, deletePhoto, getNovidades,
   getFotosFeed, getPhotoComments, addPhotoComment, deletePhotoComment,
   getSentRequests, getPendingDepoimentos, approveDepoimento, rejectDepoimento,
-  getFanCount, getIsFan, addFan, removeFan, getMessageThreads,
+  getFanCount, getIsFan, addFan, removeFan, getMessageThreads, getFans,
 } from './lib/supabase.js'
 
 /* ── Design tokens matching screenshot exactly ── */
@@ -581,7 +581,7 @@ function HomePage({ profile, myId, setPage }){
     { emoji:'✏️',  color:'#e8700a', label:'scraps',       count:scrapCount, pg:'scrapbook' },
     { emoji:'📷',  color:'#555577', label:'fotos',         count:0,          pg:'galeria' },
     { emoji:'🏷️',  color:'#e8700a', label:'fotos de mim',  count:0,          pg:null },
-    { emoji:'⭐',  color:'#f5a623', label:'fãs',            count:homeFanCount, pg:null },
+    { emoji:'⭐',  color:'#f5a623', label:'fãs',            count:homeFanCount, pg:'fans' },
     { emoji:'✉️',  color:'#757575', label:'mensagens',      count:0,          pg:'inbox' },
   ]
 
@@ -929,17 +929,25 @@ function ProfilePage({ myId, userId, setPage, toast }){
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5" stroke={MUTED} strokeWidth="1.2" fill="none"/></svg>
                 vídeos <strong style={{fontFamily:F_NUM}}>0</strong>
               </span>
-              <span style={{display:'flex',alignItems:'center',gap:4,
-                cursor:!isOwn?'pointer':'default'}}
-                onClick={!isOwn?toggleFan:undefined}>
-                <svg width="14" height="14" viewBox="0 0 14 14"
-                  fill={!isOwn&&iAmFan?'#f5a623':'none'}>
-                  <polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5"
-                    stroke={!isOwn&&iAmFan?'#f5a623':MUTED} strokeWidth="1.4"/>
-                </svg>
-                <span style={{color:!isOwn?BLUE:TEXT,
-                  textDecoration:!isOwn?'underline':'none'}}>fãs</span>
-                <strong style={{fontFamily:F_NUM}}>{fanCount}</strong>
+              <span style={{display:'flex',alignItems:'center',gap:4}}>
+                {/* Fan count — always links to fan list */}
+                <span style={{display:'flex',alignItems:'center',gap:4,cursor:'pointer'}}
+                  onClick={()=>setPage({name:'fans',userId:targetId})}>
+                  <svg width="14" height="14" viewBox="0 0 14 14"
+                    fill={!isOwn&&iAmFan?'#f5a623':'none'}>
+                    <polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5"
+                      stroke={!isOwn&&iAmFan?'#f5a623':MUTED} strokeWidth="1.4"/>
+                  </svg>
+                  <span style={{color:BLUE,textDecoration:'underline'}}>fãs</span>
+                  <strong style={{fontFamily:F_NUM}}>{fanCount}</strong>
+                </span>
+                {/* Toggle fan — only when visiting someone else */}
+                {!isOwn&&<span style={{fontSize:10,fontFamily:F_UI,color:iAmFan?'#f5a623':MUTED,
+                  cursor:'pointer',marginLeft:2,border:`1px solid ${BRD}`,
+                  borderRadius:2,padding:'1px 6px'}}
+                  onClick={toggleFan}>
+                  {iAmFan?'- deixar de ser fã':'+ ser fã'}
+                </span>}
               </span>
               {invites.length>0&&<span style={{display:'flex',alignItems:'center',gap:4,
                 color:MUTED,fontSize:11,opacity:.75}} title="convites usados">
@@ -1856,6 +1864,52 @@ function DepoimentosPage({ myId, setPage }){
   )
 }
 
+/* ── FANS PAGE ── */
+function FansPage({ userId, myId, setPage }){
+  const [fans,setFans]=useState([])
+  const [loading,setLoading]=useState(true)
+  const [name,setName]=useState('')
+
+  useEffect(()=>{
+    getProfile(userId).then(p=>setName(p?.name||''))
+    getFans(userId).then(data=>{ setFans(data); setLoading(false) })
+  },[userId])
+
+  const isOwn=userId===myId
+
+  return (
+    <div style={{maxWidth:700,margin:'0 auto',padding:'8px'}}>
+      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
+        <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'6px 12px',
+          display:'flex',alignItems:'center',gap:10}}>
+          <span style={{fontSize:12,color:BLUE,cursor:'pointer',fontFamily:F_UI}}
+            onClick={()=>setPage(isOwn?'profile':{name:'userprofile',userId})}>← voltar</span>
+          <span style={{fontWeight:700,fontSize:14,color:TEXT,fontFamily:F_UI}}>
+            {isOwn?'meus fãs':`fãs de ${name}`}
+          </span>
+          <span style={{fontSize:12,color:MUTED,fontFamily:F_UI}}>({fans.length})</span>
+        </div>
+        {loading
+          ?<div style={{padding:20,color:MUTED,fontFamily:F_UI,fontSize:13}}>Carregando…</div>
+          :fans.length===0
+            ?<div style={{padding:24,textAlign:'center',color:MUTED,fontFamily:F_UI,fontSize:13}}>
+              {isOwn?'Você ainda não tem fãs.':'Nenhum fã ainda.'}
+            </div>
+            :fans.map((f,i)=>(
+              <div key={f.id} onClick={()=>setPage({name:'userprofile',userId:f.id})}
+                style={{display:'flex',gap:12,padding:'10px 14px',cursor:'pointer',
+                  alignItems:'center',
+                  borderBottom:i<fans.length-1?`1px solid ${BRD}`:'none'}}>
+                <Av src={f.avatar_url} size={44} name={f.name} radius="50%"/>
+                <div style={{fontWeight:700,fontSize:13,fontFamily:F_UI,color:BLUE}}>{f.name}</div>
+              </div>
+            ))
+        }
+      </div>
+    </div>
+  )
+}
+
 /* ── INBOX PAGE ── */
 function InboxPage({ myId, setPage }){
   const [threads,setThreads]=useState([])
@@ -2298,6 +2352,7 @@ export default function App(){
       case '__admin':     return <AdminCleanup setToast={setToast}/>
       case 'fotosfeed':   return <FotosFeed myId={myId} setPage={navTo}/>
       case 'inbox':       return <InboxPage myId={myId} setPage={navTo}/>
+      case 'fans':        return <FansPage userId={page?.userId||myId} myId={myId} setPage={navTo}/>
       case 'galeria':     return <GaleriaPage myId={myId} userId={page?.userId||null} setPage={navTo} openAlbumId={page?.albumId||null}/>
       case 'depoimentos': return <DepoimentosPage myId={myId} setPage={navTo}/>
       default:            return <HomePage profile={profile} myId={myId} setPage={navTo}/>

@@ -465,3 +465,11 @@ export async function getMessageThreads(userId) {
     (a, b) => new Date(b.lastMsg.created_at) - new Date(a.lastMsg.created_at)
   )
 }
+
+export async function getFans(userId) {
+  const { data } = await supabase.from('fans')
+    .select('fan:profiles!fan_id(id,name,avatar_url)')
+    .eq('star_id', userId)
+    .order('created_at', { ascending: false })
+  return (data || []).map(d => d.fan)
+}
