@@ -473,3 +473,20 @@ export async function getFans(userId) {
     .order('created_at', { ascending: false })
   return (data || []).map(d => d.fan)
 }
+
+/* ── Feedback / Guestbook ────────────────────────────────────── */
+export async function getFeedback() {
+  const { data } = await supabase.from('feedback')
+    .select('id,name,text,created_at')
+    .order('created_at', { ascending: false })
+    .limit(50)
+  return data || []
+}
+
+export async function addFeedback(name, text) {
+  const { data, error } = await supabase.from('feedback')
+    .insert({ name: name.trim(), text: text.trim() })
+    .select().single()
+  if (error) throw error
+  return data
+}
