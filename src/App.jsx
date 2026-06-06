@@ -193,17 +193,27 @@ function WhoGrid(){
     </div>
   )
   return (
-    <div style={{width:'100%',maxWidth:320,margin:'0 auto'}}>
+    <div style={{width:'100%',maxWidth:320,margin:'0 auto',position:'relative'}}>
       <Row cells={topCells.slice(0,4)}/>
       <Row cells={topCells.slice(4,8)}/>
-      <div style={{textAlign:'center',padding:'10px 0 8px'}}>
-        <span style={{
-          fontSize:23,fontWeight:400,
-          fontFamily:"'EB Garamond','Garamond','Georgia','Times New Roman',serif",
-          color:'#111',letterSpacing:'0.03em',
+      {/* Text overlaid on grid — absolute center */}
+      <div style={{position:'relative',height:0,overflow:'visible',zIndex:10,
+        display:'flex',justifyContent:'center',alignItems:'center'}}>
+        <div style={{
+          position:'absolute',top:'50%',left:'50%',
+          transform:'translate(-50%,-50%)',
+          background:'rgba(220,227,240,0.82)',
+          borderRadius:4,padding:'4px 14px',
+          whiteSpace:'nowrap',
         }}>
-          quem v<span style={{fontWeight:600,fontSize:25}}>O</span>cê conhece?
-        </span>
+          <span style={{
+            fontSize:26,fontWeight:700,
+            fontFamily:"'EB Garamond','Garamond','Georgia','Times New Roman',serif",
+            color:'#111',letterSpacing:'0.02em',
+          }}>
+            quem v<span style={{fontSize:29}}>O</span>cê conhece?
+          </span>
+        </div>
       </div>
       <Row cells={botCells.slice(0,4)}/>
       <Row cells={botCells.slice(4,8)}/>
