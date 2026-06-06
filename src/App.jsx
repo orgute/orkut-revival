@@ -246,7 +246,7 @@ function GuestbookTab(){
   }
   return (
     <div style={{maxWidth:600,margin:'0 auto',padding:'0 16px 16px'}}>
-      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
+      <div style={{background:'#e8edf7',border:'1px solid #c8d0e0',borderRadius:3,
         padding:'20px 24px',marginBottom:20,textAlign:'center'}}>
         <img src="https://uakmvwwgtjrwdymfwtrf.supabase.co/storage/v1/object/public/avatars/7a55048c-70bb-44a1-9195-818c9b865689/avatar.jpeg"
           alt="Elton" onError={e=>{e.target.style.display='none'}}
@@ -263,7 +263,7 @@ function GuestbookTab(){
           Projeto pessoal sem compromisso de manutenção ou continuidade.
         </div>
       </div>
-      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,padding:'16px 20px',marginBottom:20}}>
+      <div style={{background:'#e8edf7',border:'1px solid #c8d0e0',borderRadius:3,padding:'16px 20px',marginBottom:20}}>
         <div style={{fontWeight:700,fontSize:13,color:TEXT,fontFamily:F_UI,marginBottom:12}}>deixe seu recado</div>
         <input style={{...inp,marginBottom:8}} placeholder="Nome *" value={name}
           onChange={e=>setName(e.target.value)} maxLength={60}/>
@@ -286,7 +286,7 @@ function GuestbookTab(){
           Seja o primeiro a deixar uma nota!
         </div>
         :comments.map((c,i)=>(
-          <div key={c.id||i} style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
+          <div key={c.id||i} style={{background:'#e8edf7',border:'1px solid #c8d0e0',borderRadius:3,
             padding:'12px 16px',marginBottom:8}}>
             <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
               <span style={{fontWeight:700,fontSize:13,fontFamily:F_UI,color:BLUE}}>{c.name}</span>
@@ -431,12 +431,7 @@ function AuthScreen({ onAuth }){
       </div>
 
       {authTab==='guestbook'
-        ?<div style={{paddingTop:28,flex:1,display:'flex',flexDirection:'column'}}><GuestbookTab/>{/* Footer */}
-<div style={{textAlign:'center',padding:'14px 0 20px',fontSize:11,color:MUTED,
-  borderTop:`1px solid ${BRD}`,marginTop:8,fontFamily:F_UI}}>
-  ⚠️ Aviso: Reviva a nostalgia com conexões verdadeiras. &nbsp;·&nbsp;
-  © Recriado por IA com ❤️
-</div></div>
+        ?<div style={{paddingTop:28,flex:1}}><GuestbookTab/></div>
         :<div style={{maxWidth:880,margin:'0 auto',padding:'16px 24px',
           display:'flex',gap:32,alignItems:'flex-start',flexWrap:'wrap'}}>
           <div style={{flex:'1 1 300px',minWidth:260}}>
