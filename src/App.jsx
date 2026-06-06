@@ -10,7 +10,6 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getAlbumPhotos, addPhotoToAlbum, deletePhoto, getNovidades,
   getFotosFeed, getPhotoComments, addPhotoComment, deletePhotoComment,
   getSentRequests, getPendingDepoimentos, approveDepoimento, rejectDepoimento,
-  updateLastSeen, getOnlineStatus,
 } from './lib/supabase.js'
 
 /* ── Design tokens matching screenshot exactly ── */
@@ -94,24 +93,6 @@ function NavLogo(){
         fontFamily="'Nunito Black','Nunito','Montserrat','Arial Rounded MT Bold',Arial,sans-serif"
         fontSize={h} fontWeight="900" fill="#ff00aa" mask={"url(#"+mid+")"} letterSpacing="-1">Orkut</text>
     </svg>
-  )
-}
-
-/* ── STATUS DOT ── */
-function StatusDot({ lastSeen, size=8, showLabel=true }){
-  const STATUS_COLOR = { online:'#4caf50', ausente:'#d4a017', offline:'#e03131' }
-  const STATUS_LABEL = { online:'disponível', ausente:'ausente', offline:'offline' }
-  const status = getOnlineStatus(lastSeen)
-  return (
-    <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
-      <span style={{
-        width:size, height:size, borderRadius:'50%', flexShrink:0,
-        background:STATUS_COLOR[status], display:'inline-block',
-      }}/>
-      {showLabel&&<span style={{
-        fontSize:size+3, color:STATUS_COLOR[status], fontFamily:F_UI,
-      }}>{STATUS_LABEL[status]}</span>}
-    </span>
   )
 }
 
@@ -625,7 +606,7 @@ function HomePage({ profile, myId, setPage }){
               </div>
               <div style={{padding:'5px 8px'}}>
                 <div style={{fontWeight:700,fontSize:13,color:PINK,marginBottom:2}}>{profile?.name||'…'}</div>
-                <StatusDot lastSeen={profile?.last_seen} size={7}/>
+                <div style={{fontSize:11,color:'#4caf50'}}>● disponível</div>
               </div>
             </div>
             {/* Nav links card */}
@@ -661,7 +642,7 @@ function HomePage({ profile, myId, setPage }){
               <div style={{padding:'8px 10px'}}>
                 <div style={{fontWeight:700,fontSize:14,color:PINK,cursor:'pointer',marginBottom:3}}
                   onClick={()=>setPage('profile')}>{profile?.name||'…'}</div>
-                <StatusDot lastSeen={profile?.last_seen} size={7}/>
+                <div style={{fontSize:11,color:'#4caf50'}}>● disponível</div>
               </div>
             </div>
             <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
@@ -2174,13 +2155,6 @@ export default function App(){
     window.addEventListener('keydown',onKey)
     return()=>{ subscription.unsubscribe(); window.removeEventListener('keydown',onKey) }
   },[])
-
-  // Update last_seen heartbeat every 5 min
-  useEffect(()=>{
-    if(!myId) return
-    const t=setInterval(()=>updateLastSeen(myId),5*60*1000)
-    return()=>clearInterval(t)
-  },[myId])
 
   // Global chat listener — pops up incoming messages
   const [incomingChat,setIncomingChat]=useState(null)
