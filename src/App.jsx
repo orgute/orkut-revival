@@ -141,9 +141,8 @@ const GRID_PHOTOS = [
 ]
 
 function WhoGrid(){
-  // Mosaic: alternating pink/light squares, faces cropped close
-  // Exactly like OG image: 4x4 grid with some empty pink squares
-  // Photos: mix of people including diverse faces
+  // OG style: rotated/offset squares, alternating pink empty + photo
+  // Layout: 2 rows top photos, text center, 2 rows bottom photos
   const photos = [
     "https://randomuser.me/api/portraits/men/32.jpg",
     "https://randomuser.me/api/portraits/women/44.jpg",
@@ -154,47 +153,58 @@ function WhoGrid(){
     "https://randomuser.me/api/portraits/men/75.jpg",
     "https://randomuser.me/api/portraits/women/85.jpg",
   ]
-  // 4x4 grid: P=pink empty, F=face photo, T=text center
-  // Pattern matches image 2: P F P F / F P F P / P T T P / F P F P
-  const PINK='#f0a8c0'; const LIGHT='#dce8f0'; const NONE='transparent'
-  const cells = [
-    {type:'p',bg:PINK}, {type:'f',idx:0}, {type:'p',bg:PINK}, {type:'f',idx:1},
-    {type:'f',idx:2},   {type:'p',bg:PINK}, {type:'f',idx:3}, {type:'p',bg:LIGHT},
-    {type:'p',bg:LIGHT},{type:'t'},{type:'t2'},{type:'p',bg:PINK},
-    {type:'f',idx:4},   {type:'p',bg:PINK}, {type:'f',idx:5}, {type:'p',bg:LIGHT},
+  const PINK='#f0a8c0'; const LIGHT='#dce8f0'
+  // Each cell: [type, photo_index_or_null, bg, rotation_deg, scale]
+  const topCells = [
+    {type:'p',bg:PINK,rot:-2,sc:1.02},
+    {type:'f',idx:0,rot:1.5,sc:1},
+    {type:'p',bg:LIGHT,rot:-1,sc:0.98},
+    {type:'f',idx:1,rot:-2,sc:1},
+    {type:'f',idx:2,rot:2,sc:1},
+    {type:'p',bg:PINK,rot:-1.5,sc:1.01},
+    {type:'f',idx:3,rot:1,sc:1},
+    {type:'p',bg:LIGHT,rot:2.5,sc:0.99},
   ]
-  return (
-    <div style={{width:'100%',maxWidth:280,margin:'0 auto',position:'relative'}}>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:3}}>
-        {cells.map((c,i)=>{
-          if(c.type==='p') return (
-            <div key={i} style={{aspectRatio:'1',background:c.bg,borderRadius:1}}/>
-          )
-          if(c.type==='f') return (
-            <div key={i} style={{aspectRatio:'1',overflow:'hidden',borderRadius:1,background:PINK}}>
-              <img src={photos[c.idx]} alt="" style={{width:'100%',height:'100%',
-                objectFit:'cover',objectPosition:'center top',
-                filter:'grayscale(15%) contrast(1.05)',display:'block'}}
-                onError={e=>{e.target.parentElement.style.background=PINK; e.target.style.display='none'}}/>
-            </div>
-          )
-          if(c.type==='t') return (
-            <div key={i} style={{aspectRatio:'1',display:'flex',alignItems:'center',justifyContent:'center'}}>
-              <span style={{fontSize:10,fontWeight:700,fontFamily:F_UI,color:'#1a2e5a',textAlign:'center',lineHeight:1.4}}>
-                <span style={{color:PINK,fontSize:11}}>Q</span>uem
-              </span>
-            </div>
-          )
-          if(c.type==='t2') return (
-            <div key={i} style={{aspectRatio:'1',display:'flex',alignItems:'center',justifyContent:'center'}}>
-              <span style={{fontSize:10,fontWeight:700,fontFamily:F_UI,color:'#1a2e5a',textAlign:'center',lineHeight:1.4}}>
-                <span style={{color:PINK,fontSize:11}}>V</span>ocê <span style={{color:PINK,fontSize:11}}>C</span>onhece?
-              </span>
-            </div>
-          )
-          return null
-        })}
+  const botCells = [
+    {type:'f',idx:4,rot:-1.5,sc:1},
+    {type:'p',bg:LIGHT,rot:2,sc:1.01},
+    {type:'f',idx:5,rot:1,sc:1},
+    {type:'p',bg:PINK,rot:-2,sc:0.98},
+    {type:'p',bg:PINK,rot:1.5,sc:1.02},
+    {type:'f',idx:6,rot:-1,sc:1},
+    {type:'p',bg:LIGHT,rot:2,sc:0.99},
+    {type:'f',idx:7,rot:-2.5,sc:1},
+  ]
+  const Cell=({c})=>(
+    c.type==='p'
+      ?<div style={{width:64,height:64,background:c.bg,borderRadius:2,flexShrink:0,
+          transform:`rotate(${c.rot}deg) scale(${c.sc})`}}/>
+      :<div style={{width:64,height:64,overflow:'hidden',borderRadius:2,flexShrink:0,
+          transform:`rotate(${c.rot}deg) scale(${c.sc})`,background:PINK}}>
+        <img src={photos[c.idx]} alt="" style={{width:'100%',height:'100%',
+          objectFit:'cover',objectPosition:'center top',display:'block',
+          filter:'grayscale(15%) contrast(1.05)'}}
+          onError={e=>{e.target.parentElement.style.background=PINK;e.target.style.display='none'}}/>
       </div>
+  )
+  const Row=({cells})=>(
+    <div style={{display:'flex',gap:6,justifyContent:'center',alignItems:'center',padding:'4px 0'}}>
+      {cells.map((c,i)=><Cell key={i} c={c}/>)}
+    </div>
+  )
+  return (
+    <div style={{width:'100%',maxWidth:320,margin:'0 auto'}}>
+      <Row cells={topCells.slice(0,4)}/>
+      <Row cells={topCells.slice(4,8)}/>
+      <div style={{textAlign:'center',padding:'10px 0 8px'}}>
+        <span style={{fontSize:16,fontWeight:700,fontFamily:F_UI,color:'#1a2e5a',letterSpacing:.5}}>
+          <span style={{color:PINK}}>Q</span>uem{' '}
+          <span style={{color:PINK}}>V</span>ocê{' '}
+          <span style={{color:PINK}}>C</span>onhece?
+        </span>
+      </div>
+      <Row cells={botCells.slice(0,4)}/>
+      <Row cells={botCells.slice(4,8)}/>
     </div>
   )
 }
@@ -217,7 +227,7 @@ function GuestbookTab(){
   const [submitting,setSubmitting]=useState(false)
   const [error,setError]=useState('')
   const [done,setDone]=useState(false)
-  const MAX=280
+  const MAX=140
   useEffect(()=>{getFeedback().then(setComments)},[])
   const submit=async()=>{
     setError('')
@@ -235,7 +245,7 @@ function GuestbookTab(){
     setSubmitting(false)
   }
   return (
-    <div style={{maxWidth:600,margin:'0 auto',padding:'0 16px 32px'}}>
+    <div style={{maxWidth:600,margin:'0 auto',padding:'0 16px 16px'}}>
       <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
         padding:'20px 24px',marginBottom:20,textAlign:'center'}}>
         <img src="https://uakmvwwgtjrwdymfwtrf.supabase.co/storage/v1/object/public/avatars/7a55048c-70bb-44a1-9195-818c9b865689/avatar.jpeg"
@@ -259,7 +269,7 @@ function GuestbookTab(){
           onChange={e=>setName(e.target.value)} maxLength={60}/>
         <div style={{position:'relative',marginBottom:8}}>
           <textarea style={{...inp,resize:'none',height:72,fontFamily:F_UI,fontSize:13,paddingBottom:20}}
-            placeholder="O que você achou? (máx. 280 caracteres) *"
+            placeholder="O que você achou? (máx. 140 caracteres) *"
             value={text} onChange={e=>setText(e.target.value.slice(0,MAX))}/>
           <span style={{position:'absolute',bottom:6,right:8,fontSize:10,color:MUTED,fontFamily:F_UI}}>
             {text.length}/{MAX}
