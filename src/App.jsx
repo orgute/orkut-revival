@@ -198,11 +198,11 @@ function WhoGrid(){
       <Row cells={topCells.slice(4,8)}/>
       <div style={{textAlign:'center',padding:'10px 0 8px'}}>
         <span style={{
-          fontSize:19,fontWeight:400,
+          fontSize:23,fontWeight:400,
           fontFamily:"'EB Garamond','Garamond','Georgia','Times New Roman',serif",
-          color:'#111',letterSpacing:'0.03em',fontStyle:'italic',
+          color:'#111',letterSpacing:'0.03em',
         }}>
-          quem v<span style={{fontStyle:'normal',fontWeight:600,fontSize:21}}>O</span>cê conhece?
+          quem v<span style={{fontWeight:600,fontSize:25}}>O</span>cê conhece?
         </span>
       </div>
       <Row cells={botCells.slice(0,4)}/>
@@ -249,20 +249,17 @@ function GuestbookTab(){
   return (
     <div style={{maxWidth:600,margin:'0 auto',padding:'0 16px 16px'}}>
       <div style={{background:'#e8edf7',border:'1px solid #c8d0e0',borderRadius:3,
-        padding:'20px 24px',marginBottom:20,textAlign:'center'}}>
-        <img src="https://uakmvwwgtjrwdymfwtrf.supabase.co/storage/v1/object/public/avatars/7a55048c-70bb-44a1-9195-818c9b865689/avatar.jpeg"
-          alt="Elton" onError={e=>{e.target.style.display='none'}}
-          style={{width:72,height:72,borderRadius:'50%',objectFit:'cover',
-            border:'3px solid white',boxShadow:'0 0 0 2px #c8d0e0',
-            display:'block',margin:'0 auto 10px'}}/>
-        <div style={{fontWeight:700,fontSize:14,color:PINK,fontFamily:F_UI,marginBottom:8}}>Elton Vilela</div>
-        <div style={{fontSize:13,color:TEXT,fontFamily:F_UI,lineHeight:1.8,maxWidth:440,margin:'0 auto'}}>
+        padding:'24px 28px',marginBottom:20}}>
+        <div style={{fontSize:13,color:TEXT,fontFamily:F_UI,lineHeight:1.9,marginBottom:12}}>
           Olá! Esta página foi criada com IA por diversão e nostalgia. O que você achou?
           O que adicionaria? Na versão para celular tem uma novidade, já encontrou?
           Deixe sua sugestão aqui. 😊
         </div>
-        <div style={{fontSize:11,color:MUTED,fontFamily:F_UI,marginTop:10,fontStyle:'italic'}}>
+        <div style={{fontSize:11,color:MUTED,fontFamily:F_UI,marginBottom:6,fontStyle:'italic'}}>
           Projeto pessoal sem compromisso de manutenção ou continuidade.
+        </div>
+        <div style={{textAlign:'right',fontSize:13,color:PINK,fontFamily:F_UI,fontWeight:700}}>
+          — Elton Vilela
         </div>
       </div>
       <div style={{background:'#e8edf7',border:'1px solid #c8d0e0',borderRadius:3,padding:'16px 20px',marginBottom:20}}>
