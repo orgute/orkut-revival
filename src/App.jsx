@@ -1417,10 +1417,20 @@ function ProfilePage({ myId, userId, setPage, toast }){
                   </div>
                   <div style={{fontSize:13,color:TEXT,lineHeight:1.5,fontFamily:F_UI,
                     wordBreak:'break-word'}}>{s.text}</div>
-                  <div style={{fontSize:10,color:MUTED,marginTop:2,fontFamily:F_UI}}>
-                    {new Date(s.created_at).toLocaleDateString('pt-BR',{
-                      day:'numeric',month:'short',year:'numeric',
-                      hour:'2-digit',minute:'2-digit'})}
+                  <div style={{display:'flex',gap:12,alignItems:'center',marginTop:4}}>
+                    <div style={{fontSize:10,color:MUTED,fontFamily:F_UI}}>
+                      {new Date(s.created_at).toLocaleDateString('pt-BR',{
+                        day:'numeric',month:'short',year:'numeric',
+                        hour:'2-digit',minute:'2-digit'})}
+                    </div>
+                    {myId!==targetId&&<span style={{fontSize:11,color:BLUE,cursor:'pointer',fontFamily:F_UI}}
+                      onClick={()=>setPage({name:'scrapbook',userId:s.from.id})}>
+                      ↩ responder
+                    </span>}
+                    <span style={{fontSize:11,color:BLUE,cursor:'pointer',fontFamily:F_UI}}
+                      onClick={()=>setPage({name:'scrapbook',userId:targetId})}>
+                      ver conversa
+                    </span>
                   </div>
                 </div>
               </div>
@@ -2771,7 +2781,7 @@ export default function App(){
       {renderPage()}
       <footer style={{textAlign:'center',padding:'14px 0 20px',fontSize:11,color:MUTED,
         borderTop:`1px solid ${BRD}`,marginTop:8}}>
-        © Recriado com ❤️ · Zero Monetização
+        © Recriado com IA com ❤️ · Zero Monetização
       </footer>
       <Toast msg={toast} onDone={()=>setToast('')}/>
       {incomingChat&&<IncomingChatPopup
