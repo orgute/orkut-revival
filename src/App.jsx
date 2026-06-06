@@ -132,47 +132,44 @@ function Toast({ msg, onDone }){
 
 /* ── AUTH SCREEN ── */
 const GRID_PHOTOS = [
-  "https://randomuser.me/api/portraits/women/44.jpg",
-  "https://randomuser.me/api/portraits/men/32.jpg",
-  "https://randomuser.me/api/portraits/women/68.jpg",
-  "https://randomuser.me/api/portraits/men/75.jpg",
-  "https://randomuser.me/api/portraits/women/26.jpg",
-  "https://randomuser.me/api/portraits/men/85.jpg",
-  "https://randomuser.me/api/portraits/women/52.jpg",
-  "https://randomuser.me/api/portraits/men/71.jpg",
-  "https://randomuser.me/api/portraits/men/15.jpg",
+  "https://randomuser.me/api/portraits/women/44.jpg",   // woman
+  "https://randomuser.me/api/portraits/men/32.jpg",    // man
+  "https://randomuser.me/api/portraits/women/63.jpg",  // black woman
+  "https://randomuser.me/api/portraits/women/26.jpg",  // woman
+  "https://randomuser.me/api/portraits/men/75.jpg",    // elder man
+  "https://randomuser.me/api/portraits/men/15.jpg",    // man
 ]
 
 function WhoGrid(){
-  const colors=['#f0a8c0','#dce3f0','#f0a8c0','#dce3f0','transparent','#f0a8c0','#dce3f0','#f0a8c0','#dce3f0']
+  // Row 1: 3 photos
+  // Row 2: text center cell only (full width)
+  // Row 3: 3 photos
+  const pinkBg='#f0a8c0'; const blueBg='#dce3f0'
+  const top=[0,1,2]; const bot=[3,4,5]
+  const bgs=[pinkBg,blueBg,pinkBg,blueBg,pinkBg,blueBg]
   return (
-    <div style={{width:'100%',maxWidth:310,margin:'0 auto'}}>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:4}}>
-        {[0,1,2].map(i=>(
-          <div key={i} style={{aspectRatio:'1',background:colors[i],overflow:'hidden',borderRadius:2}}>
+    <div style={{width:'100%',maxWidth:300,margin:'0 auto'}}>
+      {/* Top row */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:4,marginBottom:4}}>
+        {top.map(i=>(
+          <div key={i} style={{aspectRatio:'1',background:bgs[i],overflow:'hidden',borderRadius:2}}>
             <img src={GRID_PHOTOS[i]} alt="" style={{width:'100%',height:'100%',objectFit:'cover',
               filter:'grayscale(20%)',display:'block'}} onError={e=>{e.target.style.display='none'}}/>
           </div>
         ))}
-        <div key="t1" style={{aspectRatio:'1',background:colors[3],overflow:'hidden',borderRadius:2}}>
-          <img src={GRID_PHOTOS[3]} alt="" style={{width:'100%',height:'100%',objectFit:'cover',
-            filter:'grayscale(20%)',display:'block'}} onError={e=>{e.target.style.display='none'}}/>
-        </div>
-        {/* Center text cell */}
-        <div style={{aspectRatio:'1',display:'flex',alignItems:'center',justifyContent:'center',
-          background:'#f8f0f5',borderRadius:2,padding:6,textAlign:'center'}}>
-          <span style={{fontSize:11,fontWeight:700,fontFamily:F_UI,color:'#2a3f6f',lineHeight:1.5}}>
-            <span style={{color:PINK,fontSize:14}}>Q</span>uem{' '}
-            <span style={{color:PINK,fontSize:14}}>V</span>ocê{' '}
-            <span style={{color:PINK,fontSize:14}}>C</span>onhece?
-          </span>
-        </div>
-        <div key="t2" style={{aspectRatio:'1',background:colors[5],overflow:'hidden',borderRadius:2}}>
-          <img src={GRID_PHOTOS[5]} alt="" style={{width:'100%',height:'100%',objectFit:'cover',
-            filter:'grayscale(20%)',display:'block'}} onError={e=>{e.target.style.display='none'}}/>
-        </div>
-        {[6,7,8].map(i=>(
-          <div key={i} style={{aspectRatio:'1',background:colors[i],overflow:'hidden',borderRadius:2}}>
+      </div>
+      {/* Middle text row */}
+      <div style={{padding:'10px 0',textAlign:'center',background:'transparent'}}>
+        <span style={{fontSize:15,fontWeight:700,fontFamily:F_UI,color:'#2a3f6f',letterSpacing:.5}}>
+          <span style={{color:PINK}}>Q</span>uem{' '}
+          <span style={{color:PINK}}>V</span>ocê{' '}
+          <span style={{color:PINK}}>C</span>onhece?
+        </span>
+      </div>
+      {/* Bottom row */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:4,marginTop:4}}>
+        {bot.map(i=>(
+          <div key={i} style={{aspectRatio:'1',background:bgs[i],overflow:'hidden',borderRadius:2}}>
             <img src={GRID_PHOTOS[i]} alt="" style={{width:'100%',height:'100%',objectFit:'cover',
               filter:'grayscale(20%)',display:'block'}} onError={e=>{e.target.style.display='none'}}/>
           </div>
@@ -227,10 +224,11 @@ function GuestbookTab(){
           style={{width:72,height:72,borderRadius:'50%',objectFit:'cover',
             border:'3px solid white',boxShadow:'0 0 0 2px #c8d0e0',
             display:'block',margin:'0 auto 10px'}}/>
-        <div style={{fontWeight:700,fontSize:14,color:BLUE,fontFamily:F_UI,marginBottom:8}}>Elton</div>
+        <div style={{fontWeight:700,fontSize:14,color:PINK,fontFamily:F_UI,marginBottom:8}}>Elton Vilela</div>
         <div style={{fontSize:13,color:TEXT,fontFamily:F_UI,lineHeight:1.8,maxWidth:440,margin:'0 auto'}}>
-          Oi! Recriei o Orkut por diversão e nostalgia. O que você achou da recriação?
-          O que adicionaria? Deixe uma nota aqui. 😊
+          Olá! Esta página foi criada com IA por diversão e nostalgia. O que você achou?
+          O que adicionaria? Na versão para celular já tem uma novidade, já encontrou?
+          Deixe sua sugestão aqui. 😊
         </div>
         <div style={{fontSize:11,color:MUTED,fontFamily:F_UI,marginTop:10,fontStyle:'italic'}}>
           Projeto pessoal sem compromisso de manutenção ou continuidade.
@@ -404,12 +402,17 @@ function AuthScreen({ onAuth }){
       </div>
 
       {authTab==='guestbook'
-        ?<div style={{paddingTop:28}}><GuestbookTab/></div>
-        :<div style={{maxWidth:880,margin:'0 auto',padding:'32px 24px',
-          display:'flex',gap:48,alignItems:'flex-start',flexWrap:'wrap'}}>
+        ?<div style={{paddingTop:28}}><GuestbookTab/>{/* Footer */}
+<div style={{textAlign:'center',padding:'14px 0 20px',fontSize:11,color:MUTED,
+  borderTop:`1px solid ${BRD}`,marginTop:8,fontFamily:F_UI}}>
+  ⚠️ Aviso: Reviva a nostalgia com conexões verdadeiras. &nbsp;·&nbsp;
+  © Recriado por IA com ❤️
+</div></div>
+        :<div style={{maxWidth:880,margin:'0 auto',padding:'16px 24px',
+          display:'flex',gap:32,alignItems:'flex-start',flexWrap:'wrap'}}>
           <div style={{flex:'1 1 300px',minWidth:260}}>
-            <div style={{textAlign:'center',marginBottom:24}}>
-              <OFadeLogo size={60} id="lg2"/>
+            <div style={{textAlign:'center',marginBottom:12}}>
+              <OFadeLogo size={44} id="lg2"/>
               <p style={{fontSize:13,fontFamily:F_UI,color:TEXT,lineHeight:1.8,
                 maxWidth:320,margin:'16px auto 0',textAlign:'center'}}>
                 <strong style={{color:PINK}}>Uma comunidade de conexões reais</strong>{' '}
@@ -434,7 +437,7 @@ function AuthScreen({ onAuth }){
       <div style={{textAlign:'center',padding:'14px 0 20px',fontSize:11,color:MUTED,
         borderTop:`1px solid ${BRD}`,marginTop:8,fontFamily:F_UI}}>
         ⚠️ Aviso: Reviva a nostalgia com conexões verdadeiras. &nbsp;·&nbsp;
-        © Recriado com IA com ❤️ · Zero Monetização
+        © Recriado por IA com ❤️
       </div>
     </div>
   )
