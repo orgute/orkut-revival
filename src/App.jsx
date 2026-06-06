@@ -1494,54 +1494,238 @@ function ScrapbookPage({ myId, targetUserId, setPage, toast }){
   const [scraps,setScraps]=useState([])
   const [text,setText]=useState('')
   const [targetProfile,setTargetProfile]=useState(null)
+  const [selected,setSelected]=useState(new Set())
+  const [replyOpen,setReplyOpen]=useState(null)   // scrap id
+  const [replyText,setReplyText]=useState('')
+  const [convOpen,setConvOpen]=useState(null)     // {userId, name}
+  const [convScraps,setConvScraps]=useState([])
+
   useEffect(()=>{
     getRecados(targetId).then(setScraps)
-    if(!isOwn)getProfile(targetId).then(setTargetProfile)
+    if(!isOwn) getProfile(targetId).then(setTargetProfile)
   },[targetId])
+
   useEffect(()=>{
     const ch=supabase.channel('sc-'+targetId)
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'recados',filter:'to_id=eq.'+targetId},
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'recados',
+        filter:'to_id=eq.'+targetId},
         ()=>getRecados(targetId).then(setScraps)).subscribe()
     return()=>supabase.removeChannel(ch)
   },[targetId])
+
   const post=async()=>{
-    if(!text.trim())return
+    if(!text.trim()) return
     await sendRecado(myId,targetId,text)
-    getRecados(targetId).then(setScraps);setText('');toast('Recado enviado!')
+    getRecados(targetId).then(setScraps); setText(''); toast('Recado enviado!')
   }
-  return (
+
+  const postReply=async(toId)=>{
+    if(!replyText.trim()) return
+    await sendRecado(myId,toId,replyText)
+    setReplyOpen(null); setReplyText(''); toast('Recado enviado!')
+    // If replying from own scrapbook, also refresh
+    getRecados(targetId).then(setScraps)
+  }
+
+  const toggleSelect=(id)=>{
+    setSelected(prev=>{
+      const s=new Set(prev)
+      s.has(id)?s.delete(id):s.add(id)
+      return s
+    })
+  }
+
+  const deleteSelected=async()=>{
+    for(const id of selected) await deleteRecado(id,myId)
+    setScraps(p=>p.filter(s=>!selected.has(s.id)))
+    setSelected(new Set())
+    toast('Recados apagados.')
+  }
+
+  const selectAll=()=>setSelected(new Set(scraps.map(s=>s.id)))
+  const selectNone=()=>setSelected(new Set())
+
+  const openConv=async(partnerId,partnerName)=>{
+    // Fetch all scraps between myId and partnerId (both directions)
+    const {data}=await supabase.from('recados')
+      .select('id,text,created_at,from:profiles!recados_from_id_fkey(id,name,avatar_url)')
+      .or(`and(from_id.eq.${myId},to_id.eq.${partnerId}),and(from_id.eq.${partnerId},to_id.eq.${myId})`)
+      .order('created_at',{ascending:true})
+    setConvScraps(data||[])
+    setConvOpen({userId:partnerId,name:partnerName})
+  }
+
+  // ── Conversation view ───────────────────────────────────────
+  if(convOpen) return (
     <div style={{maxWidth:980,margin:'0 auto',padding:'8px'}}>
       <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
         <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'6px 12px',
           display:'flex',alignItems:'center',gap:10}}>
-          {!isOwn&&<span style={{fontSize:12,color:BLUE,cursor:'pointer',fontFamily:F_UI}}
-            onClick={()=>setPage({name:'userprofile',userId:targetUserId})}>← voltar</span>}
-          <span style={{fontWeight:700,fontSize:14,color:TEXT}}>
-            {isOwn?'meus recados':`recados de ${targetProfile?.name||'…'}`}
+          <span style={{fontSize:12,color:BLUE,cursor:'pointer',fontFamily:F_UI}}
+            onClick={()=>setConvOpen(null)}>← voltar</span>
+          <span style={{fontWeight:700,fontSize:14,color:TEXT,fontFamily:F_UI}}>
+            conversa com {convOpen.name}
           </span>
         </div>
-        {isOwn&&<div style={{padding:'10px 12px',borderBottom:`1px solid ${BRD}`}}>
-          <textarea style={tarea} value={text} onChange={e=>setText(e.target.value)} placeholder="Deixar um recado…"/>
-          <button style={{...btnBl,marginTop:8}} onClick={post}>Enviar</button>
-        </div>}
         <div style={{padding:'0 12px'}}>
-          {scraps.length===0
-            ?<div style={{padding:'18px 0',color:MUTED,fontSize:13}}>Nenhum recado ainda.</div>
-            :scraps.map(s=>(
-              <div key={s.id} style={{display:'flex',gap:10,padding:'10px 0',borderBottom:`1px solid ${BRD}`}}>
+          {convScraps.map((s,i)=>{
+            const isMe=s.from.id===myId
+            return (
+              <div key={s.id} style={{display:'flex',gap:10,padding:'10px 0',
+                borderBottom:i<convScraps.length-1?`1px solid ${BRD}`:'none',
+                flexDirection:isMe?'row-reverse':'row'}}>
                 <Av src={s.from.avatar_url} size={34} name={s.from.name} radius="3px"/>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:12,color:BLUE,cursor:'pointer',marginBottom:2}}
-                    onClick={()=>setPage({name:'userprofile',userId:s.from.id})}>{s.from.name}</div>
-                  <div style={{fontSize:13,color:TEXT,lineHeight:1.5}}>{s.text}</div>
-                  <div style={{fontSize:10,color:MUTED,marginTop:3}}>
-                    {new Date(s.created_at).toLocaleDateString('pt-BR')}
+                <div style={{flex:1,background:isMe?'#f0f4ff':'#f8f9fc',
+                  borderRadius:3,padding:'8px 10px',border:`1px solid ${BRD}`}}>
+                  <div style={{fontWeight:700,fontSize:12,color:isMe?BLUE:TEXT,
+                    marginBottom:4,fontFamily:F_UI}}>{s.from.name}</div>
+                  <div style={{fontSize:13,color:TEXT,lineHeight:1.5,fontFamily:F_UI}}>{s.text}</div>
+                  <div style={{fontSize:10,color:MUTED,marginTop:4,fontFamily:F_UI}}>
+                    {new Date(s.created_at).toLocaleDateString('pt-BR',{
+                      day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
                   </div>
-                  {isOwn&&<span style={{fontSize:11,color:'#cc0000',cursor:'pointer',marginTop:3,display:'inline-block'}}
-                    onClick={()=>deleteRecado(s.id,myId).then(()=>setScraps(p=>p.filter(r=>r.id!==s.id)))}>apagar</span>}
                 </div>
               </div>
-            ))}
+            )
+          })}
+        </div>
+        {/* Reply from conversation view */}
+        <div style={{padding:'10px 12px',borderTop:`1px solid ${BRD}`}}>
+          <textarea style={tarea} value={replyText} onChange={e=>setReplyText(e.target.value)}
+            placeholder={`responder para ${convOpen.name}…`}/>
+          <div style={{display:'flex',gap:8,marginTop:8}}>
+            <button style={{...btnBl,padding:'4px 14px',fontSize:12}} onClick={()=>postReply(convOpen.userId)}>
+              enviar recado
+            </button>
+            <button style={{...btnGh,padding:'4px 10px',fontSize:12}} onClick={()=>setReplyText('')}>
+              cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  // ── Main scrapbook view ─────────────────────────────────────
+  return (
+    <div style={{maxWidth:980,margin:'0 auto',padding:'8px'}}>
+      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
+        {/* Header */}
+        <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'6px 12px',
+          display:'flex',alignItems:'center',gap:10}}>
+          {!isOwn&&<span style={{fontSize:12,color:BLUE,cursor:'pointer',fontFamily:F_UI}}
+            onClick={()=>setPage({name:'userprofile',userId:targetUserId})}>← voltar</span>}
+          <span style={{fontWeight:700,fontSize:14,color:TEXT,fontFamily:F_UI}}>
+            {isOwn?`meus recados (${scraps.length})`:`recados de ${targetProfile?.name||'…'}`}
+          </span>
+        </div>
+
+        {/* Write box */}
+        {!isOwn&&<div style={{padding:'10px 12px',borderBottom:`1px solid ${BRD}`,background:'#f8f9fc'}}>
+          <textarea style={tarea} value={text} onChange={e=>setText(e.target.value)}
+            placeholder={`escrever um recado para ${targetProfile?.name||'…'}…`}/>
+          <button style={{...btnBl,marginTop:8,padding:'4px 14px',fontSize:12}} onClick={post}>
+            post scrap
+          </button>
+        </div>}
+
+        {/* Bulk actions — own scrapbook only */}
+        {isOwn&&scraps.length>0&&<div style={{padding:'8px 12px',borderBottom:`1px solid ${BRD}`,
+          display:'flex',alignItems:'center',gap:12,background:'#f8f9fc'}}>
+          <button style={{...btnGh,padding:'3px 12px',fontSize:11,
+            color:'#cc0000',borderColor:'#cc0000'}}
+            onClick={deleteSelected} disabled={selected.size===0}>
+            apagar selecionados ({selected.size})
+          </button>
+          <span style={{fontSize:11,fontFamily:F_UI,color:MUTED}}>
+            Selecionar:{' '}
+            <span style={{color:BLUE,cursor:'pointer'}} onClick={selectAll}>Todos</span>
+            {', '}
+            <span style={{color:BLUE,cursor:'pointer'}} onClick={selectNone}>Nenhum</span>
+          </span>
+        </div>}
+
+        {/* Scrap list */}
+        <div style={{padding:'0 12px'}}>
+          {scraps.length===0
+            ?<div style={{padding:'18px 0',color:MUTED,fontSize:13,fontFamily:F_UI}}>
+              Nenhum recado ainda.
+            </div>
+            :scraps.map((s,i)=>(
+              <div key={s.id} style={{display:'flex',gap:10,padding:'10px 0',
+                borderBottom:i<scraps.length-1?`1px solid ${BRD}`:'none',alignItems:'flex-start'}}>
+
+                {/* Checkbox — own scrapbook only */}
+                {isOwn&&<input type="checkbox" checked={selected.has(s.id)}
+                  onChange={()=>toggleSelect(s.id)}
+                  style={{marginTop:4,flexShrink:0,cursor:'pointer'}}/>}
+
+                <Av src={s.from.avatar_url} size={40} name={s.from.name} radius="3px"/>
+
+                <div style={{flex:1,minWidth:0}}>
+                  {/* Name + timestamp */}
+                  <div style={{display:'flex',justifyContent:'space-between',
+                    alignItems:'baseline',marginBottom:4}}>
+                    <span style={{fontWeight:700,fontSize:13,color:BLUE,cursor:'pointer',
+                      fontFamily:F_UI}}
+                      onClick={()=>setPage({name:'userprofile',userId:s.from.id})}>
+                      {s.from.name}:
+                    </span>
+                    <span style={{fontSize:10,color:MUTED,fontFamily:F_UI,flexShrink:0,marginLeft:8}}>
+                      {new Date(s.created_at).toLocaleDateString('pt-BR',{
+                        day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+                    </span>
+                  </div>
+
+                  {/* Text */}
+                  <div style={{fontSize:13,color:TEXT,lineHeight:1.6,
+                    fontFamily:F_UI,marginBottom:6}}>{s.text}</div>
+
+                  {/* Actions */}
+                  <div style={{display:'flex',gap:14,alignItems:'center'}}>
+                    {/* Reply — only if friend or own */}
+                    <span style={{fontSize:11,color:BLUE,cursor:'pointer',fontFamily:F_UI,
+                      display:'flex',alignItems:'center',gap:3}}
+                      onClick={()=>{
+                        setReplyOpen(replyOpen===s.id?null:s.id)
+                        setReplyText('')
+                      }}>
+                      ↩ responder
+                    </span>
+                    {/* Ver conversa */}
+                    <span style={{fontSize:11,color:BLUE,cursor:'pointer',fontFamily:F_UI}}
+                      onClick={()=>openConv(s.from.id,s.from.name)}>
+                      ver conversa
+                    </span>
+                    {/* Delete single */}
+                    {isOwn&&<span style={{fontSize:11,color:'#cc0000',cursor:'pointer',
+                      fontFamily:F_UI,marginLeft:'auto'}}
+                      onClick={()=>{
+                        deleteRecado(s.id,myId).then(()=>{
+                          setScraps(p=>p.filter(r=>r.id!==s.id))
+                          setSelected(prev=>{const s2=new Set(prev);s2.delete(s.id);return s2})
+                        })
+                      }}>apagar</span>}
+                  </div>
+
+                  {/* Inline reply box */}
+                  {replyOpen===s.id&&<div style={{marginTop:8,background:'#f8f9fc',
+                    border:`1px solid ${BRD}`,borderRadius:3,padding:'8px 10px'}}>
+                    <textarea style={{...tarea,minHeight:54,fontSize:12}} value={replyText}
+                      onChange={e=>setReplyText(e.target.value)}
+                      placeholder={`responder para ${s.from.name}…`}
+                      autoFocus/>
+                    <div style={{display:'flex',gap:8,marginTop:6}}>
+                      <button style={{...btnBl,padding:'3px 12px',fontSize:11}}
+                        onClick={()=>postReply(s.from.id)}>post scrap</button>
+                      <button style={{...btnGh,padding:'3px 10px',fontSize:11}}
+                        onClick={()=>{setReplyOpen(null);setReplyText('')}}>cancelar</button>
+                    </div>
+                  </div>}
+                </div>
+              </div>
+            ))
+          }
         </div>
       </div>
     </div>
