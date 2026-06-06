@@ -420,23 +420,27 @@ export function getOnlineStatus(lastSeen) {
 
 /* ── Fãs ─────────────────────────────────────────────────────── */
 export async function getFanCount(userId) {
-  const { count } = await supabase.from('fans')
-    .select('id', { count: 'exact', head: true }).eq('star_id', userId)
-  return count || 0
+  try {
+    const { count } = await supabase.from('fans')
+      .select('id', { count: 'exact', head: true }).eq('star_id', userId)
+    return count || 0
+  } catch { return 0 }
 }
 
 export async function getIsFan(fanId, starId) {
-  const { data } = await supabase.from('fans')
-    .select('id').eq('fan_id', fanId).eq('star_id', starId).maybeSingle()
-  return !!data
+  try {
+    const { data } = await supabase.from('fans')
+      .select('id').eq('fan_id', fanId).eq('star_id', starId).maybeSingle()
+    return !!data
+  } catch { return false }
 }
 
 export async function addFan(fanId, starId) {
-  await supabase.from('fans').insert({ fan_id: fanId, star_id: starId })
+  try { await supabase.from('fans').insert({ fan_id: fanId, star_id: starId }) } catch {}
 }
 
 export async function removeFan(fanId, starId) {
-  await supabase.from('fans').delete().eq('fan_id', fanId).eq('star_id', starId)
+  try { await supabase.from('fans').delete().eq('fan_id', fanId).eq('star_id', starId) } catch {}
 }
 
 /* ── Messages inbox ──────────────────────────────────────────── */
