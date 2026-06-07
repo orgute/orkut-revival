@@ -1011,19 +1011,12 @@ function ProfilePage({ myId, userId, setPage, toast }){
     if(isOwn){ getMyInvites(myId).then(setInvites); getMemberNumber(targetId).then(setMemberNum) }
     getFanCount(targetId).then(setFanCount)
     if(!isOwn){recordVisit(myId,targetId);getFriendshipStatus(myId,targetId).then(setFStatus);getIsFan(myId,targetId).then(setIAmFan)}
-    getVisitors(targetId).then(v=>{
-      const today=new Date().toDateString()
-      setVisitCount(v.filter(x=>new Date(x.visited_at).toDateString()===today).length)
-      setRecentVisitors(v.slice(0,5))
-    })
   },[targetId])
 
   const toggleFan=async()=>{
     if(iAmFan){ await removeFan(myId,targetId); setIAmFan(false); setFanCount(n=>n-1) }
     else { await addFan(myId,targetId); setIAmFan(true); setFanCount(n=>n+1) }
   }
-  const [visitCount,setVisitCount]=useState(0)
-  const [recentVisitors,setRecentVisitors]=useState([])
   const [profileReplyOpen,setProfileReplyOpen]=useState(null)
   const [profileReplyText,setProfileReplyText]=useState('')
   const postProfileReply=async(toId,toName)=>{
