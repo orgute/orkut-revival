@@ -2718,9 +2718,129 @@ function Carousel({ photos, signedUrls }){
   )
 }
 
+/* ── QUICK POST MODAL ── */
+function QuickPostModal({ myId, onClose, onPosted, toast }){
+  const [mode,setMode]=useState(null) // null | 'single' | 'carousel'
+  const [temporary,setTemporary]=useState(false)
+  const [uploading,setUploading]=useState(false)
+  const [files,setFiles]=useState([])
+  const [previews,setPreviews]=useState([])
+
+  const getExpiry=()=>temporary?new Date(Date.now()+24*60*60*1000).toISOString():null
+
+  const handleFiles=(e,isCarousel)=>{
+    const f=[...e.target.files].slice(0,isCarousel?10:1)
+    setFiles(f)
+    setPreviews(f.map(x=>URL.createObjectURL(x)))
+    setMode(isCarousel?'carousel':'single')
+  }
+
+  const post=async()=>{
+    if(!files.length) return
+    setUploading(true)
+    const expiry=getExpiry()
+    try{
+      if(mode==='carousel'){
+        await uploadCarousel(myId,files,expiry)
+      } else {
+        const albumId=await getOrCreatePostsAlbum(myId)
+        const path=await uploadPhoto(myId,files[0])
+        await addPhotoToAlbum(myId,albumId,path,'',expiry)
+      }
+      toast(temporary?'Post publicado! Expira em 24h 🕐':'Post publicado!')
+      onPosted()
+      onClose()
+    }catch(e){ toast('Erro ao publicar.') }
+    setUploading(false)
+  }
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',
+      zIndex:2000,display:'flex',alignItems:'flex-end',justifyContent:'center'}}
+      onClick={onClose}>
+      <div style={{background:WHITE,borderRadius:'12px 12px 0 0',width:'100%',
+        maxWidth:480,padding:'20px 16px 32px'}}
+        onClick={e=>e.stopPropagation()}>
+        {/* Handle bar */}
+        <div style={{width:36,height:4,background:'#c8d0e0',borderRadius:2,
+          margin:'0 auto 16px'}}/>
+        <div style={{fontWeight:700,fontSize:16,fontFamily:F_UI,
+          color:TEXT,marginBottom:16,textAlign:'center'}}>nova publicação</div>
+
+        {!mode&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
+          <label style={{display:'flex',flexDirection:'column',alignItems:'center',
+            gap:8,padding:'20px 12px',border:`2px dashed ${BRD}`,borderRadius:8,
+            cursor:'pointer',background:'#f8f9fc'}}>
+            <span style={{fontSize:28}}>📷</span>
+            <span style={{fontSize:13,fontWeight:600,fontFamily:F_UI,color:TEXT}}>foto</span>
+            <input type="file" accept="image/*" style={{display:'none'}}
+              onChange={e=>handleFiles(e,false)}/>
+          </label>
+          <label style={{display:'flex',flexDirection:'column',alignItems:'center',
+            gap:8,padding:'20px 12px',border:`2px dashed ${PINK}`,borderRadius:8,
+            cursor:'pointer',background:'#fef0f7'}}>
+            <span style={{fontSize:28}}>⊞</span>
+            <span style={{fontSize:13,fontWeight:600,fontFamily:F_UI,color:PINK}}>carrossel</span>
+            <span style={{fontSize:10,color:MUTED,fontFamily:F_UI}}>até 10 fotos</span>
+            <input type="file" accept="image/*" multiple style={{display:'none'}}
+              onChange={e=>handleFiles(e,true)}/>
+          </label>
+        </div>}
+
+        {previews.length>0&&<div style={{marginBottom:14}}>
+          <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:4}}>
+            {previews.map((p,i)=>(
+              <img key={i} src={p} alt="" style={{width:72,height:72,
+                objectFit:'cover',borderRadius:6,flexShrink:0,
+                border:`2px solid ${i===0?BLUE:BRD}`}}/>
+            ))}
+          </div>
+          <div style={{fontSize:11,color:MUTED,fontFamily:F_UI,marginTop:4}}>
+            {files.length} foto{files.length!==1?'s':''} selecionada{files.length!==1?'s':''}
+          </div>
+        </div>}
+
+        {/* Temporary toggle */}
+        {mode&&<div style={{display:'flex',alignItems:'center',gap:10,
+          marginBottom:16,padding:'10px 12px',background:'#f8f9fc',
+          borderRadius:8,border:`1px solid ${BRD}`,cursor:'pointer'}}
+          onClick={()=>setTemporary(v=>!v)}>
+          <div style={{width:38,height:22,borderRadius:11,
+            background:temporary?BLUE:'#c8d0e0',
+            position:'relative',transition:'background .2s',flexShrink:0}}>
+            <div style={{position:'absolute',top:3,
+              left:temporary?18:3,width:16,height:16,
+              borderRadius:'50%',background:WHITE,transition:'left .2s'}}/>
+          </div>
+          <div>
+            <div style={{fontSize:13,fontWeight:600,fontFamily:F_UI,color:TEXT}}>
+              🕐 post temporário
+            </div>
+            <div style={{fontSize:11,color:MUTED,fontFamily:F_UI}}>
+              {temporary?'expira em 24 horas':'permanente'}
+            </div>
+          </div>
+        </div>}
+
+        {mode&&<div style={{display:'flex',gap:8}}>
+          <button style={{...btnGh,flex:1,padding:'10px',fontSize:13}}
+            onClick={()=>{setMode(null);setFiles([]);setPreviews([])}}>
+            ← escolher outro
+          </button>
+          <button style={{...btnPk,flex:2,padding:'10px',fontSize:13}}
+            onClick={post} disabled={uploading||!files.length}>
+            {uploading?'Publicando…':'publicar'}
+          </button>
+        </div>}
+      </div>
+    </div>
+  )
+}
+
 /* ── FOTOS FEED — mobile chronological photo feed ── */
 function FotosFeed({ myId, setPage }){
   const [feedTab,setFeedTab]=useState('amigos')
+  const [showPost,setShowPost]=useState(false)
   const [posts,setPosts]=useState([])
   const [signedUrls,setSignedUrls]=useState({})
   const [feedPage,setFeedPage]=useState(0)
@@ -2796,10 +2916,10 @@ function FotosFeed({ myId, setPage }){
 
   return (
     <div style={{maxWidth:600,margin:'0 auto',padding:'8px'}}>
-      {/* Tabs */}
+      {/* Tabs + Post button */}
       <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
         marginBottom:10,overflow:'hidden'}}>
-        <div style={{display:'flex',borderBottom:`1px solid ${BRD}`}}>
+        <div style={{display:'flex',borderBottom:`1px solid ${BRD}`,alignItems:'center'}}>
           {[['amigos','amigos'],['meus posts','meus']].map(([label,tab])=>(
             <div key={tab} onClick={()=>setFeedTab(tab)} style={{
               flex:1,padding:'9px',cursor:'pointer',fontSize:13,fontWeight:700,
@@ -2810,8 +2930,14 @@ function FotosFeed({ myId, setPage }){
               {label}
             </div>
           ))}
+          <button style={{...btnPk,margin:'0 8px',padding:'5px 12px',fontSize:12,flexShrink:0}}
+            onClick={()=>setShowPost(true)}>+ post</button>
         </div>
       </div>
+      {showPost&&<QuickPostModal myId={myId}
+        onClose={()=>setShowPost(false)}
+        onPosted={()=>{setPosts([]);setFeedPage(0);setFeedTab('meus')}}
+        toast={msg=>{}}/>}
 
       {posts.length===0&&!loading&&(
         <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
@@ -2850,6 +2976,10 @@ function FotosFeed({ myId, setPage }){
                 </div>
                 <div style={{fontSize:11,fontFamily:F_UI,color:MUTED}}>
                   {post.album?.name==='__posts__'?'post':post.album?.name}
+                  {post.expires_at&&<span style={{marginLeft:6,fontSize:10,
+                    background:'#fff3cd',borderRadius:4,padding:'1px 6px',color:'#856404'}}>
+                    🕐 {Math.max(0,Math.round((new Date(post.expires_at)-Date.now())/3600000))}h
+                  </span>}
                   {' · '}{new Date(post.created_at).toLocaleDateString('pt-BR',{
                     day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
                   {post.isCarousel&&<span style={{marginLeft:6,fontSize:10,

@@ -561,16 +561,16 @@ export async function getOrCreatePostsAlbum(userId) {
   return created.id
 }
 
-export async function uploadCarousel(userId, files) {
+export async function uploadCarousel(userId, files, expiresAt = null) {
   const albumId = await getOrCreatePostsAlbum(userId)
   const carouselId = crypto.randomUUID()
   const paths = []
   for (let i = 0; i < files.length; i++) {
     const path = await uploadPhoto(userId, files[i])
-    const { data } = await supabase.from('album_photos')
-      .insert({ user_id: userId, album_id: albumId, storage_path: path,
-        caption: '', carousel_id: carouselId, carousel_order: i })
-      .select('id').single()
+    const row = { user_id: userId, album_id: albumId, storage_path: path,
+      caption: '', carousel_id: carouselId, carousel_order: i }
+    if (expiresAt) row.expires_at = expiresAt
+    const { data } = await supabase.from('album_photos').insert(row).select('id').single()
     paths.push({ id: data.id, storage_path: path, carousel_id: carouselId, carousel_order: i })
   }
   return { carouselId, albumId, paths }
@@ -584,10 +584,11 @@ export async function getFotosFeedWithCarousels(userId, page = 0, pageSize = 10,
 
   // Fetch flat photos — get more to handle carousel grouping
   const { data } = await supabase.from('album_photos')
-    .select(`id, storage_path, caption, created_at, carousel_id, carousel_order,
+    .select(`id, storage_path, caption, created_at, carousel_id, carousel_order, expires_at,
       user:profiles!album_photos_user_id_fkey(id, name, avatar_url),
       album:albums!album_photos_album_id_fkey(id, name)`)
     .in('user_id', authorIds)
+    .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
     .order('created_at', { ascending: false })
     .limit(500)
 
@@ -622,10 +623,11 @@ export async function getFotosFeedWithCarousels(userId, page = 0, pageSize = 10,
 export async function getMyFeed(userId, page = 0, pageSize = 10) {
   // Own posts only — single photos from own albums + own carousels
   const { data } = await supabase.from('album_photos')
-    .select(`id, storage_path, caption, created_at, carousel_id, carousel_order,
+    .select(`id, storage_path, caption, created_at, carousel_id, carousel_order, expires_at,
       user:profiles!album_photos_user_id_fkey(id, name, avatar_url),
       album:albums!album_photos_album_id_fkey(id, name)`)
     .eq('user_id', userId)
+    .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
     .order('created_at', { ascending: false })
     .limit(300)
 
