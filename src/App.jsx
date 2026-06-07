@@ -2142,6 +2142,81 @@ function CommunitiesPage({ myId, toast, page }){
   )
 }
 
+/* ── PHOTO TAG BAR ── */
+function PhotoTagBar({ photoId, myId, ownerId }){
+  const [tags,setTags]=useState([])
+  const [showAdd,setShowAdd]=useState(false)
+  const [query,setQuery]=useState('')
+  const [results,setResults]=useState([])
+  const canTag=myId===ownerId
+
+  useEffect(()=>{ if(photoId) getPhotoTags(photoId).then(setTags) },[photoId])
+
+  useEffect(()=>{
+    if(query.length<2){setResults([]);return}
+    const t=setTimeout(()=>{
+      searchUsers(query).then(r=>setResults(
+        r.filter(u=>u.id!==myId&&!tags.find(tg=>tg.tagged_user?.id===u.id)).slice(0,5)
+      ))
+    },300)
+    return()=>clearTimeout(t)
+  },[query,tags])
+
+  const doTag=async(u)=>{
+    await tagFriendInPhoto(photoId,u.id,myId)
+    setTags(p=>[...p,{id:Date.now()+'',tagged_user:u}])
+    setQuery('');setResults([]);setShowAdd(false)
+  }
+  const doRemove=async(tag)=>{
+    await removePhotoTag(photoId,tag.tagged_user?.id)
+    setTags(p=>p.filter(t=>t.id!==tag.id))
+  }
+  return (
+    <div style={{padding:'10px 12px',borderTop:`1px solid ${BRD}`,background:'#f8f9fc'}}>
+      <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap',marginBottom:4}}>
+        <span style={{fontSize:11,color:MUTED,fontFamily:F_UI}}>marcados:</span>
+        {tags.length===0&&!showAdd&&<span style={{fontSize:11,color:MUTED,fontFamily:F_UI}}>—</span>}
+        {tags.map(t=>(
+          <span key={t.id} style={{display:'inline-flex',alignItems:'center',gap:4,
+            background:WHITE,border:`1px solid ${BRD}`,borderRadius:10,
+            padding:'3px 10px',fontSize:12,fontFamily:F_UI,color:BLUE}}>
+            {t.tagged_user?.name}
+            {canTag&&<span style={{cursor:'pointer',color:MUTED,marginLeft:3,fontSize:14,lineHeight:1}}
+              onClick={()=>doRemove(t)}>×</span>}
+          </span>
+        ))}
+      </div>
+      {canTag&&!showAdd&&(
+        <span style={{fontSize:12,color:BLUE,cursor:'pointer',fontFamily:F_UI}}
+          onClick={()=>setShowAdd(true)}>+ marcar amigo</span>
+      )}
+      {canTag&&showAdd&&(
+        <div style={{position:'relative',marginTop:6}}>
+          <input style={{...inp,fontSize:13,padding:'6px 10px'}}
+            value={query} onChange={e=>setQuery(e.target.value)}
+            placeholder="buscar amigo pelo nome…"/>
+          {results.length>0&&(
+            <div style={{position:'absolute',top:'100%',left:0,right:0,
+              background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
+              zIndex:20,boxShadow:'0 4px 12px rgba(0,0,0,.15)',maxHeight:200,overflowY:'auto'}}>
+              {results.map(u=>(
+                <div key={u.id} style={{display:'flex',alignItems:'center',gap:10,
+                  padding:'10px 12px',cursor:'pointer',borderBottom:`1px solid ${BRD}`}}
+                  onClick={()=>doTag(u)}>
+                  <Av src={u.avatar_url} size={28} name={u.name} radius="50%"/>
+                  <span style={{fontSize:13,fontFamily:F_UI,color:TEXT}}>{u.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <button style={{...btnGh,marginTop:8,padding:'6px 14px',fontSize:12}}
+            onClick={()=>{setShowAdd(false);setQuery('');setResults([])}}>cancelar</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ── GALERIA — private albums backed by Supabase ── */
 function GaleriaPage({ myId, userId, setPage, openAlbumId }){
   const isOwn=!userId||userId===myId
@@ -2198,6 +2273,8 @@ function GaleriaPage({ myId, userId, setPage, openAlbumId }){
     setUploading(false)
   }
 
+  const [selectedPhoto,setSelectedPhoto]=useState(null)
+
   const handleDeletePhoto=async(photoId,storagePath)=>{
     await deletePhoto(photoId)
     await supabase.storage.from('avatars').remove([storagePath])
@@ -2228,20 +2305,48 @@ function GaleriaPage({ myId, userId, setPage, openAlbumId }){
             gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:8}}>
             {photos.map(p=>(
               <div key={p.id} style={{position:'relative',borderRadius:2,overflow:'hidden',
-                border:`1px solid ${BRD}`,aspectRatio:'1',background:'#f0f0f0'}}>
+                border:`1px solid ${BRD}`,aspectRatio:'1',background:'#f0f0f0',cursor:'pointer'}}
+                onClick={()=>setSelectedPhoto(p)}>
                 {signedPhotos[p.id]
                   ?<img src={signedPhotos[p.id]} alt=""
                       style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
                   :<div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',
                       justifyContent:'center',color:MUTED,fontSize:11}}>…</div>
                 }
-                {isOwn&&<button onClick={()=>handleDeletePhoto(p.id,p.storage_path)}
+                {isOwn&&<button onClick={e=>{e.stopPropagation();handleDeletePhoto(p.id,p.storage_path)}}
                   style={{position:'absolute',top:4,right:4,background:'rgba(0,0,0,.5)',
                     color:WHITE,border:'none',borderRadius:2,cursor:'pointer',
                     fontSize:10,padding:'2px 5px'}}>✕</button>}
               </div>
             ))}
           </div>}
+
+        {/* Photo viewer with tagging */}
+        {selectedPhoto&&<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.88)',
+          zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}
+          onClick={()=>setSelectedPhoto(null)}>
+          <div style={{background:WHITE,borderRadius:4,overflow:'hidden',
+            maxWidth:'min(96vw,540px)',width:'100%',display:'flex',flexDirection:'column'}}
+            onClick={e=>e.stopPropagation()}>
+            {/* Header */}
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',
+              padding:'8px 12px',borderBottom:`1px solid ${BRD}`}}>
+              <span style={{fontSize:12,color:MUTED,fontFamily:F_UI}}>{activeAlbum.name}</span>
+              <span style={{fontSize:20,cursor:'pointer',color:MUTED,lineHeight:1}}
+                onClick={()=>setSelectedPhoto(null)}>✕</span>
+            </div>
+            {/* Photo */}
+            <div style={{background:'#111',display:'flex',alignItems:'center',justifyContent:'center',
+              maxHeight:'60vh',overflow:'hidden'}}>
+              {signedPhotos[selectedPhoto.id]
+                ?<img src={signedPhotos[selectedPhoto.id]} alt=""
+                    style={{maxWidth:'100%',maxHeight:'60vh',objectFit:'contain',display:'block'}}/>
+                :<div style={{padding:40,color:'#888',fontSize:13}}>Carregando…</div>}
+            </div>
+            {/* TagBar — tagging section */}
+            <PhotoTagBar photoId={selectedPhoto.id} myId={myId} ownerId={targetId}/>
+          </div>
+        </div>}
       </div>
     </div>
   )
