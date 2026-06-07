@@ -576,38 +576,49 @@ export async function uploadCarousel(userId, files) {
   return { carouselId, albumId, paths }
 }
 
-export async function getFotosFeedWithCarousels(userId, page = 0, pageSize = 10) {
+export async function getFotosFeedWithCarousels(userId, page = 0, pageSize = 10, includeOwn = false) {
   const friends = await getFriends(userId)
   const friendIds = friends.map(f => f.id)
-  if (!friendIds.length) return []
+  const authorIds = includeOwn ? [userId, ...friendIds] : friendIds
+  if (!authorIds.length) return []
 
-  // Get all photos from friends (excluding hidden __posts__ albums via join)
+  // Fetch flat photos — get more to handle carousel grouping
   const { data } = await supabase.from('album_photos')
     .select(`id, storage_path, caption, created_at, carousel_id, carousel_order,
       user:profiles!album_photos_user_id_fkey(id, name, avatar_url),
       album:albums!album_photos_album_id_fkey(id, name)`)
-    .in('user_id', friendIds)
+    .in('user_id', authorIds)
     .order('created_at', { ascending: false })
-    .limit(200)
+    .limit(500)
 
   if (!data) return []
 
-  // Group carousels — one entry per carousel_id or per single photo
+  // Filter out __posts__ album single photos (they only appear in carousels)
+  // but keep them for carousel grouping
   const seen = new Set()
   const posts = []
+
   for (const p of data) {
     if (p.carousel_id) {
       if (seen.has(p.carousel_id)) continue
       seen.add(p.carousel_id)
-      // Collect all photos in this carousel
       const carouselPhotos = data
         .filter(x => x.carousel_id === p.carousel_id)
         .sort((a, b) => a.carousel_order - b.carousel_order)
       posts.push({ ...p, isCarousel: true, photos: carouselPhotos })
     } else {
+      // Skip photos from __posts__ album that have no carousel_id (shouldn't happen)
+      if (p.album?.name === '__posts__') continue
       posts.push({ ...p, isCarousel: false, photos: [p] })
     }
   }
 
+  // Sort by created_at descending (carousel uses first photo's timestamp)
+  posts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
   return posts.slice(page * pageSize, (page + 1) * pageSize)
+}
+
+export async function getMyFeed(userId, page = 0, pageSize = 10) {
+  return getFotosFeedWithCarousels(userId, page, pageSize, true)
 }
