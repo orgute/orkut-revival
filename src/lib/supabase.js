@@ -622,3 +622,7 @@ export async function getFotosFeedWithCarousels(userId, page = 0, pageSize = 10,
 export async function getMyFeed(userId, page = 0, pageSize = 10) {
   return getFotosFeedWithCarousels(userId, page, pageSize, true)
 }
+
+export async function deleteCarousel(carouselId) {
+  await supabase.from('album_photos').delete().eq('carousel_id', carouselId)
+}

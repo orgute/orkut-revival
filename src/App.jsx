@@ -5,7 +5,7 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getDepoimentos, sendDepoimento, getCommunities, getMyCommunities,
   joinCommunity, leaveCommunity, getCommunityPosts, createCommunityPost, createCommunity,
   getPhotoTags, tagFriendInPhoto, removePhotoTag, getTaggedPhotos, getTaggedPhotoCount,
-  uploadCarousel, getOrCreatePostsAlbum, getFotosFeedWithCarousels, getMyFeed,
+  uploadCarousel, getOrCreatePostsAlbum, getFotosFeedWithCarousels, getMyFeed, deleteCarousel,
   getMessages, sendMessage, recordVisit, getVisitors, uploadAvatar,
   searchUsers, validateInviteCode, useInviteCode, getMyInvites, getMemberNumber,
   getSignedUrl, uploadPhoto, getAlbums, createAlbum, deleteAlbum,
@@ -2853,7 +2853,7 @@ function FotosFeed({ myId, setPage }){
 
             {/* Action bar */}
             <div style={{
-              display:'flex',alignItems:'center',gap:16,
+              display:'flex',alignItems:'center',justifyContent:'space-between',
               padding:'6px 14px 10px',borderTop:`1px solid ${BRD}`,
             }}>
               <button onClick={()=>toggleComments(photo.id)} style={{
@@ -2862,6 +2862,23 @@ function FotosFeed({ myId, setPage }){
               }}>
                 💬 {photoComments.length>0?photoComments.length:''} comentários
               </button>
+              {feedTab==='meus'&&<button style={{
+                ...btnGh,padding:'3px 10px',fontSize:11,
+                color:'#cc0000',borderColor:'#cc0000'}}
+                onClick={async()=>{
+                  if(photo.isCarousel){
+                    await deleteCarousel(photo.photos[0].carousel_id)
+                  } else {
+                    await deletePhoto(photo.id)
+                  }
+                  setPosts(p=>p.filter(x=>
+                    photo.isCarousel
+                      ? x.photos?.[0]?.carousel_id!==photo.photos[0].carousel_id
+                      : x.id!==photo.id
+                  ))
+                }}>
+                apagar
+              </button>}
             </div>
 
             {/* Comments section */}
