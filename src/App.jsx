@@ -2410,10 +2410,11 @@ function GaleriaPage({ myId, userId, setPage, openAlbumId }){
           {/* Albums grid */}
           {loading
             ?<div style={{color:MUTED,fontSize:13}}>Carregando…</div>
-            :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:10}}>
-              {/* Create new album card */}
+            :<>
+              {/* New album button — outside the grid */}
               {isOwn&&(creating
-                ?<div style={{border:`1px solid ${BLUE}`,borderRadius:3,padding:10,background:'#f0f4ff'}}>
+                ?<div style={{border:`1px solid ${BLUE}`,borderRadius:3,padding:10,
+                    background:'#f0f4ff',marginBottom:10}}>
                   <input autoFocus style={{...inp,marginBottom:7}} value={newName}
                     onChange={e=>setNewName(e.target.value)}
                     onKeyDown={e=>e.key==='Enter'&&handleCreate()} placeholder="Nome do álbum"/>
@@ -2422,11 +2423,12 @@ function GaleriaPage({ myId, userId, setPage, openAlbumId }){
                     <button style={{...btnGh,flex:1,fontSize:11}} onClick={()=>setCreating(false)}>✕</button>
                   </div>
                 </div>
-                :<div style={{padding:'6px 0'}}>
+                :<div style={{marginBottom:10}}>
                   <button style={{...btnBl,padding:'6px 16px',fontSize:13}}
                     onClick={()=>setCreating(true)}>+ novo álbum</button>
                 </div>
               )}
+              <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:10}}>
               {albums.filter(a=>a.name!=='__posts__').map(a=>{
                 const count=a.photo_count?.[0]?.count||0
                 const coverUrl=albumCovers[a.id]
@@ -2475,7 +2477,8 @@ function GaleriaPage({ myId, userId, setPage, openAlbumId }){
                   </div>
                 )
               })}
-            </div>}
+              </div>
+            </>}
         </div>
       </div>
     </div>
