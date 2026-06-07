@@ -620,7 +620,35 @@ export async function getFotosFeedWithCarousels(userId, page = 0, pageSize = 10,
 }
 
 export async function getMyFeed(userId, page = 0, pageSize = 10) {
-  return getFotosFeedWithCarousels(userId, page, pageSize, true)
+  // Own posts only — single photos from own albums + own carousels
+  const { data } = await supabase.from('album_photos')
+    .select(`id, storage_path, caption, created_at, carousel_id, carousel_order,
+      user:profiles!album_photos_user_id_fkey(id, name, avatar_url),
+      album:albums!album_photos_album_id_fkey(id, name)`)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(300)
+
+  if (!data) return []
+
+  const seen = new Set()
+  const posts = []
+  for (const p of data) {
+    if (p.carousel_id) {
+      if (seen.has(p.carousel_id)) continue
+      seen.add(p.carousel_id)
+      const carouselPhotos = data
+        .filter(x => x.carousel_id === p.carousel_id)
+        .sort((a, b) => a.carousel_order - b.carousel_order)
+      posts.push({ ...p, isCarousel: true, photos: carouselPhotos })
+    } else {
+      if (p.album?.name === '__posts__') continue
+      posts.push({ ...p, isCarousel: false, photos: [p] })
+    }
+  }
+
+  posts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  return posts.slice(page * pageSize, (page + 1) * pageSize)
 }
 
 export async function deleteCarousel(carouselId) {
