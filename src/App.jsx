@@ -867,6 +867,11 @@ function HomePage({ profile, myId, setPage }){
                   color:BLUE,borderBottom:`1px solid ${BRD}`,
                 }}>{label}</div>
               ))}
+              <div style={{padding:'7px 10px',fontSize:11,color:MUTED,fontFamily:F_UI}}>
+                👁 visitas hoje: {visitCount}
+                {recentVisitors.length>0&&<span style={{marginLeft:8,color:BLUE,cursor:'pointer'}}
+                  onClick={()=>setShowVisitors(v=>!v)}>ver</span>}
+              </div>
             </div>
           </div>
           /* ── DESKTOP: stacked as before ── */
@@ -2767,21 +2772,26 @@ function QuickPostModal({ myId, onClose, onPosted, toast }){
         <div style={{fontWeight:700,fontSize:16,fontFamily:F_UI,
           color:TEXT,marginBottom:16,textAlign:'center'}}>nova publicação</div>
 
-        {!mode&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
-          <label style={{display:'flex',flexDirection:'column',alignItems:'center',
-            gap:8,padding:'20px 12px',border:`2px dashed ${BRD}`,borderRadius:8,
+        {!mode&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
+          <label style={{display:'flex',alignItems:'center',gap:10,
+            padding:'12px 14px',border:`1px solid ${BRD}`,borderRadius:8,
             cursor:'pointer',background:'#f8f9fc'}}>
-            <span style={{fontSize:28}}>📷</span>
-            <span style={{fontSize:13,fontWeight:600,fontFamily:F_UI,color:TEXT}}>foto</span>
+            <span style={{fontSize:22}}>📷</span>
+            <div>
+              <div style={{fontSize:13,fontWeight:600,fontFamily:F_UI,color:TEXT}}>foto</div>
+              <div style={{fontSize:10,color:MUTED,fontFamily:F_UI}}>1 imagem</div>
+            </div>
             <input type="file" accept="image/*" style={{display:'none'}}
               onChange={e=>handleFiles(e,false)}/>
           </label>
-          <label style={{display:'flex',flexDirection:'column',alignItems:'center',
-            gap:8,padding:'20px 12px',border:`2px dashed ${PINK}`,borderRadius:8,
+          <label style={{display:'flex',alignItems:'center',gap:10,
+            padding:'12px 14px',border:`1px solid ${PINK}`,borderRadius:8,
             cursor:'pointer',background:'#fef0f7'}}>
-            <span style={{fontSize:28}}>⊞</span>
-            <span style={{fontSize:13,fontWeight:600,fontFamily:F_UI,color:PINK}}>carrossel</span>
-            <span style={{fontSize:10,color:MUTED,fontFamily:F_UI}}>até 10 fotos</span>
+            <span style={{fontSize:22}}>⊞</span>
+            <div>
+              <div style={{fontSize:13,fontWeight:600,fontFamily:F_UI,color:PINK}}>carrossel</div>
+              <div style={{fontSize:10,color:MUTED,fontFamily:F_UI}}>até 10 fotos</div>
+            </div>
             <input type="file" accept="image/*" multiple style={{display:'none'}}
               onChange={e=>handleFiles(e,true)}/>
           </label>
@@ -3210,9 +3220,10 @@ export default function App(){
     const uid=session.user.id
     getProfile(uid).then(setProfile)
     getFriendRequests(uid).then(r=>setPendingReqs(r.length))
+    const bellCleared = localStorage.getItem('bellCleared_'+uid) || new Date(Date.now()-48*3600*1000).toISOString()
     supabase.from('recados').select('id',{count:'exact',head:true})
       .eq('to_id',uid)
-      .gte('created_at',new Date(Date.now()-48*3600*1000).toISOString())
+      .gte('created_at',bellCleared)
       .then(({count})=>setNewRecados(count||0))
     // Show popup for unread messages — only ones newer than last dismissed
     const lastSeen = localStorage.getItem('lastSeenMsg_'+uid) || '1970-01-01'
@@ -3269,7 +3280,7 @@ export default function App(){
   return (
     <div style={{fontFamily:F_UI,
       background:BG,minHeight:'100vh',color:TEXT}}>
-      <TopNav page={page} setPage={navTo} profile={profile} pendingReqs={pendingReqs} newRecados={newRecados} onBellClick={()=>setNewRecados(0)}/>
+      <TopNav page={page} setPage={navTo} profile={profile} pendingReqs={pendingReqs} newRecados={newRecados} onBellClick={()=>{ setNewRecados(0); localStorage.setItem('bellCleared_'+myId, new Date().toISOString()) }}/>
       {renderPage()}
       <footer style={{textAlign:'center',padding:'14px 0 20px',fontSize:11,color:MUTED,
         borderTop:`1px solid ${BRD}`,marginTop:8}}>
