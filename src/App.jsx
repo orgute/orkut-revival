@@ -867,11 +867,7 @@ function HomePage({ profile, myId, setPage }){
                   color:BLUE,borderBottom:`1px solid ${BRD}`,
                 }}>{label}</div>
               ))}
-              <div style={{padding:'7px 10px',fontSize:11,color:MUTED,fontFamily:F_UI}}>
-                👁 visitas hoje: {visitCount}
-                {recentVisitors.length>0&&<span style={{marginLeft:8,color:BLUE,cursor:'pointer'}}
-                  onClick={()=>setShowVisitors(v=>!v)}>ver</span>}
-              </div>
+
             </div>
           </div>
           /* ── DESKTOP: stacked as before ── */
