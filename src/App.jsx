@@ -2230,8 +2230,18 @@ function GaleriaPage({ myId, userId, setPage, openAlbumId }){
   const [creating,setCreating]=useState(false)
   const [newName,setNewName]=useState('')
   const [loading,setLoading]=useState(true)
+  const [albumCovers,setAlbumCovers]=useState({})
 
-  const loadAlbums=()=>getAlbums(targetId).then(a=>{setAlbums(a);setLoading(false)})
+  const loadAlbums=async()=>{
+    const a=await getAlbums(targetId)
+    setAlbums(a)
+    setLoading(false)
+    const covers={}
+    for(const album of a){
+      if(album.cover_path) covers[album.id]=await getSignedUrl(album.cover_path)
+    }
+    setAlbumCovers(covers)
+  }
   useEffect(()=>{loadAlbums()},[targetId])
 
   // Open specific album if passed via navigation
@@ -2417,26 +2427,54 @@ function GaleriaPage({ myId, userId, setPage, openAlbumId }){
                     onClick={()=>setCreating(true)}>+ novo álbum</button>
                 </div>
               )}
-              {albums.map(a=>(
-                <div key={a.id} style={{cursor:'pointer',border:`1px solid ${BRD}`,
-                  borderRadius:3,overflow:'hidden',background:'#f8f9fc',
-                  boxShadow:a.name==='Minhas fotos'?`0 0 0 2px ${PINK}`:'none'}}
-                  onClick={()=>openAlbum(a)}>
-                  <div style={{aspectRatio:'1',background:'#e8edf8',display:'flex',
-                    alignItems:'center',justifyContent:'center',fontSize:32,overflow:'hidden'}}>
-                    {a.name==='Minhas fotos'?'📷':'🖼️'}
-                  </div>
-                  <div style={{padding:'6px 8px'}}>
-                    <div style={{fontSize:12,fontWeight:600,color:a.name==='Minhas fotos'&&isOwn?PINK:TEXT,
-                      overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                      {a.name==='Minhas fotos'&&!isOwn?'fotos':a.name}
+              {albums.map(a=>{
+                const count=a.photo_count?.[0]?.count||0
+                const coverUrl=albumCovers[a.id]
+                const isMine=a.name==='Minhas fotos'
+                return (
+                  <div key={a.id} style={{
+                    border:`1px solid ${isMine&&isOwn?PINK:BRD}`,
+                    borderRadius:3,overflow:'hidden',background:WHITE,
+                    display:'flex',flexDirection:'column',
+                    boxShadow:isMine&&isOwn?`0 0 0 2px ${PINK}`:'none',
+                    position:'relative'}}>
+                    {/* Cover */}
+                    <div style={{aspectRatio:'1',background:'#e8edf8',overflow:'hidden',
+                      cursor:'pointer',position:'relative'}}
+                      onClick={()=>openAlbum(a)}>
+                      {coverUrl
+                        ?<img src={coverUrl} alt="" style={{width:'100%',height:'100%',
+                            objectFit:'cover',display:'block'}}/>
+                        :<div style={{width:'100%',height:'100%',display:'flex',
+                            alignItems:'center',justifyContent:'center',
+                            fontSize:36,color:'#c0c8d8'}}>
+                          {isMine?'📷':'🖼️'}
+                        </div>}
                     </div>
-                    <div style={{fontSize:10,color:MUTED}}>
-                      {a.photo_count?.[0]?.count||0} fotos
+                    {/* Info row */}
+                    <div style={{padding:'6px 8px',flex:1,display:'flex',
+                      flexDirection:'column',justifyContent:'space-between'}}>
+                      <div style={{fontSize:12,fontWeight:600,
+                        color:isMine&&isOwn?PINK:TEXT,
+                        overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
+                        cursor:'pointer',marginBottom:2}}
+                        onClick={()=>openAlbum(a)}>
+                        {isMine&&!isOwn?'fotos':a.name}
+                      </div>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                        <span style={{fontSize:10,color:MUTED}}>{count} fotos</span>
+                        {isOwn&&count===0&&<span style={{fontSize:10,color:'#cc0000',
+                          cursor:'pointer',fontFamily:F_UI}}
+                          onClick={async e=>{
+                            e.stopPropagation()
+                            await deleteAlbum(a.id)
+                            setAlbums(p=>p.filter(x=>x.id!==a.id))
+                          }}>apagar</span>}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>}
         </div>
       </div>

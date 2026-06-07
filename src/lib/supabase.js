@@ -287,10 +287,17 @@ export async function uploadPhoto(userId, file) {
 export async function getAlbums(userId) {
   const { data } = await supabase
     .from('albums')
-    .select('id, name, created_at, photo_count:album_photos(count)')
+    .select(`id, name, created_at,
+      photo_count:album_photos(count),
+      cover:album_photos(storage_path)`)
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
-  return data || []
+  // Take only the last photo as cover
+  return (data || []).map(a => ({
+    ...a,
+    cover_path: a.cover?.[a.cover.length - 1]?.storage_path || null,
+    photo_count: a.photo_count
+  }))
 }
 
 export async function createAlbum(userId, name) {
