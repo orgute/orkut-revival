@@ -791,6 +791,9 @@ function HomePage({ profile, myId, setPage }){
   const [scrapCount,setScrapCount]=useState(0)
   const [comCount,setComCount]=useState(0)
   const [homeFanCount,setHomeFanCount]=useState(0)
+  const [visitCount,setVisitCount]=useState(0)
+  const [recentVisitors,setRecentVisitors]=useState([])
+  const [showVisitors,setShowVisitors]=useState(false)
   const [fortune,setFortune]=useState('Tenha um ótimo dia!')
   const [editingFortune,setEditingFortune]=useState(false)
   const [fortuneDraft,setFortuneDraft]=useState('')
@@ -799,6 +802,12 @@ function HomePage({ profile, myId, setPage }){
     getRecados(myId).then(r=>setScrapCount(r.length))
     getMyCommunities(myId).then(c=>setComCount(c.length))
     getFanCount(myId).then(setHomeFanCount)
+    getVisitors(myId).then(v=>{
+      const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-10)
+      const today=new Date().toDateString()
+      setVisitCount(v.filter(x=>new Date(x.visited_at).toDateString()===today).length)
+      setRecentVisitors(v.filter(x=>new Date(x.visited_at)>=cutoff).slice(0,20))
+    })
   },[myId])
 
   // Icon row — colored icons matching screenshot
@@ -941,19 +950,29 @@ function HomePage({ profile, myId, setPage }){
           {/* Stats line */}
           <div style={{fontSize:12,color:TEXT,lineHeight:1.9,borderTop:`1px solid ${BRD}`,paddingTop:10}}>
             <div><strong>Visitas ao perfil:</strong> desde hoje: {visitCount}</div>
-            <div style={{display:'flex',alignItems:'center',gap:4,flexWrap:'wrap'}}>
+            <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
               <strong>Visitantes recentes:</strong>
               {recentVisitors.length===0
                 ?<span style={{color:MUTED}}> —</span>
-                :recentVisitors.map(v=>(
-                  <span key={v.visitor?.id} style={{cursor:'pointer'}}
-                    title={v.visitor?.name}
-                    onClick={()=>setPage({name:'userprofile',userId:v.visitor?.id})}>
-                    <Av src={v.visitor?.avatar_url} size={20} name={v.visitor?.name} radius="50%"/>
-                  </span>
-                ))
-              }
+                :<span style={{cursor:'pointer',color:BLUE,fontSize:12,textDecoration:'underline'}}
+                  onClick={()=>setShowVisitors(v=>!v)}>
+                  ver {recentVisitors.length} visitante{recentVisitors.length!==1?'s':''} (10 dias)
+                </span>}
             </div>
+            {showVisitors&&recentVisitors.length>0&&<div style={{
+              display:'flex',flexWrap:'wrap',gap:6,marginTop:6,
+              background:'#f8f9fc',borderRadius:3,padding:'8px',border:`1px solid ${BRD}`}}>
+              {recentVisitors.map(v=>(
+                <div key={v.visitor?.id} style={{textAlign:'center',cursor:'pointer',width:44}}
+                  onClick={()=>setPage({name:'userprofile',userId:v.visitor?.id})}>
+                  <Av src={v.visitor?.avatar_url} size={32} name={v.visitor?.name} radius="50%"/>
+                  <div style={{fontSize:9,color:MUTED,marginTop:2,overflow:'hidden',
+                    textOverflow:'ellipsis',whiteSpace:'nowrap',fontFamily:F_UI}}>
+                    {v.visitor?.name?.split(' ')[0]}
+                  </div>
+                </div>
+              ))}
+            </div>}
             <div><strong>Fortuna do dia:</strong> {fortune}</div>
           </div>
         </div>
