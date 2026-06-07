@@ -477,7 +477,7 @@ function AuthScreen({ onAuth }){
 }
 
 /* ── TOP NAV — desktop unchanged, mobile hamburger ── */
-function TopNav({ page, setPage, profile, pendingReqs, newRecados }){
+function TopNav({ page, setPage, profile, pendingReqs, newRecados, onBellClick }){
   const [menuOpen,setMenuOpen]=useState(false)
   const cur=typeof page==='string'?page:page?.name
   const links=[['Início','home'],['Perfil','profile'],['Recados','scrapbook'],
@@ -525,7 +525,7 @@ function TopNav({ page, setPage, profile, pendingReqs, newRecados }){
               <span style={{cursor:'pointer'}} onClick={()=>go('profile')}>{profile?.name?.split(' ')[0]||'…'}</span>
             </span>
             {/* Notification bell */}
-            <span style={{position:'relative',cursor:'pointer'}} onClick={()=>go('scrapbook')} title="Recados">
+            <span style={{position:'relative',cursor:'pointer'}} onClick={()=>{if(onBellClick)onBellClick();go('scrapbook')}} title="Recados">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M8 1a5 5 0 0 1 5 5v3l1.5 2H1.5L3 9V6a5 5 0 0 1 5-5z" stroke="white" strokeWidth="1.4" fill="none"/>
                 <path d="M6 13a2 2 0 0 0 4 0" stroke="white" strokeWidth="1.4" fill="none"/>
@@ -1915,7 +1915,7 @@ function FriendsPage({ myId, setPage, toast }){
                   <div style={{fontSize:11,fontWeight:600,color:TEXT,margin:'5px 0',cursor:'pointer',
                     overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
                     onClick={()=>setPage({name:'userprofile',userId:f.id})}>{f.name}</div>
-                  <button style={{...btnBl,padding:'2px 7px',fontSize:10}} onClick={()=>openChat(f)}>💬 chat</button>
+                  {/* chat disabled */}
                 </div>
               ))}
             </div>)}
@@ -1946,7 +1946,7 @@ function FriendsPage({ myId, setPage, toast }){
           <SearchPeople myId={myId} setPage={setPage}/>
         </div>
       </div>
-      {chatF&&(
+      {false&&chatF&&(
         <div style={{position:'fixed',bottom:20,right:20,width:290,background:WHITE,
           border:`1.5px solid ${BRD}`,borderRadius:3,boxShadow:'0 6px 24px rgba(0,0,0,.15)',zIndex:999,overflow:'hidden'}}>
           <div style={{background:BLUE,padding:'8px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
@@ -2820,7 +2820,7 @@ export default function App(){
   return (
     <div style={{fontFamily:F_UI,
       background:BG,minHeight:'100vh',color:TEXT}}>
-      <TopNav page={page} setPage={navTo} profile={profile} pendingReqs={pendingReqs} newRecados={newRecados}/>
+      <TopNav page={page} setPage={navTo} profile={profile} pendingReqs={pendingReqs} newRecados={newRecados} onBellClick={()=>setNewRecados(0)}/>
       {renderPage()}
       <footer style={{textAlign:'center',padding:'14px 0 20px',fontSize:11,color:MUTED,
         borderTop:`1px solid ${BRD}`,marginTop:8}}>
