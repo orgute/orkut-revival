@@ -526,7 +526,7 @@ export async function getTaggedPhotos(userId) {
     .select(`
       id,
       photo:album_photos!photo_tags_photo_id_fkey(
-        id, url, album_id,
+        id, storage_path, album_id,
         album:albums!album_photos_album_id_fkey(id, name, user_id,
           owner:profiles!albums_user_id_fkey(id, name, avatar_url))
       )

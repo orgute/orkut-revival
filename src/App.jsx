@@ -2427,8 +2427,10 @@ function GaleriaPage({ myId, userId, setPage, openAlbumId }){
                     {a.name==='Minhas fotos'?'📷':'🖼️'}
                   </div>
                   <div style={{padding:'6px 8px'}}>
-                    <div style={{fontSize:12,fontWeight:600,color:a.name==='Minhas fotos'?PINK:TEXT,
-                      overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.name==='Minhas fotos'&&!isOwn?'fotos':a.name}</div>
+                    <div style={{fontSize:12,fontWeight:600,color:a.name==='Minhas fotos'&&isOwn?PINK:TEXT,
+                      overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                      {a.name==='Minhas fotos'&&!isOwn?'fotos':a.name}
+                    </div>
                     <div style={{fontSize:10,color:MUTED}}>
                       {a.photo_count?.[0]?.count||0} fotos
                     </div>
@@ -2523,9 +2525,18 @@ function FansPage({ userId, myId, setPage }){
 /* ── TAGGED PHOTOS PAGE ── */
 function TaggedPhotosPage({ myId, setPage }){
   const [photos,setPhotos]=useState([])
+  const [signedUrls,setSignedUrls]=useState({})
   const [loading,setLoading]=useState(true)
   useEffect(()=>{
-    getTaggedPhotos(myId).then(data=>{setPhotos(data);setLoading(false)})
+    getTaggedPhotos(myId).then(async data=>{
+      setPhotos(data)
+      const urls={}
+      for(const p of data){
+        if(p.storage_path) urls[p.id]=await getSignedUrl(p.storage_path)
+      }
+      setSignedUrls(urls)
+      setLoading(false)
+    })
   },[myId])
   return (
     <div style={{maxWidth:980,margin:'0 auto',padding:'8px'}}>
@@ -2551,7 +2562,9 @@ function TaggedPhotosPage({ myId, setPage }){
                   onClick={()=>setPage({name:'galeria',userId:p.album?.user_id})}>
                   <div style={{aspectRatio:'1',overflow:'hidden',borderRadius:3,
                     boxShadow:'0 0 0 3px white,0 0 0 4px #c8d0e0',background:'#eee'}}>
-                    <SignedImg path={p.url} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+                    {signedUrls[p.id]
+                      ?<img src={signedUrls[p.id]} alt="" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+                      :<div style={{width:'100%',height:'100%',background:'#e8edf0',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>📷</div>}
                   </div>
                   <div style={{fontSize:10,color:MUTED,fontFamily:F_UI,marginTop:4,
                     overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
