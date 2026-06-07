@@ -2152,15 +2152,16 @@ function PhotoTagBar({ photoId, myId, ownerId }){
 
   useEffect(()=>{ if(photoId) getPhotoTags(photoId).then(setTags) },[photoId])
 
+  const [friends,setFriends]=useState([])
+  useEffect(()=>{ getFriends(ownerId).then(f=>setFriends(f)) },[ownerId])
+
   useEffect(()=>{
-    if(query.length<2){setResults([]);return}
-    const t=setTimeout(()=>{
-      searchUsers(query).then(r=>setResults(
-        r.filter(u=>u.id!==myId&&!tags.find(tg=>tg.tagged_user?.id===u.id)).slice(0,5)
-      ))
-    },300)
-    return()=>clearTimeout(t)
-  },[query,tags])
+    if(query.length<1){setResults([]);return}
+    const q=query.toLowerCase()
+    setResults(
+      friends.filter(f=>f.name.toLowerCase().includes(q)&&!tags.find(tg=>tg.tagged_user?.id===f.id)).slice(0,5)
+    )
+  },[query,tags,friends])
 
   const doTag=async(u)=>{
     await tagFriendInPhoto(photoId,u.id,myId)
@@ -2360,7 +2361,7 @@ function GaleriaPage({ myId, userId, setPage, openAlbumId }){
           {!isOwn&&<span style={{fontSize:12,color:BLUE,cursor:'pointer',fontFamily:F_UI}}
             onClick={()=>setPage({name:'userprofile',userId:userId})}>← voltar</span>}
           <span style={{fontWeight:700,fontSize:14,color:TEXT}}>
-            meus álbuns
+            {isOwn?'meus álbuns':'álbuns'}
           </span>
         </div>
         <div style={{padding:'12px 14px'}}>
@@ -2427,7 +2428,7 @@ function GaleriaPage({ myId, userId, setPage, openAlbumId }){
                   </div>
                   <div style={{padding:'6px 8px'}}>
                     <div style={{fontSize:12,fontWeight:600,color:a.name==='Minhas fotos'?PINK:TEXT,
-                      overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.name}</div>
+                      overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.name==='Minhas fotos'&&!isOwn?'fotos':a.name}</div>
                     <div style={{fontSize:10,color:MUTED}}>
                       {a.photo_count?.[0]?.count||0} fotos
                     </div>
