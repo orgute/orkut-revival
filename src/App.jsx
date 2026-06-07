@@ -3,7 +3,7 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getFriends, getFriendRequests, sendFriendRequest, respondFriendRequest,
   getFriendshipStatus, getRecados, sendRecado, deleteRecado,
   getDepoimentos, sendDepoimento, getCommunities, getMyCommunities,
-  joinCommunity, leaveCommunity, getCommunityPosts, createCommunityPost,
+  joinCommunity, leaveCommunity, getCommunityPosts, createCommunityPost, createCommunity,
   getMessages, sendMessage, recordVisit, getVisitors, uploadAvatar,
   searchUsers, validateInviteCode, useInviteCode, getMyInvites, getMemberNumber,
   getSignedUrl, uploadPhoto, getAlbums, createAlbum, deleteAlbum,
@@ -791,6 +791,7 @@ function HomePage({ profile, myId, setPage }){
   const [scrapCount,setScrapCount]=useState(0)
   const [comCount,setComCount]=useState(0)
   const [homeFanCount,setHomeFanCount]=useState(0)
+  const [homePhotoCount,setHomePhotoCount]=useState(0)
   const [visitCount,setVisitCount]=useState(0)
   const [recentVisitors,setRecentVisitors]=useState([])
   const [showVisitors,setShowVisitors]=useState(false)
@@ -802,6 +803,7 @@ function HomePage({ profile, myId, setPage }){
     getRecados(myId).then(r=>setScrapCount(r.length))
     getMyCommunities(myId).then(c=>setComCount(c.length))
     getFanCount(myId).then(setHomeFanCount)
+    supabase.from('album_photos').select('id',{count:'exact',head:true}).eq('user_id',myId).then(({count})=>setHomePhotoCount(count||0))
     getVisitors(myId).then(v=>{
       const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-10)
       const today=new Date().toDateString()
@@ -813,7 +815,7 @@ function HomePage({ profile, myId, setPage }){
   // Icon row — colored icons matching screenshot
   const icons=[
     { emoji:'✏️',  color:'#e8700a', label:'scraps',       count:scrapCount, pg:'scrapbook' },
-    { emoji:'📷',  color:'#555577', label:'fotos',         count:0,          pg:'galeria' },
+    { emoji:'📷',  color:'#555577', label:'fotos',         count:homePhotoCount, pg:'galeria' },
     { emoji:'🏷️',  color:'#e8700a', label:'fotos de mim',  count:0,          pg:null },
     { emoji:'⭐',  color:'#f5a623', label:'fãs',            count:homeFanCount, pg:'fans' },
     { emoji:'✉️',  color:'#757575', label:'mensagens',      count:0,          pg:'inbox' },
@@ -2003,6 +2005,22 @@ function CommunitiesPage({ myId, toast, page }){
   },[page?.openCommunity?.id])
   const myIds=new Set(mine.map(c=>c.id))
   const filtered=all.filter(c=>c.name.toLowerCase().includes(search.toLowerCase()))
+  const [showCreate,setShowCreate]=useState(false)
+  const [newComName,setNewComName]=useState('')
+  const [newComDesc,setNewComDesc]=useState('')
+  const [newComCat,setNewComCat]=useState('')
+  const [creating,setCreating]=useState(false)
+  const submitCreate=async()=>{
+    if(!newComName.trim()) return
+    setCreating(true)
+    try{
+      const c=await createCommunity(myId,{name:newComName.trim(),description:newComDesc.trim(),category:newComCat.trim()})
+      setAll(p=>[c,...p]); setMine(p=>[c,...p])
+      setNewComName(''); setNewComDesc(''); setNewComCat('')
+      setShowCreate(false); toast('Comunidade criada!')
+    }catch(e){ toast('Erro ao criar.') }
+    setCreating(false)
+  }
 
   const toggle=async(c)=>{
     if(myIds.has(c.id)){await leaveCommunity(myId,c.id);setMine(p=>p.filter(x=>x.id!==c.id));toast('Você saiu')}
@@ -2066,8 +2084,28 @@ function CommunitiesPage({ myId, toast, page }){
         <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'6px 12px',
           display:'flex',justifyContent:'space-between',alignItems:'center'}}>
           <span style={{fontWeight:700,fontSize:14,color:TEXT}}>comunidades</span>
-          <span style={{fontSize:12,color:BLUE,cursor:'pointer',fontWeight:600}}>+ criar comunidade</span>
+          <span style={{fontSize:12,color:BLUE,cursor:'pointer',fontWeight:600}}
+            onClick={()=>setShowCreate(v=>!v)}>+ criar comunidade</span>
         </div>
+        {showCreate&&<div style={{padding:'12px 14px',borderBottom:`1px solid ${BRD}`,background:'#f8f9fc'}}>
+          <div style={{fontWeight:700,fontSize:13,color:TEXT,fontFamily:F_UI,marginBottom:10}}>nova comunidade</div>
+          {[['nome *','text',newComName,setNewComName],
+            ['descrição','text',newComDesc,setNewComDesc],
+            ['categoria','text',newComCat,setNewComCat]].map(([l,t,v,s])=>(
+            <div key={l} style={{marginBottom:8}}>
+              <label style={{fontSize:11,color:MUTED,fontFamily:F_UI,display:'block',marginBottom:3}}>{l}</label>
+              <input style={inp} type={t} value={v} onChange={e=>s(e.target.value)}/>
+            </div>
+          ))}
+          <div style={{display:'flex',gap:8,marginTop:10}}>
+            <button style={{...btnBl,padding:'8px 16px',fontSize:13,flex:1}}
+              onClick={submitCreate} disabled={creating}>
+              {creating?'criando…':'criar'}
+            </button>
+            <button style={{...btnGh,padding:'8px 14px',fontSize:13}}
+              onClick={()=>setShowCreate(false)}>cancelar</button>
+          </div>
+        </div>}
         <div style={{padding:'10px 12px',borderBottom:`1px solid ${BRD}`}}>
           <input style={inp} placeholder="buscar nome ou categoria" value={search} onChange={e=>setSearch(e.target.value)}/>
         </div>
