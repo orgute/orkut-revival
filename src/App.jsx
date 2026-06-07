@@ -956,7 +956,7 @@ function HomePage({ profile, myId, setPage }){
                 ?<span style={{color:MUTED}}> —</span>
                 :<span style={{cursor:'pointer',color:BLUE,fontSize:12,textDecoration:'underline'}}
                   onClick={()=>setShowVisitors(v=>!v)}>
-                  ver {recentVisitors.length} visitante{recentVisitors.length!==1?'s':''} (10 dias)
+                  ver
                 </span>}
             </div>
             {showVisitors&&recentVisitors.length>0&&<div style={{
@@ -1661,19 +1661,7 @@ function ScrapbookPage({ myId, targetUserId, setPage, toast }){
             )
           })}
         </div>
-        {/* Reply from conversation view */}
-        <div style={{padding:'10px 12px',borderTop:`1px solid ${BRD}`}}>
-          <textarea style={tarea} value={replyText} onChange={e=>setReplyText(e.target.value)}
-            placeholder={`responder para ${convOpen.name}…`}/>
-          <div style={{display:'flex',gap:8,marginTop:8}}>
-            <button style={{...btnBl,padding:'4px 14px',fontSize:12}} onClick={()=>postReply(convOpen.userId)}>
-              enviar recado
-            </button>
-            <button style={{...btnGh,padding:'4px 10px',fontSize:12}} onClick={()=>setReplyText('')}>
-              cancelar
-            </button>
-          </div>
-        </div>
+
       </div>
     </div>
   )
@@ -1692,14 +1680,7 @@ function ScrapbookPage({ myId, targetUserId, setPage, toast }){
           </span>
         </div>
 
-        {/* Write box */}
-        {!isOwn&&<div style={{padding:'10px 12px',borderBottom:`1px solid ${BRD}`,background:'#f8f9fc'}}>
-          <textarea style={tarea} value={text} onChange={e=>setText(e.target.value)}
-            placeholder={`escrever um recado para ${targetProfile?.name||'…'}…`}/>
-          <button style={{...btnBl,marginTop:8,padding:'4px 14px',fontSize:12}} onClick={post}>
-            post scrap
-          </button>
-        </div>}
+
 
         {/* Bulk actions — own scrapbook only */}
         {isOwn&&scraps.length>0&&<div style={{padding:'8px 12px',borderBottom:`1px solid ${BRD}`,
@@ -2663,7 +2644,7 @@ function IncomingChatPopup({ chat, onOpen, onClose }){
           overflow:'hidden',textOverflow:'ellipsis',display:'-webkit-box',
           WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{chat.text}</div>
         <button style={{...btnBl,width:'100%',padding:'6px',fontSize:12}}
-          onClick={onOpen}>💬 responder</button>
+          onClick={onOpen} style={{display:'none'}}>💬 responder</button>
       </div>
     </div>
   )
