@@ -549,3 +549,65 @@ export async function getTaggedPhotoCount(userId) {
     .eq('tagged_user_id', userId)
   return count || 0
 }
+
+/* ── Carousel posts ──────────────────────────────────────────── */
+export async function getOrCreatePostsAlbum(userId) {
+  // Hidden album for carousel posts — name starts with __ so filtered from album list
+  const { data } = await supabase.from('albums')
+    .select('id').eq('user_id', userId).eq('name', '__posts__').maybeSingle()
+  if (data) return data.id
+  const { data: created } = await supabase.from('albums')
+    .insert({ user_id: userId, name: '__posts__' }).select('id').single()
+  return created.id
+}
+
+export async function uploadCarousel(userId, files) {
+  const albumId = await getOrCreatePostsAlbum(userId)
+  const carouselId = crypto.randomUUID()
+  const paths = []
+  for (let i = 0; i < files.length; i++) {
+    const path = await uploadPhoto(userId, files[i])
+    const { data } = await supabase.from('album_photos')
+      .insert({ user_id: userId, album_id: albumId, storage_path: path,
+        caption: '', carousel_id: carouselId, carousel_order: i })
+      .select('id').single()
+    paths.push({ id: data.id, storage_path: path, carousel_id: carouselId, carousel_order: i })
+  }
+  return { carouselId, albumId, paths }
+}
+
+export async function getFotosFeedWithCarousels(userId, page = 0, pageSize = 10) {
+  const friends = await getFriends(userId)
+  const friendIds = friends.map(f => f.id)
+  if (!friendIds.length) return []
+
+  // Get all photos from friends (excluding hidden __posts__ albums via join)
+  const { data } = await supabase.from('album_photos')
+    .select(`id, storage_path, caption, created_at, carousel_id, carousel_order,
+      user:profiles!album_photos_user_id_fkey(id, name, avatar_url),
+      album:albums!album_photos_album_id_fkey(id, name)`)
+    .in('user_id', friendIds)
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  if (!data) return []
+
+  // Group carousels — one entry per carousel_id or per single photo
+  const seen = new Set()
+  const posts = []
+  for (const p of data) {
+    if (p.carousel_id) {
+      if (seen.has(p.carousel_id)) continue
+      seen.add(p.carousel_id)
+      // Collect all photos in this carousel
+      const carouselPhotos = data
+        .filter(x => x.carousel_id === p.carousel_id)
+        .sort((a, b) => a.carousel_order - b.carousel_order)
+      posts.push({ ...p, isCarousel: true, photos: carouselPhotos })
+    } else {
+      posts.push({ ...p, isCarousel: false, photos: [p] })
+    }
+  }
+
+  return posts.slice(page * pageSize, (page + 1) * pageSize)
+}

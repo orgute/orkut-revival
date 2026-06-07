@@ -5,6 +5,7 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getDepoimentos, sendDepoimento, getCommunities, getMyCommunities,
   joinCommunity, leaveCommunity, getCommunityPosts, createCommunityPost, createCommunity,
   getPhotoTags, tagFriendInPhoto, removePhotoTag, getTaggedPhotos, getTaggedPhotoCount,
+  uploadCarousel, getOrCreatePostsAlbum, getFotosFeedWithCarousels,
   getMessages, sendMessage, recordVisit, getVisitors, uploadAvatar,
   searchUsers, validateInviteCode, useInviteCode, getMyInvites, getMemberNumber,
   getSignedUrl, uploadPhoto, getAlbums, createAlbum, deleteAlbum,
@@ -2375,36 +2376,37 @@ function GaleriaPage({ myId, userId, setPage, openAlbumId }){
           </span>
         </div>
         <div style={{padding:'12px 14px'}}>
-          {/* Quick upload strip — no album needed */}
-          {isOwn&&<div style={{marginBottom:14,padding:'10px 12px',
-            background:'#f0f4ff',borderRadius:3,border:`1px solid ${BRD}`,
-            display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
-            <div>
-              <div style={{fontSize:13,fontWeight:700,color:TEXT,marginBottom:2}}>Publicar fotos/vídeos</div>
-              <div style={{fontSize:11,color:MUTED}}>Vai direto para "Minhas fotos"</div>
-            </div>
-            <label style={{...btnPk,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}>
-              + adicionar
-              <input type="file" accept="image/*,video/*" multiple style={{display:'none'}}
+          {/* Upload options */}
+          {isOwn&&<div style={{marginBottom:14,display:'flex',gap:8,flexWrap:'wrap'}}>
+            {/* Single/multiple to Minhas fotos */}
+            <label style={{...btnBl,cursor:'pointer',padding:'8px 16px',fontSize:13,
+              display:'inline-flex',alignItems:'center',gap:6}}>
+              📷 foto
+              <input type="file" accept="image/*,video/*" style={{display:'none'}}
                 onChange={async(e)=>{
                   const files=[...e.target.files]; if(!files.length) return
-                  // Get or create default "Minhas fotos" album
-                  let defaultAlbum = albums.find(a=>a.name==='Minhas fotos')
-                  if(!defaultAlbum){
-                    defaultAlbum = await createAlbum(myId,'Minhas fotos')
-                    await loadAlbums()
-                  }
-                  setActiveAlbum(defaultAlbum)
+                  let defaultAlbum=albums.find(a=>a.name==='Minhas fotos')
+                  if(!defaultAlbum){ defaultAlbum=await createAlbum(myId,'Minhas fotos'); await loadAlbums() }
+                  setActiveAlbum(defaultAlbum); setUploading(true)
+                  const path=await uploadPhoto(myId,files[0])
+                  await addPhotoToAlbum(myId,defaultAlbum.id,path,'')
+                  await openAlbum(defaultAlbum); await loadAlbums(); setUploading(false)
+                }}/>
+            </label>
+            {/* Carousel post */}
+            <label style={{...btnPk,cursor:'pointer',padding:'8px 16px',fontSize:13,
+              display:'inline-flex',alignItems:'center',gap:6}}>
+              ⊞ carrossel (até 10)
+              <input type="file" accept="image/*,video/*" multiple style={{display:'none'}}
+                onChange={async(e)=>{
+                  const files=[...e.target.files].slice(0,10); if(!files.length) return
                   setUploading(true)
-                  for(const file of files){
-                    const path=await uploadPhoto(myId,file)
-                    await addPhotoToAlbum(myId,defaultAlbum.id,path,'')
-                  }
-                  await openAlbum(defaultAlbum)
+                  await uploadCarousel(myId,files)
                   await loadAlbums()
                   setUploading(false)
                 }}/>
             </label>
+            {uploading&&<span style={{fontSize:12,color:MUTED,alignSelf:'center'}}>Enviando…</span>}
           </div>}
 
           {/* Albums grid */}
@@ -2427,7 +2429,7 @@ function GaleriaPage({ myId, userId, setPage, openAlbumId }){
                     onClick={()=>setCreating(true)}>+ novo álbum</button>
                 </div>
               )}
-              {albums.map(a=>{
+              {albums.filter(a=>a.name!=='__posts__').map(a=>{
                 const count=a.photo_count?.[0]?.count||0
                 const coverUrl=albumCovers[a.id]
                 const isMine=a.name==='Minhas fotos'
@@ -2668,6 +2670,54 @@ function InboxPage({ myId, setPage }){
   )
 }
 
+/* ── CAROUSEL VIEWER ── */
+function Carousel({ photos, signedUrls }){
+  const [idx,setIdx]=useState(0)
+  const total=photos.length
+  if(!total) return null
+  const url=signedUrls[photos[idx]?.id]
+  return (
+    <div style={{position:'relative',background:'#111',userSelect:'none'}}>
+      {/* Photo */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'center',
+        minHeight:260,maxHeight:480,overflow:'hidden'}}>
+        {url
+          ?<img src={url} alt="" style={{width:'100%',maxHeight:480,objectFit:'contain',display:'block'}}/>
+          :<div style={{padding:60,color:'#888',fontSize:13}}>Carregando…</div>}
+      </div>
+      {/* Prev / Next arrows */}
+      {total>1&&<>
+        <button onClick={()=>setIdx(i=>(i-1+total)%total)} style={{
+          position:'absolute',left:8,top:'50%',transform:'translateY(-50%)',
+          background:'rgba(0,0,0,.45)',border:'none',color:WHITE,
+          borderRadius:'50%',width:32,height:32,cursor:'pointer',
+          fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}}>‹</button>
+        <button onClick={()=>setIdx(i=>(i+1)%total)} style={{
+          position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',
+          background:'rgba(0,0,0,.45)',border:'none',color:WHITE,
+          borderRadius:'50%',width:32,height:32,cursor:'pointer',
+          fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}}>›</button>
+        {/* Dots */}
+        <div style={{position:'absolute',bottom:8,left:0,right:0,
+          display:'flex',justifyContent:'center',gap:5}}>
+          {photos.map((_,i)=>(
+            <div key={i} onClick={()=>setIdx(i)} style={{
+              width:i===idx?18:7,height:7,borderRadius:4,cursor:'pointer',
+              background:i===idx?WHITE:'rgba(255,255,255,.45)',
+              transition:'all .2s'}}/>
+          ))}
+        </div>
+        {/* Counter */}
+        <div style={{position:'absolute',top:8,right:10,
+          background:'rgba(0,0,0,.45)',color:WHITE,fontSize:11,
+          padding:'2px 7px',borderRadius:10,fontFamily:F_UI}}>
+          {idx+1}/{total}
+        </div>
+      </>}
+    </div>
+  )
+}
+
 /* ── FOTOS FEED — mobile chronological photo feed ── */
 function FotosFeed({ myId, setPage }){
   const [photos,setPhotos]=useState([])
@@ -2779,26 +2829,26 @@ function FotosFeed({ myId, setPage }){
               </div>
             </div>
 
-            {/* Photo — retro white frame */}
-            <div style={{
-              margin:'0 10px 10px',
-              padding:6,
-              background:WHITE,
-              boxShadow:'0 0 0 1px #e0e4ee, 2px 2px 6px rgba(0,0,0,.10)',
-              borderRadius:1,
-            }}>
-              {url
-                ?<img src={url} alt={photo.caption||''}
-                    style={{width:'100%',display:'block',borderRadius:1,
-                      maxHeight:480,objectFit:'cover'}}/>
-                :<div style={{width:'100%',height:200,background:'#f0f0f0',
-                    display:'flex',alignItems:'center',justifyContent:'center',
-                    color:MUTED,fontSize:12,fontFamily:F_UI}}>Carregando…</div>
+            {/* Photo or Carousel */}
+            <div style={{margin:'0 0 4px',overflow:'hidden'}}>
+              {photo.isCarousel
+                ?<Carousel photos={photo.photos} signedUrls={signedUrls}/>
+                :<div style={{padding:'0 10px 10px'}}>
+                  <div style={{padding:6,background:WHITE,
+                    boxShadow:'0 0 0 1px #e0e4ee, 2px 2px 6px rgba(0,0,0,.10)',borderRadius:1}}>
+                    {url
+                      ?<img src={url} alt={photo.caption||''}
+                          style={{width:'100%',display:'block',borderRadius:1,
+                            maxHeight:480,objectFit:'cover'}}/>
+                      :<div style={{width:'100%',height:200,background:'#f0f0f0',
+                          display:'flex',alignItems:'center',justifyContent:'center',
+                          color:MUTED,fontSize:12,fontFamily:F_UI}}>Carregando…</div>
+                    }
+                    {photo.caption&&<div style={{fontSize:11,fontFamily:F_UI,color:MUTED,
+                      marginTop:5,textAlign:'center',fontStyle:'italic'}}>{photo.caption}</div>}
+                  </div>
+                </div>
               }
-              {photo.caption&&<div style={{
-                fontSize:11,fontFamily:F_UI,color:MUTED,
-                marginTop:5,textAlign:'center',fontStyle:'italic',
-              }}>{photo.caption}</div>}
             </div>
 
             {/* Action bar */}

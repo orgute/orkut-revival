@@ -11,3 +11,11 @@ CREATE POLICY "tags_select" ON photo_tags FOR SELECT USING (auth.uid() IS NOT NU
 CREATE POLICY "tags_insert" ON photo_tags FOR INSERT WITH CHECK (auth.uid() = tagged_by_id);
 CREATE POLICY "tags_delete" ON photo_tags FOR DELETE USING (auth.uid() = tagged_by_id OR auth.uid() = tagged_user_id);
 SELECT 'photo_tags ready' as status;
+
+-- Carousel grouping
+ALTER TABLE album_photos ADD COLUMN IF NOT EXISTS carousel_id uuid;
+ALTER TABLE album_photos ADD COLUMN IF NOT EXISTS carousel_order int DEFAULT 0;
+
+-- Hidden "Posts" album per user (name starts with __ to hide from album list)
+-- No SQL needed — created on-the-fly per user
+SELECT 'carousel columns ready' as status;
