@@ -4,6 +4,7 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getFriendshipStatus, getRecados, sendRecado, deleteRecado,
   getDepoimentos, sendDepoimento, getCommunities, getMyCommunities,
   joinCommunity, leaveCommunity, getCommunityPosts, createCommunityPost, createCommunity,
+  getPhotoTags, tagFriendInPhoto, removePhotoTag, getTaggedPhotos, getTaggedPhotoCount,
   getMessages, sendMessage, recordVisit, getVisitors, uploadAvatar,
   searchUsers, validateInviteCode, useInviteCode, getMyInvites, getMemberNumber,
   getSignedUrl, uploadPhoto, getAlbums, createAlbum, deleteAlbum,
@@ -792,6 +793,7 @@ function HomePage({ profile, myId, setPage }){
   const [comCount,setComCount]=useState(0)
   const [homeFanCount,setHomeFanCount]=useState(0)
   const [homePhotoCount,setHomePhotoCount]=useState(0)
+  const [taggedCount,setTaggedCount]=useState(0)
   const [visitCount,setVisitCount]=useState(0)
   const [recentVisitors,setRecentVisitors]=useState([])
   const [showVisitors,setShowVisitors]=useState(false)
@@ -804,6 +806,7 @@ function HomePage({ profile, myId, setPage }){
     getMyCommunities(myId).then(c=>setComCount(c.length))
     getFanCount(myId).then(setHomeFanCount)
     supabase.from('album_photos').select('id',{count:'exact',head:true}).eq('user_id',myId).then(({count})=>setHomePhotoCount(count||0))
+    getTaggedPhotoCount(myId).then(setTaggedCount)
     getVisitors(myId).then(v=>{
       const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-10)
       const today=new Date().toDateString()
@@ -816,7 +819,7 @@ function HomePage({ profile, myId, setPage }){
   const icons=[
     { emoji:'✏️',  color:'#e8700a', label:'scraps',       count:scrapCount, pg:'scrapbook' },
     { emoji:'📷',  color:'#555577', label:'fotos',         count:homePhotoCount, pg:'galeria' },
-    { emoji:'🏷️',  color:'#e8700a', label:'fotos de mim',  count:0,          pg:null },
+    { emoji:'🏷️',  color:'#e8700a', label:'fotos de mim',  count:taggedCount, pg:'taggedphotos' },
     { emoji:'⭐',  color:'#f5a623', label:'fãs',            count:homeFanCount, pg:'fans' },
     { emoji:'✉️',  color:'#757575', label:'mensagens',      count:0,          pg:'inbox' },
   ]
@@ -2252,7 +2255,7 @@ function GaleriaPage({ myId, userId, setPage, openAlbumId }){
           {!isOwn&&<span style={{fontSize:12,color:BLUE,cursor:'pointer',fontFamily:F_UI}}
             onClick={()=>setPage({name:'userprofile',userId:userId})}>← voltar</span>}
           <span style={{fontWeight:700,fontSize:14,color:TEXT}}>
-            álbuns de {isOwn?'mim':userId}
+            meus álbuns
           </span>
         </div>
         <div style={{padding:'12px 14px'}}>
@@ -2405,6 +2408,52 @@ function FansPage({ userId, myId, setPage }){
                 <div style={{fontWeight:700,fontSize:13,fontFamily:F_UI,color:BLUE}}>{f.name}</div>
               </div>
             ))
+        }
+      </div>
+    </div>
+  )
+}
+
+/* ── TAGGED PHOTOS PAGE ── */
+function TaggedPhotosPage({ myId, setPage }){
+  const [photos,setPhotos]=useState([])
+  const [loading,setLoading]=useState(true)
+  useEffect(()=>{
+    getTaggedPhotos(myId).then(data=>{setPhotos(data);setLoading(false)})
+  },[myId])
+  return (
+    <div style={{maxWidth:980,margin:'0 auto',padding:'8px'}}>
+      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
+        <div style={{background:RH_BG,borderBottom:`1px solid ${RH_BRD}`,padding:'6px 12px',
+          display:'flex',alignItems:'center',gap:10}}>
+          <span style={{fontSize:12,color:BLUE,cursor:'pointer',fontFamily:F_UI}}
+            onClick={()=>setPage('home')}>← início</span>
+          <span style={{fontWeight:700,fontSize:14,color:TEXT,fontFamily:F_UI}}>
+            fotos de mim ({photos.length})
+          </span>
+        </div>
+        {loading
+          ?<div style={{padding:24,color:MUTED,fontFamily:F_UI,fontSize:13}}>Carregando…</div>
+          :photos.length===0
+            ?<div style={{padding:24,textAlign:'center',color:MUTED,fontFamily:F_UI,fontSize:13}}>
+              Você não foi marcado(a) em nenhuma foto ainda.
+            </div>
+            :<div style={{padding:'12px',display:'grid',
+              gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:10}}>
+              {photos.map(p=>(
+                <div key={p.id} style={{cursor:'pointer'}}
+                  onClick={()=>setPage({name:'galeria',userId:p.album?.user_id})}>
+                  <div style={{aspectRatio:'1',overflow:'hidden',borderRadius:3,
+                    boxShadow:'0 0 0 3px white,0 0 0 4px #c8d0e0',background:'#eee'}}>
+                    <SignedImg path={p.url} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+                  </div>
+                  <div style={{fontSize:10,color:MUTED,fontFamily:F_UI,marginTop:4,
+                    overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                    {p.album?.name} · {p.album?.owner?.name}
+                  </div>
+                </div>
+              ))}
+            </div>
         }
       </div>
     </div>
@@ -2853,6 +2902,7 @@ export default function App(){
       case '__admin':     return <AdminCleanup setToast={setToast}/>
       case 'fotosfeed':   return <FotosFeed myId={myId} setPage={navTo}/>
       case 'inbox':       return <InboxPage myId={myId} setPage={navTo}/>
+      case 'taggedphotos': return <TaggedPhotosPage myId={myId} setPage={navTo}/>
       case 'fans':        return <FansPage userId={page?.userId||myId} myId={myId} setPage={navTo}/>
       case 'galeria':     return <GaleriaPage myId={myId} userId={page?.userId||null} setPage={navTo} openAlbumId={page?.albumId||null}/>
       case 'depoimentos': return <DepoimentosPage myId={myId} setPage={navTo}/>

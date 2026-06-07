@@ -501,3 +501,44 @@ export async function createCommunity(ownerId, { name, description, category }) 
   await supabase.from('memberships').insert({ user_id: ownerId, community_id: data.id })
   return data
 }
+
+/* ── Photo tags ──────────────────────────────────────────────── */
+export async function getPhotoTags(photoId) {
+  const { data } = await supabase.from('photo_tags')
+    .select('id,tagged_user:profiles!photo_tags_tagged_user_id_fkey(id,name,avatar_url)')
+    .eq('photo_id', photoId)
+  return data || []
+}
+
+export async function tagFriendInPhoto(photoId, taggedUserId, taggedById) {
+  const { error } = await supabase.from('photo_tags')
+    .insert({ photo_id: photoId, tagged_user_id: taggedUserId, tagged_by_id: taggedById })
+  if (error && !error.message.includes('duplicate')) throw error
+}
+
+export async function removePhotoTag(photoId, taggedUserId) {
+  await supabase.from('photo_tags')
+    .delete().eq('photo_id', photoId).eq('tagged_user_id', taggedUserId)
+}
+
+export async function getTaggedPhotos(userId) {
+  const { data } = await supabase.from('photo_tags')
+    .select(`
+      id,
+      photo:album_photos!photo_tags_photo_id_fkey(
+        id, url, album_id,
+        album:albums!album_photos_album_id_fkey(id, name, user_id,
+          owner:profiles!albums_user_id_fkey(id, name, avatar_url))
+      )
+    `)
+    .eq('tagged_user_id', userId)
+    .order('created_at', { ascending: false })
+  return (data || []).map(d => d.photo).filter(Boolean)
+}
+
+export async function getTaggedPhotoCount(userId) {
+  const { count } = await supabase.from('photo_tags')
+    .select('id', { count: 'exact', head: true })
+    .eq('tagged_user_id', userId)
+  return count || 0
+}
