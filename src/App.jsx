@@ -2720,45 +2720,47 @@ function Carousel({ photos, signedUrls }){
 
 /* ── FOTOS FEED — mobile chronological photo feed ── */
 function FotosFeed({ myId, setPage }){
-  const [photos,setPhotos]=useState([])
+  const [feedTab,setFeedTab]=useState('amigos')
+  const [posts,setPosts]=useState([])
   const [signedUrls,setSignedUrls]=useState({})
-  const [page,setFeedPage]=useState(0)
-  const [hasMore,setHasMore]=useState(true)
+  const [feedPage,setFeedPage]=useState(0)
   const [loading,setLoading]=useState(true)
   const [loadingMore,setLoadingMore]=useState(false)
-  const [openComments,setOpenComments]=useState(null) // photoId
-  const [comments,setComments]=useState({})           // photoId → []
+  const [hasMore,setHasMore]=useState(true)
+  const [openComments,setOpenComments]=useState(null)
+  const [comments,setComments]=useState({})
   const [commentText,setCommentText]=useState('')
   const PAGE_SIZE=10
 
-  const resolveUrls=async(items)=>{
+  const resolvePostUrls=async(data)=>{
     const urls={}
-    for(const p of items){
-      if(!signedUrls[p.id]) urls[p.id]=await getSignedUrl(p.storage_path)
+    for(const p of data){
+      for(const photo of (p.photos||[p])){
+        if(photo.storage_path&&!signedUrls[photo.id])
+          urls[photo.id]=await getSignedUrl(photo.storage_path)
+      }
     }
     setSignedUrls(prev=>({...prev,...urls}))
   }
 
-  const loadPage=async(pg,append=false)=>{
-    const data=await getFotosFeed(myId,pg,PAGE_SIZE)
-    if(append) setPhotos(prev=>[...prev,...data])
-    else setPhotos(data)
-    setHasMore(data.length===PAGE_SIZE)
-    await resolveUrls(data)
-    return data
-  }
+  useEffect(()=>{ setPosts([]); setFeedPage(0); setSignedUrls({}) },[feedTab])
 
   useEffect(()=>{
-    loadPage(0).then(()=>setLoading(false))
-  },[myId])
+    if(!myId) return
+    setLoading(true)
+    const loader=feedTab==='meus'
+      ?getMyFeed(myId,feedPage,PAGE_SIZE)
+      :getFotosFeedWithCarousels(myId,feedPage,PAGE_SIZE)
+    loader.then(async data=>{
+      await resolvePostUrls(data)
+      setPosts(prev=>feedPage===0?data:[...prev,...data])
+      setHasMore(data.length===PAGE_SIZE)
+      setLoading(false)
+      setLoadingMore(false)
+    })
+  },[myId,feedPage,feedTab])
 
-  const loadMore=async()=>{
-    setLoadingMore(true)
-    const next=page+1
-    await loadPage(next,true)
-    setFeedPage(next)
-    setLoadingMore(false)
-  }
+  const loadMore=()=>{ setLoadingMore(true); setFeedPage(p=>p+1) }
 
   const toggleComments=async(photoId)=>{
     if(openComments===photoId){ setOpenComments(null); return }
@@ -2773,164 +2775,164 @@ function FotosFeed({ myId, setPage }){
     if(!commentText.trim()) return
     const c=await addPhotoComment(myId,photoId,commentText.trim())
     setComments(prev=>({...prev,[photoId]:[...(prev[photoId]||[]),{
-      ...c, author:{id:myId, name:'Você', avatar_url:null}
+      ...c, author:{id:myId,name:'Você',avatar_url:null}
     }]}))
     setCommentText('')
   }
 
-  if(loading) return (
-    <div style={{padding:40,textAlign:'center',color:MUTED,fontFamily:F_UI}}>
-      Carregando…
-    </div>
-  )
+  const deletePost=async(post)=>{
+    if(post.isCarousel) await deleteCarousel(post.photos[0].carousel_id)
+    else await deletePhoto(post.id)
+    setPosts(p=>p.filter(x=>
+      post.isCarousel
+        ?x.photos?.[0]?.carousel_id!==post.photos[0].carousel_id
+        :x.id!==post.id
+    ))
+  }
 
-  if(!photos.length) return (
-    <div style={{maxWidth:600,margin:'0 auto',padding:20,textAlign:'center'}}>
-      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,padding:32}}>
-        <div style={{fontSize:32,marginBottom:12}}>🖼️</div>
-        <div style={{fontSize:14,color:TEXT,fontFamily:F_UI,marginBottom:6}}>Nenhuma foto ainda</div>
-        <div style={{fontSize:12,color:MUTED,fontFamily:F_UI}}>
-          Quando seus amigos postarem fotos, elas aparecerão aqui.
-        </div>
-      </div>
-    </div>
+  if(loading) return (
+    <div style={{padding:40,textAlign:'center',color:MUTED,fontFamily:F_UI}}>Carregando…</div>
   )
 
   return (
     <div style={{maxWidth:600,margin:'0 auto',padding:'8px'}}>
-      {photos.map(photo=>{
-        const url=signedUrls[photo.id]
-        const isOpen=openComments===photo.id
-        const photoComments=comments[photo.id]||[]
-        const isOwn=photo.author.id===myId
+      {/* Tabs */}
+      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
+        marginBottom:10,overflow:'hidden'}}>
+        <div style={{display:'flex',borderBottom:`1px solid ${BRD}`}}>
+          {[['amigos','amigos'],['meus posts','meus']].map(([label,tab])=>(
+            <div key={tab} onClick={()=>setFeedTab(tab)} style={{
+              flex:1,padding:'9px',cursor:'pointer',fontSize:13,fontWeight:700,
+              fontFamily:F_UI,color:feedTab===tab?BLUE:MUTED,textAlign:'center',
+              background:feedTab===tab?'#fce8f3':'transparent',
+              borderBottom:feedTab===tab?`2px solid ${BLUE}`:'2px solid transparent',
+              boxSizing:'border-box'}}>
+              {label}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {posts.length===0&&!loading&&(
+        <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
+          padding:32,textAlign:'center'}}>
+          <div style={{fontSize:32,marginBottom:12}}>🖼️</div>
+          <div style={{fontSize:13,color:MUTED,fontFamily:F_UI}}>
+            {feedTab==='meus'
+              ?'Você ainda não postou nenhuma foto.'
+              :'Nenhuma foto de amigos ainda.'}
+          </div>
+        </div>
+      )}
+
+      {posts.map(post=>{
+        const firstPhotoId=post.isCarousel?post.photos[0]?.id:post.id
+        const url=signedUrls[post.id]
+        const isOpen=openComments===firstPhotoId
+        const photoComments=comments[firstPhotoId]||[]
+        const author=post.user
 
         return (
-          <div key={photo.id} style={{
-            background:WHITE,border:`1px solid ${BRD}`,
-            borderRadius:3,marginBottom:12,overflow:'hidden',
-          }}>
-            {/* Post header */}
+          <div key={post.isCarousel?post.photos[0]?.carousel_id:post.id}
+            style={{background:WHITE,border:`1px solid ${BRD}`,
+              borderRadius:3,marginBottom:12,overflow:'hidden'}}>
+
+            {/* Header */}
             <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px'}}>
               <div style={{cursor:'pointer',flexShrink:0}}
-                onClick={()=>setPage({name:'userprofile',userId:photo.author.id})}>
-                <Av src={photo.author.avatar_url} size={36} name={photo.author.name} radius="50%"/>
+                onClick={()=>setPage({name:'userprofile',userId:author?.id})}>
+                <Av src={author?.avatar_url} size={36} name={author?.name} radius="50%"/>
               </div>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:700,fontSize:13,fontFamily:F_UI,color:BLUE,
-                  cursor:'pointer',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
-                  onClick={()=>setPage({name:'userprofile',userId:photo.author.id})}>
-                  {photo.author.name}
+                <div style={{fontWeight:700,fontSize:13,fontFamily:F_UI,color:BLUE,cursor:'pointer'}}
+                  onClick={()=>setPage({name:'userprofile',userId:author?.id})}>
+                  {author?.name}
                 </div>
                 <div style={{fontSize:11,fontFamily:F_UI,color:MUTED}}>
-                  {photo.album?.name} · {new Date(photo.created_at).toLocaleDateString('pt-BR',{
-                    day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'
-                  })}
+                  {post.album?.name==='__posts__'?'post':post.album?.name}
+                  {' · '}{new Date(post.created_at).toLocaleDateString('pt-BR',{
+                    day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+                  {post.isCarousel&&<span style={{marginLeft:6,fontSize:10,
+                    background:'#e8edf7',borderRadius:4,padding:'1px 6px',color:BLUE}}>
+                    ⊞ {post.photos.length} fotos
+                  </span>}
                 </div>
               </div>
             </div>
 
             {/* Photo or Carousel */}
-            <div style={{margin:'0 0 4px',overflow:'hidden'}}>
-              {photo.isCarousel
-                ?<Carousel photos={photo.photos} signedUrls={signedUrls}/>
-                :<div style={{padding:'0 10px 10px'}}>
-                  <div style={{padding:6,background:WHITE,
-                    boxShadow:'0 0 0 1px #e0e4ee, 2px 2px 6px rgba(0,0,0,.10)',borderRadius:1}}>
-                    {url
-                      ?<img src={url} alt={photo.caption||''}
-                          style={{width:'100%',display:'block',borderRadius:1,
-                            maxHeight:480,objectFit:'cover'}}/>
-                      :<div style={{width:'100%',height:200,background:'#f0f0f0',
-                          display:'flex',alignItems:'center',justifyContent:'center',
-                          color:MUTED,fontSize:12,fontFamily:F_UI}}>Carregando…</div>
-                    }
-                    {photo.caption&&<div style={{fontSize:11,fontFamily:F_UI,color:MUTED,
-                      marginTop:5,textAlign:'center',fontStyle:'italic'}}>{photo.caption}</div>}
-                  </div>
+            {post.isCarousel
+              ?<Carousel photos={post.photos} signedUrls={signedUrls}/>
+              :<div style={{padding:'0 10px 10px'}}>
+                <div style={{padding:6,background:WHITE,
+                  boxShadow:'0 0 0 1px #e0e4ee,2px 2px 6px rgba(0,0,0,.1)',borderRadius:1}}>
+                  {signedUrls[post.id]
+                    ?<img src={signedUrls[post.id]} alt=""
+                        style={{width:'100%',display:'block',borderRadius:1,
+                          maxHeight:480,objectFit:'cover'}}/>
+                    :<div style={{height:200,background:'#f0f0f0',display:'flex',
+                        alignItems:'center',justifyContent:'center',color:MUTED,fontSize:12}}>
+                      Carregando…</div>}
                 </div>
-              }
-            </div>
+              </div>
+            }
 
-            {/* Action bar */}
-            <div style={{
-              display:'flex',alignItems:'center',justifyContent:'space-between',
-              padding:'6px 14px 10px',borderTop:`1px solid ${BRD}`,
-            }}>
-              <button onClick={()=>toggleComments(photo.id)} style={{
+            {/* Actions */}
+            <div style={{display:'flex',alignItems:'center',
+              justifyContent:'space-between',padding:'6px 14px 10px',
+              borderTop:`1px solid ${BRD}`}}>
+              <button onClick={()=>toggleComments(firstPhotoId)} style={{
                 ...btnGh,padding:'3px 10px',fontSize:11,fontFamily:F_BTN,
-                color:isOpen?BLUE:MUTED,borderColor:isOpen?BLUE:BRD,
-              }}>
+                color:isOpen?BLUE:MUTED,borderColor:isOpen?BLUE:BRD}}>
                 💬 {photoComments.length>0?photoComments.length:''} comentários
               </button>
               {feedTab==='meus'&&<button style={{
                 ...btnGh,padding:'3px 10px',fontSize:11,
                 color:'#cc0000',borderColor:'#cc0000'}}
-                onClick={async()=>{
-                  if(photo.isCarousel){
-                    await deleteCarousel(photo.photos[0].carousel_id)
-                  } else {
-                    await deletePhoto(photo.id)
-                  }
-                  setPosts(p=>p.filter(x=>
-                    photo.isCarousel
-                      ? x.photos?.[0]?.carousel_id!==photo.photos[0].carousel_id
-                      : x.id!==photo.id
-                  ))
-                }}>
+                onClick={()=>deletePost(post)}>
                 apagar
               </button>}
             </div>
 
-            {/* Comments section */}
-            {isOpen&&<div style={{borderTop:`1px solid ${BRD}`,background:'#f8f9fc'}}>
-              <div style={{padding:'8px 14px',maxHeight:240,overflowY:'auto'}}>
-                {photoComments.length===0
-                  ?<div style={{fontSize:12,fontFamily:F_UI,color:MUTED,padding:'4px 0'}}>
-                    Nenhum comentário ainda. Seja o primeiro!
-                  </div>
-                  :photoComments.map(c=>(
-                    <div key={c.id} style={{display:'flex',gap:8,marginBottom:8,alignItems:'flex-start'}}>
-                      <Av src={c.author?.avatar_url} size={26} name={c.author?.name} radius="50%"/>
-                      <div style={{flex:1,background:WHITE,borderRadius:2,
-                        padding:'5px 9px',border:`1px solid ${BRD}`}}>
-                        <div style={{fontSize:11,fontWeight:700,fontFamily:F_UI,
-                          color:BLUE,marginBottom:2}}>{c.author?.name}</div>
-                        <div style={{fontSize:12,fontFamily:F_UI,color:TEXT,lineHeight:1.5}}>{c.text}</div>
-                      </div>
+            {/* Comments */}
+            {isOpen&&<div style={{borderTop:`1px solid ${BRD}`,background:'#f8f9fc',padding:'8px 12px'}}>
+              {photoComments.length===0
+                ?<div style={{fontSize:12,color:MUTED,fontFamily:F_UI,marginBottom:8}}>
+                  Nenhum comentário ainda.
+                </div>
+                :photoComments.map(c=>(
+                  <div key={c.id} style={{display:'flex',gap:8,marginBottom:8,alignItems:'flex-start'}}>
+                    <Av src={c.author?.avatar_url} size={24} name={c.author?.name} radius="50%"/>
+                    <div style={{flex:1,background:WHITE,borderRadius:3,
+                      padding:'5px 9px',border:`1px solid ${BRD}`}}>
+                      <div style={{fontWeight:700,fontSize:11,color:BLUE,
+                        fontFamily:F_UI,marginBottom:2}}>{c.author?.name}</div>
+                      <div style={{fontSize:12,color:TEXT,fontFamily:F_UI}}>{c.text}</div>
                     </div>
-                  ))
-                }
-              </div>
-              {/* Comment input */}
-              <div style={{display:'flex',gap:8,padding:'8px 14px',
-                borderTop:`1px solid ${BRD}`}}>
-                <input
-                  style={{...inp,flex:1,fontSize:12}}
-                  placeholder="Escrever um comentário…"
-                  value={commentText}
-                  onChange={e=>setCommentText(e.target.value)}
-                  onKeyDown={e=>e.key==='Enter'&&submitComment(photo.id)}/>
-                <button style={{...btnBl,padding:'4px 12px',fontSize:11}}
-                  onClick={()=>submitComment(photo.id)}>→</button>
+                  </div>
+                ))
+              }
+              <div style={{display:'flex',gap:6,marginTop:6}}>
+                <input style={{...inp,flex:1,fontSize:12,padding:'5px 8px'}}
+                  value={commentText} onChange={e=>setCommentText(e.target.value)}
+                  placeholder="comentar…"
+                  onKeyDown={e=>e.key==='Enter'&&submitComment(firstPhotoId)}/>
+                <button style={{...btnBl,padding:'5px 12px',fontSize:12}}
+                  onClick={()=>submitComment(firstPhotoId)}>→</button>
               </div>
             </div>}
           </div>
         )
       })}
 
-      {/* Paginated load more */}
-      {hasMore&&<div style={{textAlign:'center',padding:'8px 0 16px'}}>
-        <button style={{...btnGh,padding:'8px 24px',fontSize:13,fontFamily:F_BTN}}
-          onClick={loadMore} disabled={loadingMore}>
-          {loadingMore?'Carregando…':'ver mais fotos'}
-        </button>
-      </div>}
-      {!hasMore&&photos.length>0&&<div style={{
-        textAlign:'center',padding:'12px 0 20px',
-        fontSize:11,fontFamily:F_UI,color:MUTED,
-      }}>
-        Você está em dia com as fotos dos seus amigos 🎉
-      </div>}
+      {hasMore&&!loading&&(
+        <div style={{textAlign:'center',padding:'10px 0'}}>
+          <button style={{...btnGh,padding:'6px 24px',fontSize:12}}
+            onClick={loadMore} disabled={loadingMore}>
+            {loadingMore?'Carregando…':'ver mais'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
