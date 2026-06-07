@@ -641,7 +641,7 @@ function RightSidebar({ myId, viewId, setPage }){
         ):(
           <>
             <input placeholder="buscar amigos" style={{...inp,marginBottom:8,fontSize:11}}/>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(64px,1fr))',gap:8}}>
               {friends.slice(0,6).map(f=>(
                 <div key={f.id} style={{textAlign:'center',cursor:'pointer'}}
                   onClick={()=>setPage({name:'userprofile',userId:f.id})}>
@@ -658,7 +658,7 @@ function RightSidebar({ myId, viewId, setPage }){
         onTitleClick={isOwnSidebar?()=>setPage('communities'):undefined}>
         {mine.length===0
           ?<div style={{fontSize:12,color:MUTED}}>Sem comunidades.</div>
-          :<div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
+          :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(64px,1fr))',gap:8}}>
             {mine.slice(0,6).map(c=>(
               <div key={c.id} style={{textAlign:'center',cursor:'pointer'}}
                 onClick={()=>setPage({name:'communities',openCommunity:c})}>
@@ -2196,9 +2196,9 @@ function PhotoTagBar({ photoId, myId, ownerId }){
             value={query} onChange={e=>setQuery(e.target.value)}
             placeholder="buscar amigo pelo nome…"/>
           {results.length>0&&(
-            <div style={{position:'absolute',top:'100%',left:0,right:0,
+            <div style={{position:'absolute',bottom:'100%',left:0,right:0,
               background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
-              zIndex:20,boxShadow:'0 4px 12px rgba(0,0,0,.15)',maxHeight:200,overflowY:'auto'}}>
+              zIndex:9999,boxShadow:'0 -4px 12px rgba(0,0,0,.15)',maxHeight:200,overflowY:'auto'}}>
               {results.map(u=>(
                 <div key={u.id} style={{display:'flex',alignItems:'center',gap:10,
                   padding:'10px 12px',cursor:'pointer',borderBottom:`1px solid ${BRD}`}}
