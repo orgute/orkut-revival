@@ -1480,15 +1480,18 @@ function ProfilePage({ myId, userId, setPage, toast }){
                   </div>
                   {profileReplyOpen===s.id&&<div style={{marginTop:8,background:'#f8f9fc',
                     border:`1px solid ${BRD}`,borderRadius:3,padding:'8px 10px'}}>
-                    <textarea style={{...tarea,minHeight:52,fontSize:12}} value={profileReplyText}
+                    <textarea style={{...tarea,minHeight:72,fontSize:14,lineHeight:1.5,
+                      WebkitAppearance:'none',borderRadius:3}}
+                      value={profileReplyText}
                       onChange={e=>setProfileReplyText(e.target.value)}
-                      placeholder={`responder para ${s.from.name}…`} autoFocus/>
-                    <div style={{display:'flex',gap:8,marginTop:6}}>
-                      <button style={{...btnBl,padding:'3px 12px',fontSize:11}}
+                      placeholder={`responder para ${s.from.name}…`}
+                      ref={el=>{if(el) setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'nearest'}),100)}}/>
+                    <div style={{display:'flex',gap:8,marginTop:8}}>
+                      <button style={{...btnBl,padding:'8px 16px',fontSize:13,flex:1}}
                         onClick={()=>postProfileReply(s.from.id,s.from.name)}>
-                        post scrap
+                        enviar
                       </button>
-                      <button style={{...btnGh,padding:'3px 10px',fontSize:11}}
+                      <button style={{...btnGh,padding:'8px 14px',fontSize:13}}
                         onClick={()=>{setProfileReplyOpen(null);setProfileReplyText('')}}>
                         cancelar
                       </button>
@@ -1764,14 +1767,16 @@ function ScrapbookPage({ myId, targetUserId, setPage, toast }){
                   {/* Inline reply box */}
                   {replyOpen===s.id&&<div style={{marginTop:8,background:'#f8f9fc',
                     border:`1px solid ${BRD}`,borderRadius:3,padding:'8px 10px'}}>
-                    <textarea style={{...tarea,minHeight:54,fontSize:12}} value={replyText}
+                    <textarea style={{...tarea,minHeight:72,fontSize:14,lineHeight:1.5,
+                      WebkitAppearance:'none',borderRadius:3}}
+                      value={replyText}
                       onChange={e=>setReplyText(e.target.value)}
                       placeholder={`responder para ${s.from.name}…`}
-                      autoFocus/>
-                    <div style={{display:'flex',gap:8,marginTop:6}}>
-                      <button style={{...btnBl,padding:'3px 12px',fontSize:11}}
-                        onClick={()=>postReply(s.from.id)}>post scrap</button>
-                      <button style={{...btnGh,padding:'3px 10px',fontSize:11}}
+                      ref={el=>{if(el) setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'nearest'}),100)}}/>
+                    <div style={{display:'flex',gap:8,marginTop:8}}>
+                      <button style={{...btnBl,padding:'8px 16px',fontSize:13,flex:1}}
+                        onClick={()=>postReply(s.from.id)}>enviar</button>
+                      <button style={{...btnGh,padding:'8px 14px',fontSize:13}}
                         onClick={()=>{setReplyOpen(null);setReplyText('')}}>cancelar</button>
                     </div>
                   </div>}
