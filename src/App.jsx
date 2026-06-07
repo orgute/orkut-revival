@@ -1196,10 +1196,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
                 <svg width="14" height="12" viewBox="0 0 14 12" fill="none"><rect x="0.5" y="1" width="13" height="10" rx="1.5" stroke={BLUE} strokeWidth="1.4" fill="none"/><path d="M0.5 8l3.5-3 3 3 2.5-2.5 5 4" stroke={BLUE} strokeWidth="1.2" strokeLinejoin="round" fill="none"/><circle cx="4" cy="4.5" r="1.2" fill="none" stroke={BLUE} strokeWidth="1.2"/></svg>
                 <span style={{color:BLUE,textDecoration:'underline'}}>fotos</span> <strong style={{fontFamily:F_NUM}}>{photoCount}</strong>
               </span>
-              <span style={{display:'flex',alignItems:'center',gap:4}}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polygon points="7,1 9,5.5 14,6 10.5,9.5 11.5,14 7,11.5 2.5,14 3.5,9.5 0,6 5,5.5" stroke={MUTED} strokeWidth="1.2" fill="none"/></svg>
-                vídeos <strong style={{fontFamily:F_NUM}}>0</strong>
-              </span>
+
               <span style={{display:'flex',alignItems:'center',gap:4}}>
                 {/* Fan count — always links to fan list */}
                 <span style={{display:'flex',alignItems:'center',gap:4,cursor:'pointer'}}
