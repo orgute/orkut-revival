@@ -58,7 +58,9 @@ Feito por **Elton Vilela** — profissional de segurança digital apaixonado por
 
 ## Licença
 
-MIT — use, fork, brinque. Só não monetize.
+Código disponível publicamente **apenas para consulta e transparência**.
+Forks, cópias e uso comercial são expressamente proibidos.
+Veja [LICENSE](./LICENSE) para os termos completos.
 
 ---
 
