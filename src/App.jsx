@@ -155,7 +155,7 @@ function WhoGrid(){
     "https://randomuser.me/api/portraits/men/75.jpg",
     "https://randomuser.me/api/portraits/women/85.jpg",
   ]
-  const PINK='#c9a0dc'; const LIGHT='#dce8f0'
+  const PINK='#f0a8c0'; const LIGHT='#dce8f0'
   // Each cell: [type, photo_index_or_null, bg, rotation_deg, scale]
   const topCells = [
     {type:'p',bg:PINK,rot:-2,sc:1.02},
