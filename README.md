@@ -2,7 +2,7 @@
 
 > Construído por diversão, nostalgia e um pouco de teimosia.
 
-Uma recriação funcional do Orkut — a rede social que conectou o Brasil entre 2004 e 2014 — desenvolvida inteiramente com IA em algumas semanas, sem equipe, sem investimento, sem monetização.
+Uma recriação funcional do Orkut — a rede social que conectou o Brasil entre 2004 e 2014 — desenvolvida inteiramente com IA em 1 semana, sem equipe, sem investimento, sem monetização.
 
 ---
 
@@ -50,7 +50,7 @@ Este projeto não tem compromisso de manutenção contínua. É um experimento p
 
 ## Sobre o criador
 
-Feito por **Elton Vilela** — profissional de segurança digital apaixonado por privacidade, tecnologia e pela internet que um dia foi sobre conexões de verdade.
+Feito por **Elton Vilela** — apaixonado por inovação, tecnologia e internet, que um dia foi sobre conexões de verdade. Mais apaixonado ainda por privacidade.
 
 → [orgute.org](https://orgute.org)
 
@@ -62,6 +62,3 @@ Código disponível publicamente **apenas para consulta e transparência**.
 Forks, cópias e uso comercial são expressamente proibidos.
 Veja [LICENSE](./LICENSE) para os termos completos.
 
----
-
-*"Se o Brasil foi eliminado, pelo menos o Orkut voltou."* 🇧🇷
