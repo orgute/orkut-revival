@@ -155,7 +155,7 @@ function WhoGrid(){
     "https://randomuser.me/api/portraits/men/75.jpg",
     "https://randomuser.me/api/portraits/women/85.jpg",
   ]
-  const PINK='#f0a8c0'; const LIGHT='#dce8f0'
+  const PINK='#c9a0dc'; const LIGHT='#dce8f0'
   // Each cell: [type, photo_index_or_null, bg, rotation_deg, scale]
   const topCells = [
     {type:'p',bg:PINK,rot:-2,sc:1.02},
@@ -325,7 +325,12 @@ function AuthScreen({ onAuth }){
 
   const doLogin=async()=>{
     setErr('');setLoading(true)
-    const {error}=await supabase.auth.signInWithPassword({email:form.email,password:form.password})
+    // If "lembrar senha" unchecked, session expires when browser closes
+    const {error}=await supabase.auth.signInWithPassword({
+      email:form.email,
+      password:form.password,
+      options:{ persistSession: remember }
+    })
     if(error) setErr('E-mail ou senha incorretos.')
     setLoading(false)
   }
