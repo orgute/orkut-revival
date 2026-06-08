@@ -631,7 +631,10 @@ function RightSidebar({ myId, viewId, setPage }){
   },[targetSidebarId])
   return (
     <aside style={{width:250,flexShrink:0}}>
-      <RightPanel title={`${isOwnSidebar?'meus ':' '}amigos (${friends.length})`}
+      <RightPanel
+        title={<span>{isOwnSidebar?'meus ':' '}amigos{' '}
+          <span style={{color:BLUE,textDecoration:'underline'}}>({friends.length})</span>
+        </span>}
         onTitleClick={isOwnSidebar?()=>setPage('friends'):undefined}>
         {friends.length===0?(
           <>
@@ -654,7 +657,10 @@ function RightSidebar({ myId, viewId, setPage }){
           </>
         )}
       </RightPanel>
-      <RightPanel title={`${isOwnSidebar?'minhas ':' '}comunidades (${mine.length})`}
+      <RightPanel
+        title={<span>{isOwnSidebar?'minhas ':' '}comunidades{' '}
+          <span style={{color:BLUE,textDecoration:'underline'}}>({mine.length})</span>
+        </span>}
         onTitleClick={isOwnSidebar?()=>setPage('communities'):undefined}>
         {mine.length===0
           ?<div style={{fontSize:12,color:MUTED}}>Sem comunidades.</div>
@@ -1562,6 +1568,9 @@ function ProfilePage({ myId, userId, setPage, toast }){
 
       {/* Right — hidden on mobile */}
       {!mob&&<RightSidebar myId={myId} viewId={targetId} setPage={setPage}/>}
+      {mob&&!isOwn&&<div style={{marginTop:8}}>
+        <RightSidebar myId={myId} viewId={targetId} setPage={setPage}/>
+      </div>}
     </div>
   )
 }
@@ -2020,7 +2029,7 @@ function CommunitiesPage({ myId, toast, page }){
       setAll(p=>[c,...p]); setMine(p=>[c,...p])
       setNewComName(''); setNewComDesc(''); setNewComCat('')
       setShowCreate(false); toast('Comunidade criada!')
-    }catch(e){ toast('Erro ao criar.') }
+    }catch(e){ toast('Erro: '+e.message) }
     setCreating(false)
   }
 
