@@ -501,7 +501,7 @@ export async function addFeedback(name, text) {
 export async function createCommunity(ownerId, { name, description, category }) {
   const seed = Math.floor(Math.random() * 1000)
   const { data, error } = await supabase.from('communities')
-    .insert({ name, description, category, owner_id: ownerId, members_count: 1, seed })
+    .insert({ name, description, category, members_count: 1, seed: String(seed) })
     .select().single()
   if (error) throw error
   // Auto-join as member
