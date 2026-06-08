@@ -1,16 +1,65 @@
-# React + Vite
+# orgute — uma recriação do Orkut feita com IA
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> Construído por diversão, nostalgia e um pouco de teimosia.
 
-Currently, two official plugins are available:
+Uma recriação funcional do Orkut — a rede social que conectou o Brasil entre 2004 e 2014 — desenvolvida inteiramente com IA em algumas semanas, sem equipe, sem investimento, sem monetização.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Por que?
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Porque o Orkut foi real. As amizades eram reais. A conexão era real.
 
-## Expanding the ESLint configuration
+Hoje 95% do que vemos nas redes sociais é anúncio, algoritmo ou influencer vendendo algo. O Orkut era diferente — era sobre pessoas, não sobre engajamento.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Isso aqui é um experimento: será que ainda tem espaço para uma rede social que respeita o usuário?
+
+---
+
+## O que está incluído
+
+- Perfis com scrapbook, depoimentos e fotos
+- Sistema de amigos com convites
+- Comunidades temáticas
+- Feed de fotos com carrossel (estilo Instagram, jeito Orkut)
+- Posts temporários de 24h
+- Sem anúncios. Sem rastreamento. Sem algoritmo de engajamento.
+- Convites por indicação — cada membro convida até 10 pessoas
+
+---
+
+## Stack
+
+- **Frontend:** React + Vite
+- **Backend:** Supabase (PostgreSQL + Auth + Storage)
+- **Deploy:** Vercel
+- **Construído com:** Claude (Anthropic)
+
+---
+
+## Filosofia
+
+- Zero monetização
+- Zero rastreamento
+- Zero anúncios
+- Open source por transparência, não por roadmap
+
+Este projeto não tem compromisso de manutenção contínua. É um experimento público, construído com IA, por uma pessoa, para reviver um momento.
+
+---
+
+## Sobre o criador
+
+Feito por **Elton Vilela** — profissional de segurança digital apaixonado por privacidade, tecnologia e pela internet que um dia foi sobre conexões de verdade.
+
+→ [orgute.org](https://orgute.org)
+
+---
+
+## Licença
+
+MIT — use, fork, brinque. Só não monetize.
+
+---
+
+*"Se o Brasil foi eliminado, pelo menos o Orkut voltou."* 🇧🇷
