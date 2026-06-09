@@ -2,7 +2,7 @@
 
 > Construído por diversão, nostalgia e um pouco de teimosia.
 
-Uma recriação funcional do Orkut — a rede social que conectou o Brasil entre 2004 e 2014 — desenvolvida inteiramente por um agente autônomo de IA em 1 semana, sem equipe, sem investimento, sem monetização, apenas orientação e supervisão de um humano 👀
+Uma recriação funcional do Orkut — a rede social que conectou o Brasil entre 2004 e 2014 — desenvolvida inteiramente via iphone por um agente autônomo de IA em 1 semana, sem equipe, sem investimento, sem monetização, apenas orientação e supervisão de um humano 👀
 
 ---
 
