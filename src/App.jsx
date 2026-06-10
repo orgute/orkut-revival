@@ -13,6 +13,7 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getFotosFeed, getPhotoComments, addPhotoComment, deletePhotoComment,
   getSentRequests, getPendingDepoimentos, approveDepoimento, rejectDepoimento,
   getFanCount, getIsFan, addFan, removeFan, getMessageThreads, getFans,
+  getWaitlist, markInvited, updateWaitlistNotes, deleteWaitlistEntry,
   getFeedback, addFeedback,
 } from './lib/supabase.js'
 
@@ -3188,6 +3189,136 @@ function AdminCleanup({ setToast }){
   )
 }
 
+/* ── WAITLIST ADMIN PANEL ── */
+function WaitlistPanel({ myId }){
+  const [list,setList]=useState([])
+  const [loading,setLoading]=useState(true)
+  const [filter,setFilter]=useState('all') // all | pending | invited
+  const [copied,setCopied]=useState(null)
+
+  useEffect(()=>{
+    getWaitlist().then(d=>{setList(d);setLoading(false)})
+  },[])
+
+  const filtered=list.filter(e=>{
+    if(filter==='pending') return !e.invited_at
+    if(filter==='invited') return !!e.invited_at
+    return true
+  })
+
+  const copyEmail=(email,id)=>{
+    navigator.clipboard.writeText(email)
+    setCopied(id); setTimeout(()=>setCopied(null),2000)
+  }
+
+  const copyAllPending=()=>{
+    const emails=list.filter(e=>!e.invited_at).map(e=>e.email).join(', ')
+    navigator.clipboard.writeText(emails)
+    setCopied('all'); setTimeout(()=>setCopied(null),2000)
+  }
+
+  const sendInvite=async(entry)=>{
+    // Generate invite code for this person
+    const {data:invite}=await supabase.from('invites')
+      .select('code').eq('owner_id',myId).eq('used',false).limit(1).single()
+    if(!invite){alert('Sem convites disponíveis.');return}
+    const link=`https://orgute.org?convite=${invite.code}`
+    navigator.clipboard.writeText(link)
+    await markInvited(entry.id)
+    setList(p=>p.map(e=>e.id===entry.id?{...e,invited_at:new Date().toISOString()}:e))
+    setCopied(entry.id+'inv'); setTimeout(()=>setCopied(null),2000)
+  }
+
+  const pending=list.filter(e=>!e.invited_at).length
+  const invited=list.filter(e=>!!e.invited_at).length
+
+  return (
+    <div style={{maxWidth:900,margin:'0 auto',padding:'8px'}}>
+      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,overflow:'hidden'}}>
+        {/* Header */}
+        <div style={{background:'#1a2a4a',padding:'10px 16px',
+          display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
+          <div>
+            <span style={{fontWeight:700,fontSize:15,color:WHITE,fontFamily:F_UI}}>
+              Waitlist Admin
+            </span>
+            <span style={{fontSize:11,color:'rgba(255,255,255,.6)',marginLeft:12,fontFamily:F_UI}}>
+              {list.length} total · {pending} pendentes · {invited} convidados
+            </span>
+          </div>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            {[['all','todos'],['pending','pendentes'],['invited','convidados']].map(([v,l])=>(
+              <span key={v} onClick={()=>setFilter(v)} style={{
+                fontSize:11,fontFamily:F_UI,cursor:'pointer',padding:'3px 10px',
+                borderRadius:10,fontWeight:filter===v?700:400,
+                background:filter===v?PINK:'rgba(255,255,255,.15)',
+                color:WHITE}}>
+                {l}
+              </span>
+            ))}
+            <button style={{...btnPk,fontSize:11,padding:'4px 12px'}}
+              onClick={copyAllPending}>
+              {copied==='all'?'✓ copiado!':'copiar pendentes'}
+            </button>
+          </div>
+        </div>
+
+        {/* List */}
+        {loading
+          ?<div style={{padding:24,color:MUTED,fontFamily:F_UI}}>Carregando…</div>
+          :filtered.length===0
+            ?<div style={{padding:24,color:MUTED,fontFamily:F_UI,textAlign:'center'}}>
+              Nenhuma entrada.
+            </div>
+            :filtered.map((e,i)=>(
+              <div key={e.id} style={{
+                display:'flex',gap:12,padding:'10px 16px',
+                borderBottom:i<filtered.length-1?`1px solid ${BRD}`:'none',
+                alignItems:'center',
+                background:e.invited_at?'#f0fff4':WHITE}}>
+                {/* Status dot */}
+                <div style={{width:8,height:8,borderRadius:'50%',flexShrink:0,
+                  background:e.invited_at?'#4caf50':'#f5a623'}}/>
+                {/* Info */}
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:13,fontFamily:F_UI,color:TEXT}}>
+                    {e.name}
+                  </div>
+                  <div style={{fontSize:11,fontFamily:F_UI,color:MUTED,
+                    display:'flex',gap:10,flexWrap:'wrap',marginTop:2}}>
+                    <span>{e.email}</span>
+                    <span>{new Date(e.created_at).toLocaleDateString('pt-BR',{
+                      day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
+                    {e.invited_at&&<span style={{color:'#2e7d32'}}>
+                      ✓ convidado {new Date(e.invited_at).toLocaleDateString('pt-BR',{day:'numeric',month:'short'})}
+                    </span>}
+                  </div>
+                </div>
+                {/* Actions */}
+                <div style={{display:'flex',gap:6,flexShrink:0}}>
+                  <button style={{...btnGh,fontSize:10,padding:'3px 8px'}}
+                    onClick={()=>copyEmail(e.email,e.id)}>
+                    {copied===e.id?'✓':'copiar email'}
+                  </button>
+                  {!e.invited_at&&<button style={{...btnBl,fontSize:10,padding:'3px 8px'}}
+                    onClick={()=>sendInvite(e)}>
+                    {copied===e.id+'inv'?'✓ link copiado!':'gerar convite'}
+                  </button>}
+                  <button style={{...btnGh,fontSize:10,padding:'3px 8px',
+                    color:'#cc0000',borderColor:'#cc0000'}}
+                    onClick={async()=>{
+                      await deleteWaitlistEntry(e.id)
+                      setList(p=>p.filter(x=>x.id!==e.id))
+                    }}>✕</button>
+                </div>
+              </div>
+            ))
+        }
+      </div>
+    </div>
+  )
+}
+
 /* ── ROOT ── */
 export default function App(){
   const [session,setSession]=useState(undefined)
@@ -3200,7 +3331,10 @@ export default function App(){
   useEffect(()=>{
     supabase.auth.getSession().then(({data:{session}})=>setSession(session))
     const {data:{subscription}}=supabase.auth.onAuthStateChange((_,s)=>setSession(s))
-    const onKey=(e)=>{ if(e.ctrlKey&&e.shiftKey&&e.key==='A') setPage('__admin') }
+    const onKey=(e)=>{
+      if(e.ctrlKey&&e.shiftKey&&e.key==='A') setPage('__admin')
+      if(e.ctrlKey&&e.shiftKey&&e.key==='W') setPage('__waitlist')
+    }
     window.addEventListener('keydown',onKey)
     return()=>{ subscription.unsubscribe(); window.removeEventListener('keydown',onKey) }
   },[])

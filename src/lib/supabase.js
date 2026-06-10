@@ -656,3 +656,26 @@ export async function getMyFeed(userId, page = 0, pageSize = 10) {
 export async function deleteCarousel(carouselId) {
   await supabase.from('album_photos').delete().eq('carousel_id', carouselId)
 }
+
+/* ── Waitlist admin ──────────────────────────────────────────── */
+export async function getWaitlist() {
+  const { data } = await supabase
+    .from('waitlist')
+    .select('id,name,email,created_at,invited_at,notes')
+    .order('created_at', { ascending: false })
+  return data || []
+}
+
+export async function markInvited(id) {
+  await supabase.from('waitlist')
+    .update({ invited_at: new Date().toISOString() })
+    .eq('id', id)
+}
+
+export async function updateWaitlistNotes(id, notes) {
+  await supabase.from('waitlist').update({ notes }).eq('id', id)
+}
+
+export async function deleteWaitlistEntry(id) {
+  await supabase.from('waitlist').delete().eq('id', id)
+}
