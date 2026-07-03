@@ -14,6 +14,9 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getSentRequests, getPendingDepoimentos, approveDepoimento, rejectDepoimento,
   getFanCount, getIsFan, addFan, removeFan, getMessageThreads, getFans,
   getWaitlist, markInvited, updateWaitlistNotes, deleteWaitlistEntry,
+  CROPS, ANIMALS, xpForLevel, getOrCreateFarm, getPlots, getAnimals,
+  checkReadyPlots, plantCrop, harvestOwnPlot, stealCrop, giftHarvest,
+  collectAnimal, buyAnimal, getFarmActions, getGenerosityPoints, getFarmLeaderboard,
   getFeedback, addFeedback,
 } from './lib/supabase.js'
 
@@ -489,8 +492,8 @@ function TopNav({ page, setPage, profile, pendingReqs, newRecados, onBellClick }
   const [menuOpen,setMenuOpen]=useState(false)
   const cur=typeof page==='string'?page:page?.name
   const links=[['Início','home'],['Perfil','profile'],['Recados','scrapbook'],
-               ['Amigos','friends'],['Comunidades','communities']]
-  const mobileLinks=[...links,['Fotos Feed','fotosfeed']]
+               ['Amigos','friends'],['Comunidades','communities'],['🌾','fazendinha']]
+  const mobileLinks=[...links,['Fotos Feed','fotosfeed'],['Fazendinha 🌾','fazendinha']]
   const go=(pg)=>{ setPage(pg); setMenuOpen(false) }
 
   return (
@@ -3185,6 +3188,388 @@ function AdminCleanup({ setToast }){
           ))}
         </div>}
       </div>
+    </div>
+  )
+}
+
+/* ── FAZENDINHA PAGE ── */
+function FazendinhaPage({ myId, setPage, userId }){
+  const isOwn = userId === myId
+  const [farm, setFarm] = useState(null)
+  const [plots, setPlots] = useState([])
+  const [animals, setAnimals] = useState([])
+  const [actions, setActions] = useState([])
+  const [genPoints, setGenPoints] = useState(0)
+  const [tab, setTab] = useState('farm') // farm | market | leaderboard
+  const [selectedPlot, setSelectedPlot] = useState(null)
+  const [toast, setToast] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [myFarm, setMyFarm] = useState(null)
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2500) }
+
+  const load = async () => {
+    const f = await getOrCreateFarm(userId)
+    setFarm(f)
+    if (!isOwn) { const mf = await getOrCreateFarm(myId); setMyFarm(mf) }
+    await checkReadyPlots(f.id)
+    const [p, a, acts, g] = await Promise.all([
+      getPlots(f.id), getAnimals(f.id),
+      getFarmActions(f.id), getGenerosityPoints(isOwn ? myId : userId)
+    ])
+    setPlots(p); setAnimals(a); setActions(acts)
+    setGenPoints(g.total_earned); setLoading(false)
+  }
+
+  useEffect(() => { load() }, [userId])
+
+  // Timer to refresh ready plots every 30s
+  useEffect(() => {
+    const t = setInterval(async () => {
+      if (!farm) return
+      await checkReadyPlots(farm.id)
+      const p = await getPlots(farm.id); setPlots(p)
+    }, 30000)
+    return () => clearInterval(t)
+  }, [farm])
+
+  const handlePlotClick = async (plot) => {
+    if (!farm) return
+    if (isOwn) {
+      if (plot.state === 'empty') { setSelectedPlot(plot); setTab('market') }
+      else if (plot.state === 'ready') {
+        const r = await harvestOwnPlot(plot.id, myId)
+        if (r) { showToast(`+${r.crop.value} moedas 🌾`); load() }
+      }
+    } else {
+      if (plot.state !== 'ready') return
+      setSelectedPlot(plot)
+    }
+  }
+
+  const handleSteal = async (plot) => {
+    const r = await stealCrop(plot.id, farm.id, myId)
+    if (r) { showToast(`Roubou ${r.crop.emoji} +${r.value} moedas 🦹`); setSelectedPlot(null); load() }
+  }
+
+  const handleGift = async (plot) => {
+    const farmOwner = farm.user_id
+    const r = await giftHarvest(plot.id, farm.id, myId, farmOwner)
+    if (r) { showToast(`Colheu pra eles +${r.bonus} moedas 🤝`); setSelectedPlot(null); load() }
+  }
+
+  const handleCollect = async (animal) => {
+    const r = await collectAnimal(animal.id, isOwn ? myId : null)
+    if (r) { showToast(`+${r.animal.value} moedas ${r.animal.emoji}`); load() }
+    else showToast('Ainda não está pronto!')
+  }
+
+  const handlePlant = async (cropType) => {
+    if (!selectedPlot || !farm) return
+    const crop = CROPS[cropType]
+    if ((myFarm || farm).coins < crop.cost) { showToast('Moedas insuficientes!'); return }
+    await plantCrop(selectedPlot.id, cropType, myId)
+    showToast(`${crop.emoji} plantado! Pronto em ${crop.growHours < 1 ? crop.growHours*60+'min' : crop.growHours+'h'}`)
+    setSelectedPlot(null); setTab('farm'); load()
+  }
+
+  const handleBuyAnimal = async (type) => {
+    const cat = ANIMALS[type]
+    if ((myFarm || farm).coins < cat.cost) { showToast('Moedas insuficientes!'); return }
+    await buyAnimal(farm.id, type, myId)
+    showToast(`${cat.emoji} ${cat.name} comprada!`); load()
+  }
+
+  const timeLeft = (readyAt) => {
+    const diff = new Date(readyAt) - Date.now()
+    if (diff <= 0) return 'pronto!'
+    const h = Math.floor(diff / 3600000)
+    const m = Math.floor((diff % 3600000) / 60000)
+    return h > 0 ? `${h}h${m}m` : `${m}m`
+  }
+
+  const plotColor = (plot) => {
+    if (plot.state === 'empty') return '#c8b89a'
+    if (plot.state === 'planted') return '#8ba865'
+    return '#f5d060' // ready — golden
+  }
+
+  const coinsBal = isOwn ? farm?.coins : myFarm?.coins
+
+  if (loading) return <div style={{padding:40,textAlign:'center',color:MUTED,fontFamily:F_UI}}>Carregando fazenda…</div>
+
+  return (
+    <div style={{maxWidth:700,margin:'0 auto',padding:'8px'}}>
+      {/* Toast */}
+      {toast&&<div style={{position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',
+        background:'#2a3f6f',color:WHITE,padding:'8px 20px',borderRadius:20,
+        fontSize:13,fontFamily:F_UI,fontWeight:700,zIndex:9999,
+        boxShadow:'0 2px 12px rgba(0,0,0,.2)'}}>{toast}</div>}
+
+      {/* Header */}
+      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
+        marginBottom:8,overflow:'hidden'}}>
+        <div style={{background:'#5a8a3c',padding:'8px 14px',
+          display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+          <div>
+            <span style={{fontSize:15,fontWeight:700,color:WHITE,fontFamily:F_UI}}>
+              🌾 {isOwn?'Minha Fazendinha':'Fazenda do amigo'}
+            </span>
+            {!isOwn&&<span style={{fontSize:11,color:'rgba(255,255,255,.7)',
+              marginLeft:8,fontFamily:F_UI}}>nível {farm?.level}</span>}
+          </div>
+          <div style={{display:'flex',gap:16,alignItems:'center'}}>
+            {isOwn&&<span style={{fontSize:13,color:WHITE,fontFamily:F_UI}}>
+              💰 {farm?.coins} &nbsp;⭐ nível {farm?.level}
+            </span>}
+            {!isOwn&&<span style={{fontSize:13,color:WHITE,fontFamily:F_UI}}>
+              💰 {coinsBal} moedas
+            </span>}
+            {!isOwn&&<button style={{...btnGh,fontSize:11,padding:'3px 10px',color:WHITE,borderColor:'rgba(255,255,255,.4)'}}
+              onClick={()=>setPage({name:'userprofile',userId})}>← perfil</button>}
+          </div>
+        </div>
+
+        {/* XP bar — own only */}
+        {isOwn&&farm&&<div style={{height:4,background:'#e0e6d0'}}>
+          <div style={{height:4,background:'#5a8a3c',
+            width:`${Math.min(100,(farm.xp%(farm.level*100))/(farm.level*100)*100)}%`,
+            transition:'width .5s'}}/>
+        </div>}
+
+        {/* Tabs */}
+        <div style={{display:'flex',borderBottom:`1px solid ${BRD}`}}>
+          {(isOwn?[['🌾 Fazenda','farm'],['🏪 Mercado','market'],['🏆 Ranking','leaderboard'],['📜 Histórico','history']]
+                 :[['🌾 Fazenda','farm'],['📜 Histórico','history']]).map(([l,t])=>(
+            <div key={t} onClick={()=>setTab(t)} style={{
+              padding:'8px 14px',cursor:'pointer',fontSize:12,fontFamily:F_UI,fontWeight:700,
+              color:tab===t?'#5a8a3c':MUTED,
+              borderBottom:tab===t?'2px solid #5a8a3c':'2px solid transparent',
+              boxSizing:'border-box'}}>
+              {l}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── FARM TAB ── */}
+      {tab==='farm'&&<>
+        {/* Plot grid 4x4 */}
+        <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
+          padding:12,marginBottom:8}}>
+          <div style={{fontWeight:700,fontSize:12,color:MUTED,fontFamily:F_UI,marginBottom:8}}>
+            {isOwn?'Clique em um terreno vazio para plantar, dourado para colher':'Clique em terrenos dourados para agir'}
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
+            {plots.map(plot=>(
+              <div key={plot.id} onClick={()=>handlePlotClick(plot)}
+                style={{aspectRatio:'1',borderRadius:4,background:plotColor(plot),
+                  cursor:plot.state==='empty'&&!isOwn?'default':'pointer',
+                  display:'flex',flexDirection:'column',alignItems:'center',
+                  justifyContent:'center',border:selectedPlot?.id===plot.id?'2px solid #2a3f6f':'2px solid transparent',
+                  position:'relative',transition:'transform .1s',
+                  transform:plot.state==='ready'?'scale(1.02)':'scale(1)',
+                  boxShadow:plot.state==='ready'?'0 0 8px rgba(245,208,96,.8)':'none'}}>
+                {plot.state==='planted'&&<>
+                  <div style={{fontSize:20}}>{CROPS[plot.crop_type]?.emoji||'🌱'}</div>
+                  <div style={{fontSize:9,color:'#fff',fontFamily:F_UI,marginTop:2,
+                    background:'rgba(0,0,0,.3)',borderRadius:8,padding:'1px 5px'}}>
+                    {timeLeft(plot.ready_at)}
+                  </div>
+                </>}
+                {plot.state==='ready'&&<>
+                  <div style={{fontSize:22}}>{CROPS[plot.crop_type]?.emoji||'✨'}</div>
+                  <div style={{fontSize:9,color:'#1a1a1a',fontFamily:F_UI,fontWeight:700}}>pronto!</div>
+                </>}
+                {plot.state==='empty'&&<div style={{fontSize:14,color:'rgba(255,255,255,.6)'}}>+</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Friend action modal */}
+        {!isOwn&&selectedPlot&&selectedPlot.state==='ready'&&(
+          <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
+            padding:16,marginBottom:8,textAlign:'center'}}>
+            <div style={{fontSize:28,marginBottom:8}}>{CROPS[selectedPlot.crop_type]?.emoji}</div>
+            <div style={{fontSize:13,fontFamily:F_UI,color:TEXT,marginBottom:14}}>
+              {CROPS[selectedPlot.crop_type]?.name} está pronto!
+            </div>
+            <div style={{display:'flex',gap:10,justifyContent:'center'}}>
+              <button style={{...btnGh,padding:'8px 18px',fontSize:13,color:'#cc0000',borderColor:'#cc0000'}}
+                onClick={()=>handleSteal(selectedPlot)}>🦹 Roubar (+{Math.floor(CROPS[selectedPlot.crop_type]?.stealValue)} moedas)</button>
+              <button style={{...btnBl,padding:'8px 18px',fontSize:13}}
+                onClick={()=>handleGift(selectedPlot)}>🤝 Colher pra eles (+bônus)</button>
+            </div>
+            <div style={{fontSize:10,color:MUTED,fontFamily:F_UI,marginTop:8}}>
+              Roubar: você ganha 60% · Colher: eles ganham tudo + você ganha bônus e pontos de generosidade
+            </div>
+          </div>
+        )}
+
+        {/* Animals */}
+        {animals.length>0&&<div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
+          padding:12,marginBottom:8}}>
+          <div style={{fontWeight:700,fontSize:12,color:MUTED,fontFamily:F_UI,marginBottom:8}}>Animais</div>
+          <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+            {animals.map(a=>{
+              const cat=ANIMALS[a.animal_type]
+              const readyTime=new Date(a.last_collected).getTime()+cat.produceHours*3600000
+              const ready=Date.now()>=readyTime
+              return (
+                <div key={a.id} onClick={()=>isOwn&&handleCollect(a)}
+                  style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4,
+                    padding:'10px 14px',border:`1px solid ${ready?'#f5d060':BRD}`,borderRadius:8,
+                    cursor:isOwn?'pointer':'default',background:ready?'#fffbea':WHITE,
+                    boxShadow:ready?'0 0 8px rgba(245,208,96,.5)':'none'}}>
+                  <div style={{fontSize:28}}>{cat.emoji}</div>
+                  <div style={{fontSize:11,fontFamily:F_UI,fontWeight:700,color:TEXT}}>{cat.name}</div>
+                  <div style={{fontSize:10,fontFamily:F_UI,color:ready?'#856404':MUTED}}>
+                    {ready?`✓ coletar +${cat.value}`:timeLeft(new Date(readyTime).toISOString())}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>}
+
+        {/* Farm log */}
+        {actions.length>0&&<div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,padding:12}}>
+          <div style={{fontWeight:700,fontSize:12,color:MUTED,fontFamily:F_UI,marginBottom:8}}>Últimas ações</div>
+          {actions.map(a=>(
+            <div key={a.id} style={{display:'flex',gap:8,alignItems:'center',
+              padding:'5px 0',borderBottom:`1px solid ${BRD}`,fontSize:12,fontFamily:F_UI}}>
+              <Av src={a.actor?.avatar_url} size={22} name={a.actor?.name} radius="50%"/>
+              <span style={{flex:1,color:TEXT}}>
+                <strong style={{color:a.action==='stole'?'#cc0000':a.action==='gifted'?'#2e7d32':BLUE}}>
+                  {a.actor?.name}
+                </strong>
+                {a.action==='stole'?' roubou ':a.action==='gifted'?' colheu pra você ':' visitou '}
+                {CROPS[a.crop_type]?.emoji}{' '}
+                {a.crop_type&&CROPS[a.crop_type]?.name}
+              </span>
+              <span style={{color:MUTED,fontSize:10}}>
+                {new Date(a.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
+              </span>
+            </div>
+          ))}
+        </div>}
+      </>}
+
+      {/* ── MARKET TAB ── */}
+      {tab==='market'&&isOwn&&<div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,padding:14}}>
+        <div style={{fontWeight:700,fontSize:13,color:TEXT,fontFamily:F_UI,marginBottom:2}}>
+          🏪 Mercado
+        </div>
+        <div style={{fontSize:11,color:MUTED,fontFamily:F_UI,marginBottom:14}}>
+          💰 {farm?.coins} moedas disponíveis
+          {selectedPlot&&<span style={{color:BLUE,marginLeft:8}}>
+            · terreno #{selectedPlot.position+1} selecionado
+          </span>}
+        </div>
+
+        {/* Seeds */}
+        <div style={{fontWeight:700,fontSize:12,color:MUTED,fontFamily:F_UI,marginBottom:8}}>Sementes</div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8,marginBottom:16}}>
+          {Object.entries(CROPS).filter(([,c])=>!c.generosityOnly&&c.minLevel<=farm?.level).map(([key,crop])=>(
+            <div key={key} style={{border:`1px solid ${BRD}`,borderRadius:6,padding:'10px 12px',
+              display:'flex',gap:10,alignItems:'center',
+              opacity:selectedPlot?1:.6,cursor:selectedPlot?'pointer':'default',
+              background:selectedPlot&&farm?.coins>=crop.cost?'#f8fff0':WHITE}}
+              onClick={()=>selectedPlot&&farm?.coins>=crop.cost&&handlePlant(key)}>
+              <div style={{fontSize:26}}>{crop.emoji}</div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:12,fontFamily:F_UI,color:TEXT}}>{crop.name}</div>
+                <div style={{fontSize:10,fontFamily:F_UI,color:MUTED}}>
+                  {crop.growHours<1?crop.growHours*60+'min':crop.growHours+'h'} · +{crop.value} moedas
+                </div>
+                <div style={{fontSize:11,fontFamily:F_UI,color:farm?.coins>=crop.cost?'#2e7d32':'#cc0000',fontWeight:700}}>
+                  💰 {crop.cost} moedas
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Animals */}
+        <div style={{fontWeight:700,fontSize:12,color:MUTED,fontFamily:F_UI,marginBottom:8}}>Animais</div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8}}>
+          {Object.entries(ANIMALS).filter(([,a])=>!a.generosityOnly&&a.minLevel<=farm?.level).map(([key,cat])=>(
+            <div key={key} style={{border:`1px solid ${BRD}`,borderRadius:6,padding:'10px 12px',
+              display:'flex',gap:10,alignItems:'center',cursor:'pointer',
+              background:farm?.coins>=cat.cost?'#f8fff0':WHITE}}
+              onClick={()=>farm?.coins>=cat.cost&&handleBuyAnimal(key)}>
+              <div style={{fontSize:26}}>{cat.emoji}</div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:12,fontFamily:F_UI,color:TEXT}}>{cat.name}</div>
+                <div style={{fontSize:10,fontFamily:F_UI,color:MUTED}}>
+                  {cat.product} a cada {cat.produceHours}h
+                </div>
+                <div style={{fontSize:11,fontFamily:F_UI,color:farm?.coins>=cat.cost?'#2e7d32':'#cc0000',fontWeight:700}}>
+                  💰 {cat.cost} moedas
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {!selectedPlot&&<div style={{marginTop:12,padding:'8px 12px',background:'#fff3cd',
+          borderRadius:4,fontSize:11,fontFamily:F_UI,color:'#856404'}}>
+          ⬅ Volte para a fazenda e clique em um terreno vazio para plantar
+        </div>}
+      </div>}
+
+      {/* ── LEADERBOARD TAB ── */}
+      {tab==='leaderboard'&&<LeaderboardTab myId={myId}/>}
+
+      {/* ── HISTORY TAB ── */}
+      {tab==='history'&&<div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,padding:14}}>
+        <div style={{fontWeight:700,fontSize:13,color:TEXT,fontFamily:F_UI,marginBottom:12}}>📜 Histórico</div>
+        {actions.length===0
+          ?<div style={{color:MUTED,fontSize:12,fontFamily:F_UI}}>Nenhuma ação ainda.</div>
+          :actions.map(a=>(
+            <div key={a.id} style={{display:'flex',gap:10,padding:'8px 0',
+              borderBottom:`1px solid ${BRD}`,alignItems:'center'}}>
+              <Av src={a.actor?.avatar_url} size={28} name={a.actor?.name} radius="50%"/>
+              <div style={{flex:1,fontFamily:F_UI,fontSize:12,color:TEXT}}>
+                <strong style={{color:a.action==='stole'?'#cc0000':'#2e7d32'}}>{a.actor?.name}</strong>
+                {a.action==='stole'?' 🦹 roubou ':`' 🤝 colheu pra você '`}
+                {CROPS[a.crop_type]?.emoji} {CROPS[a.crop_type]?.name}
+                {a.coins_gained>0&&<span style={{color:MUTED}}> (+{a.coins_gained} moedas)</span>}
+              </div>
+              <div style={{fontSize:10,color:MUTED,fontFamily:F_UI}}>
+                {new Date(a.created_at).toLocaleDateString('pt-BR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+              </div>
+            </div>
+          ))
+        }
+      </div>}
+    </div>
+  )
+}
+
+function LeaderboardTab({ myId }){
+  const [data,setData]=useState([])
+  useEffect(()=>{ getFarmLeaderboard().then(setData) },[])
+  return (
+    <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,padding:14}}>
+      <div style={{fontWeight:700,fontSize:13,color:TEXT,fontFamily:F_UI,marginBottom:12}}>🏆 Fazendeiros mais ricos</div>
+      {data.map((f,i)=>(
+        <div key={i} style={{display:'flex',gap:10,padding:'8px 0',
+          borderBottom:`1px solid ${BRD}`,alignItems:'center'}}>
+          <div style={{width:24,height:24,borderRadius:'50%',
+            background:i===0?'#f5d060':i===1?'#c8c8c8':i===2?'#cd7f32':'#f0f4ff',
+            display:'flex',alignItems:'center',justifyContent:'center',
+            fontSize:12,fontWeight:700,color:i<3?'#1a1a1a':MUTED,flexShrink:0}}>
+            {i+1}
+          </div>
+          <Av src={f.user?.avatar_url} size={30} name={f.user?.name} radius="50%"/>
+          <div style={{flex:1,fontFamily:F_UI}}>
+            <div style={{fontSize:13,fontWeight:700,color:f.user?.id===myId?BLUE:TEXT}}>{f.user?.name}</div>
+            <div style={{fontSize:10,color:MUTED}}>nível {f.level}</div>
+          </div>
+          <div style={{fontSize:13,fontFamily:F_UI,fontWeight:700,color:'#856404'}}>💰 {f.coins}</div>
+        </div>
+      ))}
     </div>
   )
 }
