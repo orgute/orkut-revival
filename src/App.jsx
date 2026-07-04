@@ -3370,13 +3370,34 @@ function FazendinhaPage({ myId, setPage, userId }){
                   position:'relative',transition:'transform .1s',
                   transform:plot.state==='ready'?'scale(1.02)':'scale(1)',
                   boxShadow:plot.state==='ready'?'0 0 8px rgba(245,208,96,.8)':'none'}}>
-                {plot.state==='planted'&&<>
-                  <div style={{fontSize:20}}>{CROPS[plot.crop_type]?.emoji||'🌱'}</div>
-                  <div style={{fontSize:9,color:'#fff',fontFamily:F_UI,marginTop:2,
-                    background:'rgba(0,0,0,.3)',borderRadius:8,padding:'1px 5px'}}>
-                    {timeLeft(plot.ready_at)}
-                  </div>
-                </>}
+                {plot.state==='planted'&&(()=>{
+                  const crop=CROPS[plot.crop_type]
+                  const total=crop?crop.growHours*3600000:1
+                  const elapsed=Date.now()-new Date(plot.planted_at).getTime()
+                  const pct=Math.min(elapsed/total,1)
+                  const stage=pct<0.25?{emoji:'🌱',label:'semente'}
+                    :pct<0.5?{emoji:'🌿',label:'brotando'}
+                    :pct<0.75?{emoji:'🌾',label:'crescendo'}
+                    :{emoji:crop?.emoji||'🌾',label:'quase!'}
+                  return <>
+                    <div style={{fontSize:20}}>{stage.emoji}</div>
+                    <div style={{fontSize:8,color:'#fff',fontFamily:F_UI,marginTop:1,
+                      background:'rgba(0,0,0,.35)',borderRadius:8,padding:'1px 5px',
+                      maxWidth:'90%',textAlign:'center'}}>
+                      {stage.label}
+                    </div>
+                    <div style={{fontSize:8,color:'rgba(255,255,255,.8)',fontFamily:F_UI}}>
+                      {timeLeft(plot.ready_at)}
+                    </div>
+                    {/* Progress bar */}
+                    <div style={{position:'absolute',bottom:3,left:4,right:4,
+                      height:3,background:'rgba(0,0,0,.2)',borderRadius:2}}>
+                      <div style={{height:3,borderRadius:2,
+                        background:pct<0.5?'#90c060':pct<0.75?'#c0d040':'#f0c020',
+                        width:`${pct*100}%`,transition:'width 1s'}}/>
+                    </div>
+                  </>
+                })()}
                 {plot.state==='ready'&&<>
                   <div style={{fontSize:22}}>{CROPS[plot.crop_type]?.emoji||'✨'}</div>
                   <div style={{fontSize:9,color:'#1a1a1a',fontFamily:F_UI,fontWeight:700}}>pronto!</div>
