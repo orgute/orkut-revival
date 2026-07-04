@@ -492,8 +492,8 @@ function TopNav({ page, setPage, profile, pendingReqs, newRecados, onBellClick }
   const [menuOpen,setMenuOpen]=useState(false)
   const cur=typeof page==='string'?page:page?.name
   const links=[['Início','home'],['Perfil','profile'],['Recados','scrapbook'],
-               ['Amigos','friends'],['Comunidades','communities'],['🌾','fazendinha']]
-  const mobileLinks=[...links,['Fotos Feed','fotosfeed'],['Fazendinha 🌾','fazendinha']]
+               ['Amigos','friends'],['Comunidades','communities'],['Fazendinha','fazendinha']]
+  const mobileLinks=[...links,['Fotos Feed','fotosfeed']]
   const go=(pg)=>{ setPage(pg); setMenuOpen(false) }
 
   return (
