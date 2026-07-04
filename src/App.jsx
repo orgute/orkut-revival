@@ -3800,6 +3800,7 @@ export default function App(){
       case 'inbox':       return <InboxPage myId={myId} setPage={navTo}/>
       case 'taggedphotos': return <TaggedPhotosPage myId={myId} setPage={navTo}/>
       case 'fans':        return <FansPage userId={page?.userId||myId} myId={myId} setPage={navTo}/>
+      case 'fazendinha':  return <FazendinhaPage myId={myId} setPage={navTo} userId={page?.userId||myId}/>
       case 'galeria':     return <GaleriaPage myId={myId} userId={page?.userId||null} setPage={navTo} openAlbumId={page?.albumId||null}/>
       case 'depoimentos': return <DepoimentosPage myId={myId} setPage={navTo}/>
       default:            return <HomePage profile={profile} myId={myId} setPage={navTo}/>
