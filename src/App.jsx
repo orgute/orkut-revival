@@ -876,13 +876,16 @@ function HomePage({ profile, myId, setPage }){
                   onClick={()=>setPage('profile')}>editar</span>
               </div>
               {[['scrapbook','scrapbook'],['fotos','galeria'],['amigos','friends'],
-                ['comunidades','communities'],['depoimentos','depoimentos'],
-                ['🌾 fazendinha',{name:'fazendinha',userId:targetId}]].map(([label,pg])=>(
+                ['comunidades','communities'],['depoimentos','depoimentos']].map(([label,pg])=>(
                 <div key={label} onClick={()=>setPage(pg)} style={{
                   padding:'9px 10px',fontSize:14,cursor:'pointer',
                   color:BLUE,borderBottom:`1px solid ${BRD}`,
                 }}>{label}</div>
               ))}
+              <div onClick={()=>setPage({name:'fazendinha',userId:targetId})} style={{
+                padding:'9px 10px',fontSize:14,cursor:'pointer',
+                color:BLUE,borderBottom:`1px solid ${BRD}`,
+              }}>🌾 fazendinha</div>
 
             </div>
           </div>
@@ -913,8 +916,7 @@ function HomePage({ profile, myId, setPage }){
                   onClick={()=>setPage('profile')}>editar</span>
               </div>
               {[['scrapbook','scrapbook'],['fotos','galeria'],['amigos','friends'],
-                ['comunidades','communities'],['depoimentos','depoimentos'],
-                ['🌾 fazendinha',{name:'fazendinha',userId:targetId}]].map(([label,pg])=>(
+                ['comunidades','communities'],['depoimentos','depoimentos']].map(([label,pg])=>(
                 <div key={label} onClick={()=>pg&&setPage(pg)} style={{
                   padding:'5px 10px',fontSize:13,cursor:pg?'pointer':'default',
                   color:BLUE,borderBottom:`1px solid ${BRD}`,
