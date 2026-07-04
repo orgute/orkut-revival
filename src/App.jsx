@@ -876,7 +876,8 @@ function HomePage({ profile, myId, setPage }){
                   onClick={()=>setPage('profile')}>editar</span>
               </div>
               {[['scrapbook','scrapbook'],['fotos','galeria'],['amigos','friends'],
-                ['comunidades','communities'],['depoimentos','depoimentos']].map(([label,pg])=>(
+                ['comunidades','communities'],['depoimentos','depoimentos'],
+                ['🌾 fazendinha',{name:'fazendinha',userId:targetId}]].map(([label,pg])=>(
                 <div key={label} onClick={()=>setPage(pg)} style={{
                   padding:'9px 10px',fontSize:14,cursor:'pointer',
                   color:BLUE,borderBottom:`1px solid ${BRD}`,
@@ -912,7 +913,8 @@ function HomePage({ profile, myId, setPage }){
                   onClick={()=>setPage('profile')}>editar</span>
               </div>
               {[['scrapbook','scrapbook'],['fotos','galeria'],['amigos','friends'],
-                ['comunidades','communities'],['depoimentos','depoimentos']].map(([label,pg])=>(
+                ['comunidades','communities'],['depoimentos','depoimentos'],
+                ['🌾 fazendinha',{name:'fazendinha',userId:targetId}]].map(([label,pg])=>(
                 <div key={label} onClick={()=>pg&&setPage(pg)} style={{
                   padding:'5px 10px',fontSize:13,cursor:pg?'pointer':'default',
                   color:BLUE,borderBottom:`1px solid ${BRD}`,
@@ -3445,9 +3447,25 @@ function FazendinhaPage({ myId, setPage, userId }){
                     boxShadow:ready?'0 0 8px rgba(245,208,96,.5)':'none'}}>
                   <div style={{fontSize:28}}>{cat.emoji}</div>
                   <div style={{fontSize:11,fontFamily:F_UI,fontWeight:700,color:TEXT}}>{cat.name}</div>
-                  <div style={{fontSize:10,fontFamily:F_UI,color:ready?'#856404':MUTED}}>
-                    {ready?`✓ coletar +${cat.value}`:timeLeft(new Date(readyTime).toISOString())}
-                  </div>
+                  {(()=>{
+                    const pct=Math.min((Date.now()-new Date(a.last_collected).getTime())/(cat.produceHours*3600000),1)
+                    const stage=pct<0.33?'dormindo 💤':pct<0.66?'produzindo...':pct<1?'quase pronto!':'✓ coletar!'
+                    return <>
+                      <div style={{fontSize:10,fontFamily:F_UI,
+                        color:ready?'#856404':pct>0.66?'#5a8a3c':MUTED,fontWeight:ready?700:400}}>
+                        {ready?`✓ coletar +${cat.value}`:stage}
+                      </div>
+                      <div style={{width:'100%',height:3,background:'rgba(0,0,0,.1)',
+                        borderRadius:2,marginTop:2}}>
+                        <div style={{height:3,borderRadius:2,
+                          background:ready?'#f5d060':pct>0.66?'#90c060':'#c8d8a0',
+                          width:`${pct*100}%`,transition:'width 1s'}}/>
+                      </div>
+                      {!ready&&<div style={{fontSize:9,color:MUTED,fontFamily:F_UI}}>
+                        {timeLeft(new Date(readyTime).toISOString())}
+                      </div>}
+                    </>
+                  })()}
                 </div>
               )
             })}

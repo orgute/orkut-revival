@@ -726,14 +726,24 @@ export async function plantCrop(plotId,cropType,userId){
   const readyAt=new Date(Date.now()+crop.growHours*3600000).toISOString()
   await supabase.from('plots').update({state:'planted',crop_type:cropType,
     planted_at:new Date().toISOString(),ready_at:readyAt}).eq('id',plotId)
-  await supabase.rpc('decrement_coins',{uid:userId,amount:crop.cost})
+  const {data:farm}=await supabase.from('farms').select('coins').eq('user_id',userId).single()
+  if(farm) await supabase.from('farms').update({coins:Math.max(0,farm.coins-crop.cost)}).eq('user_id',userId)
 }
 export async function harvestOwnPlot(plotId,userId){
   const {data:plot}=await supabase.from('plots').select('*').eq('id',plotId).single()
   if(!plot||plot.state!=='ready') return null
   const crop=CROPS[plot.crop_type]; if(!crop) return null
   await supabase.from('plots').update({state:'empty',crop_type:null,planted_at:null,ready_at:null}).eq('id',plotId)
-  await supabase.rpc('add_coins_xp',{uid:userId,coins:crop.value,xp:Math.floor(crop.value*0.1)})
+  // Update coins and xp directly
+  const {data:farm}=await supabase.from('farms').select('coins,xp,level').eq('user_id',userId).single()
+  if(farm){
+    const newXp=farm.xp+Math.floor(crop.value*0.1)
+    const newLevel=newXp>=farm.level*100?farm.level+1:farm.level
+    await supabase.from('farms').update({
+      coins:Math.max(0,farm.coins+crop.value),
+      xp:newXp, level:newLevel
+    }).eq('user_id',userId)
+  }
   return {crop}
 }
 export async function stealCrop(plotId,farmId,actorId){
@@ -741,7 +751,8 @@ export async function stealCrop(plotId,farmId,actorId){
   if(!plot||plot.state!=='ready') return null
   const crop=CROPS[plot.crop_type]; if(!crop||crop.generosityOnly) return null
   await supabase.from('plots').update({state:'empty',crop_type:null,planted_at:null,ready_at:null}).eq('id',plotId)
-  await supabase.rpc('add_coins_xp',{uid:actorId,coins:Math.floor(crop.stealValue),xp:0})
+  const {data:af}=await supabase.from('farms').select('coins').eq('user_id',actorId).single()
+  if(af) await supabase.from('farms').update({coins:af.coins+Math.floor(crop.stealValue)}).eq('user_id',actorId)
   await supabase.from('farm_actions').insert({actor_id:actorId,target_farm_id:farmId,
     action:'stole',crop_type:plot.crop_type,coins_gained:Math.floor(crop.stealValue)})
   return {crop,value:Math.floor(crop.stealValue)}
@@ -752,8 +763,12 @@ export async function giftHarvest(plotId,farmId,actorId,farmOwnerId){
   const crop=CROPS[plot.crop_type]; if(!crop) return null
   await supabase.from('plots').update({state:'empty',crop_type:null,planted_at:null,ready_at:null}).eq('id',plotId)
   const bonus=Math.floor(crop.value*0.2)
-  await supabase.rpc('add_coins_xp',{uid:farmOwnerId,coins:crop.value,xp:0})
-  await supabase.rpc('add_coins_xp',{uid:actorId,coins:bonus,xp:5})
+  const {data:of}=await supabase.from('farms').select('coins').eq('user_id',farmOwnerId).single()
+  if(of) await supabase.from('farms').update({coins:of.coins+crop.value}).eq('user_id',farmOwnerId)
+  const {data:acf}=await supabase.from('farms').select('coins,xp,level').eq('user_id',actorId).single()
+  if(acf){ const nx=acf.xp+5; await supabase.from('farms').update({
+    coins:acf.coins+bonus,xp:nx,level:nx>=acf.level*100?acf.level+1:acf.level
+  }).eq('user_id',actorId) }
   await supabase.from('generosity_points').upsert({user_id:actorId,points:1,total_earned:1},
     {onConflict:'user_id',ignoreDuplicates:false})
   await supabase.from('farm_actions').insert({actor_id:actorId,target_farm_id:farmId,
@@ -766,12 +781,16 @@ export async function collectAnimal(animalId,userId){
   const cat=ANIMALS[a.animal_type]
   if(Date.now()<new Date(a.last_collected).getTime()+cat.produceHours*3600000) return null
   await supabase.from('farm_animals').update({last_collected:new Date().toISOString()}).eq('id',animalId)
-  await supabase.rpc('add_coins_xp',{uid:userId,coins:cat.value,xp:Math.floor(cat.value*0.1)})
+  const {data:cf}=await supabase.from('farms').select('coins,xp,level').eq('user_id',userId).single()
+  if(cf){ const nx=cf.xp+Math.floor(cat.value*0.1); await supabase.from('farms').update({
+    coins:cf.coins+cat.value,xp:nx,level:nx>=cf.level*100?cf.level+1:cf.level
+  }).eq('user_id',userId) }
   return {animal:cat}
 }
 export async function buyAnimal(farmId,animalType,userId){
   const cat=ANIMALS[animalType]; if(!cat||cat.generosityOnly) throw new Error('Cannot buy')
-  await supabase.rpc('decrement_coins',{uid:userId,amount:cat.cost})
+  const {data:bf}=await supabase.from('farms').select('coins').eq('user_id',userId).single()
+  if(bf) await supabase.from('farms').update({coins:Math.max(0,bf.coins-cat.cost)}).eq('user_id',userId)
   await supabase.from('farm_animals').insert({farm_id:farmId,animal_type:animalType})
 }
 export async function getFarmActions(farmId){
