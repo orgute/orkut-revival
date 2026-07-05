@@ -3196,6 +3196,26 @@ function AdminCleanup({ setToast }){
   )
 }
 
+/* ── CROP ANIMATOR — 2-frame sprite ── */
+function CropAnim({ f1, f2, sz, speed, id }){
+  const [frame,setFrame]=useState(0)
+  useEffect(()=>{
+    const t=setInterval(()=>setFrame(f=>1-f), speed*500)
+    return()=>clearInterval(t)
+  },[speed])
+  const emoji=frame===0?f1:f2
+  const rotate=frame===0?-2:2
+  const scale=frame===0?1:1.08
+  return (
+    <span style={{
+      fontSize:sz,lineHeight:1,display:'inline-block',
+      transform:`scale(${scale}) rotate(${rotate}deg)`,
+      transition:`transform ${speed*0.4}s ease`,
+      userSelect:'none',
+    }}>{emoji}</span>
+  )
+}
+
 /* ── FAZENDINHA PAGE ── */
 function FazendinhaPage({ myId, setPage, userId }){
   const isOwn = userId === myId
@@ -3379,34 +3399,62 @@ function FazendinhaPage({ myId, setPage, userId }){
                   const total=crop?crop.growHours*3600000:1
                   const elapsed=Date.now()-new Date(plot.planted_at).getTime()
                   const pct=Math.min(elapsed/total,1)
-                  const stage=pct<0.25?{emoji:'🌱',label:'semente'}
-                    :pct<0.5?{emoji:'🌿',label:'brotando'}
-                    :pct<0.75?{emoji:'🌾',label:'crescendo'}
-                    :{emoji:crop?.emoji||'🌾',label:'quase!'}
-                  return <>
-                    <div style={{fontSize:20}}>{stage.emoji}</div>
-                    <div style={{fontSize:8,color:'#fff',fontFamily:F_UI,marginTop:1,
-                      background:'rgba(0,0,0,.35)',borderRadius:8,padding:'1px 5px',
-                      maxWidth:'90%',textAlign:'center'}}>
-                      {stage.label}
+                  // Two-frame definitions: [frame1, frame2, fontSize, label]
+                  const stages=[
+                    {f1:'🌱',f2:'🪴',sz:28,label:'semente',speed:1.2},
+                    {f1:'🌿',f2:'☘️', sz:32,label:'brotando',speed:1.0},
+                    {f1:'🌾',f2:'🎋',sz:36,label:'crescendo',speed:0.8},
+                    {f1:crop?.emoji||'🌾',f2:crop?.emoji||'🌾',sz:40,label:'quase!',speed:0.6},
+                  ]
+                  const s=pct<0.25?stages[0]:pct<0.5?stages[1]:pct<0.75?stages[2]:stages[3]
+                  const animId=`crop-${plot.id}`
+                  return (
+                    <div style={{
+                      width:'100%',height:'100%',display:'flex',
+                      alignItems:'center',justifyContent:'center',
+                      position:'relative',overflow:'hidden',
+                    }}>
+                      <style>{`
+                        @keyframes ${animId} {
+                          0%,49%  { content: '${s.f1}'; transform: scale(1)   rotate(-2deg); }
+                          50%,100%{ content: '${s.f2}'; transform: scale(1.08) rotate(2deg);  }
+                        }
+                        .${animId} {
+                          animation: ${animId} ${s.speed}s steps(1) infinite;
+                          display:inline-block;
+                          font-size:${s.sz}px;
+                          line-height:1;
+                        }
+                      `}</style>
+                      <CropAnim f1={s.f1} f2={s.f2} sz={s.sz} speed={s.speed} id={animId}/>
+                      <div style={{position:'absolute',bottom:2,left:0,right:0,
+                        textAlign:'center',fontSize:8,color:'rgba(255,255,255,.9)',
+                        fontFamily:F_UI,fontWeight:700,
+                        textShadow:'0 1px 3px rgba(0,0,0,.6)',
+                        letterSpacing:'0.03em'}}>
+                        {timeLeft(plot.ready_at)}
+                      </div>
                     </div>
-                    <div style={{fontSize:8,color:'rgba(255,255,255,.8)',fontFamily:F_UI}}>
-                      {timeLeft(plot.ready_at)}
-                    </div>
-                    {/* Progress bar */}
-                    <div style={{position:'absolute',bottom:3,left:4,right:4,
-                      height:3,background:'rgba(0,0,0,.2)',borderRadius:2}}>
-                      <div style={{height:3,borderRadius:2,
-                        background:pct<0.5?'#90c060':pct<0.75?'#c0d040':'#f0c020',
-                        width:`${pct*100}%`,transition:'width 1s'}}/>
-                    </div>
-                  </>
+                  )
                 })()}
-                {plot.state==='ready'&&<>
-                  <div style={{fontSize:22}}>{CROPS[plot.crop_type]?.emoji||'✨'}</div>
-                  <div style={{fontSize:9,color:'#1a1a1a',fontFamily:F_UI,fontWeight:700}}>pronto!</div>
-                </>}
-                {plot.state==='empty'&&<div style={{fontSize:14,color:'rgba(255,255,255,.6)'}}>+</div>}
+                {plot.state==='ready'&&(()=>{
+                  const crop=CROPS[plot.crop_type]
+                  return (
+                    <div style={{width:'100%',height:'100%',display:'flex',
+                      alignItems:'center',justifyContent:'center',
+                      position:'relative',overflow:'hidden'}}>
+                      <CropAnim f1={crop?.emoji||'✨'} f2={crop?.emoji||'🌟'}
+                        sz={44} speed={0.5} id={`r-${plot.id}`}/>
+                      <div style={{position:'absolute',bottom:2,left:0,right:0,
+                        textAlign:'center',fontSize:8,fontFamily:F_UI,fontWeight:700,
+                        color:'#1a1a1a',textShadow:'0 1px 2px rgba(255,255,255,.8)'}}>
+                        colher!
+                      </div>
+                    </div>
+                  )
+                })()}
+                {plot.state==='empty'&&<div style={{fontSize:18,color:'rgba(255,255,255,.5)',
+                  userSelect:'none'}}>＋</div>}
               </div>
             ))}
           </div>
