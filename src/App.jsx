@@ -1586,6 +1586,20 @@ function ProfilePage({ myId, userId, setPage, toast }){
       {/* Right — hidden on mobile */}
       {!mob&&<RightSidebar myId={myId} viewId={targetId} setPage={setPage}/>}
       {mob&&!isOwn&&<div style={{marginTop:8}}>
+        <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
+          marginBottom:8,overflow:'hidden'}}>
+          {[['📝 recados',{name:'scrapbook',userId:targetId}],
+            ['📷 fotos',{name:'galeria',userId:targetId}],
+            ['🌾 fazendinha',{name:'fazendinha',userId:targetId}]].map(([label,pg])=>(
+            <div key={label} onClick={()=>setPage(pg)} style={{
+              padding:'10px 14px',fontSize:14,cursor:'pointer',
+              color:label.includes('🌾')?'#5a8a3c':BLUE,
+              fontWeight:label.includes('🌾')?700:400,
+              borderBottom:`1px solid ${BRD}`}}>
+              {label}
+            </div>
+          ))}
+        </div>
         <RightSidebar myId={myId} viewId={targetId} setPage={setPage}/>
       </div>}
     </div>
