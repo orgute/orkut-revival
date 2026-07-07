@@ -4239,8 +4239,8 @@ export default function App(){
       case 'scrapbook':   return <ScrapbookPage myId={myId} targetUserId={page?.userId||null} setPage={navTo} toast={setToast}/>
       case 'friends':     return <FriendsPage myId={myId} setPage={navTo} toast={setToast}/>
       case 'communities': return <CommunitiesPage myId={myId} toast={setToast} page={page}/>
-      case '__admin':     return <AdminCleanup setToast={setToast}/>
-      case '__waitlist':  return <WaitlistPanel myId={myId}/>
+      case '__admin':     return profile?.email==='elton.marques@gmail.com'?<AdminCleanup setToast={setToast}/>:null
+      case '__waitlist':  return profile?.email==='elton.marques@gmail.com'?<WaitlistPanel myId={myId}/>:null
       case 'fotosfeed':   return <FotosFeed myId={myId} setPage={navTo}/>
       case 'inbox':       return <InboxPage myId={myId} setPage={navTo}/>
       case 'taggedphotos': return <TaggedPhotosPage myId={myId} setPage={navTo}/>
