@@ -882,9 +882,9 @@ function HomePage({ profile, myId, setPage }){
                   color:BLUE,borderBottom:`1px solid ${BRD}`,
                 }}>{label}</div>
               ))}
-              <div onClick={()=>setPage({name:'fazendinha',userId:targetId})} style={{
+              <div onClick={()=>setPage('fazendinha')} style={{
                 padding:'9px 10px',fontSize:14,cursor:'pointer',
-                color:BLUE,borderBottom:`1px solid ${BRD}`,
+                color:'#5a8a3c',fontWeight:600,borderBottom:`1px solid ${BRD}`,
               }}>🌾 fazendinha</div>
 
             </div>
