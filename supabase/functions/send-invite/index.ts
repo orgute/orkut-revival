@@ -23,25 +23,21 @@ serve(async (req) => {
           Seu convite para o <strong>Orgute</strong> chegou.<br/>
           A recriação do Orkut — sem anúncios, sem algoritmo, só conexões reais.
         </p>
-        <a href="${inviteLink}" style="display:inline-block;margin:16px 0;background:#e8197d;
-          color:#fff;padding:14px 32px;border-radius:3px;text-decoration:none;
-          font-weight:700;font-family:Verdana,sans-serif;font-size:14px;">
-          aceitar convite →
-        </a>
-        <p style="color:#666;font-size:12px;line-height:1.6;margin-top:16px;">
-          Este link é pessoal e intransferível.<br/>
-          Cada membro convida até 10 pessoas de confiança.
-        </p>
+        <a href="${inviteLink}" style="display:inline-block;margin:16px 0;background:#e8197d;color:#fff;padding:14px 32px;border-radius:3px;text-decoration:none;font-weight:700;font-family:Verdana,sans-serif;font-size:14px;">aceitar convite →</a>
+        <p style="color:#666;font-size:12px;line-height:1.6;margin-top:16px;">Este link é pessoal e intransferível.<br/>Cada membro convida até 10 pessoas de confiança.</p>
+        <div style="margin-top:20px;padding:16px;background:#f0e8f5;border-radius:4px;text-align:center;">
+          <p style="color:#2a3f6f;font-size:13px;font-weight:700;margin:0 0 8px;">Conta pra galera que o Orkut voltou! 🧡</p>
+          <p style="color:#666;font-size:12px;line-height:1.6;margin:0 0 12px;">Siga e marque seus amigos nos stories!</p>
+          <div>
+            <a href="https://instagram.com/orguteoficial" style="display:inline-block;background:#e8197d;color:#fff;padding:8px 18px;border-radius:20px;text-decoration:none;font-weight:700;font-size:12px;margin:4px;">📸 Instagram</a>
+            <a href="https://tiktok.com/@orguteoficial" style="display:inline-block;background:#2a3f6f;color:#fff;padding:8px 18px;border-radius:20px;text-decoration:none;font-weight:700;font-size:12px;margin:4px;">🎵 TikTok</a>
+          </div>
+        </div>
         <hr style="border:none;border-top:1px solid #c8d0e0;margin:24px 0;"/>
-        <p style="color:#999;font-size:11px;">
-          <a href="https://orgute.org" style="color:#e8197d;">orgute.org</a> ·
-          <a href="https://instagram.com/orguteoficial" style="color:#999;">@orguteoficial</a>
-        </p>
+        <p style="color:#999;font-size:11px;"><a href="https://orgute.org" style="color:#e8197d;">orgute.org</a> · <a href="https://instagram.com/orguteoficial" style="color:#999;">@orguteoficial</a></p>
       </div>`
     })
   })
   const data = await res.json()
-  return new Response(JSON.stringify(data), {
-    headers: { ...cors, 'Content-Type': 'application/json' }
-  })
+  return new Response(JSON.stringify(data), { headers: { ...cors, 'Content-Type': 'application/json' } })
 })
