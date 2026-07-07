@@ -3389,7 +3389,8 @@ function FazendinhaPage({ myId, setPage, userId }){
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2500) }
 
   const load = async () => {
-    const f = await getOrCreateFarm(userId)
+    const f = isOwn ? await getOrCreateFarm(userId) : await getFarm(userId)
+    if (!f) { setLoading(false); return }
     setFarm(f)
     if (!isOwn) { const mf = await getOrCreateFarm(myId); setMyFarm(mf) }
     await checkReadyPlots(f.id)
