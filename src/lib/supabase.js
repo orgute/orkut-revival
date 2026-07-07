@@ -242,6 +242,15 @@ export async function useInviteCode(code, userId) {
   if (error) throw error
 }
 
+export async function createInviteCode(userId) {
+  const code = Math.random().toString(36).substring(2,10).toUpperCase()
+  const { data, error } = await supabase.from('invites')
+    .insert({ code, created_by: userId })
+    .select('code').single()
+  if (error) throw error
+  return data.code
+}
+
 export async function getMyInvites(userId) {
   const { data } = await supabase
     .from('invites')

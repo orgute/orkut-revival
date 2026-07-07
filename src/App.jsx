@@ -13,7 +13,7 @@ import { supabase, signUp, signIn, signOut, getProfile, updateProfile,
   getFotosFeed, getPhotoComments, addPhotoComment, deletePhotoComment,
   getSentRequests, getPendingDepoimentos, approveDepoimento, rejectDepoimento,
   getFanCount, getIsFan, addFan, removeFan, getMessageThreads, getFans,
-  getWaitlist, markInvited, updateWaitlistNotes, deleteWaitlistEntry,
+  getWaitlist, markInvited, updateWaitlistNotes, deleteWaitlistEntry, createInviteCode,
   CROPS, ANIMALS, xpForLevel, getOrCreateFarm, getFarm, getPlots, getAnimals,
   checkReadyPlots, plantCrop, harvestOwnPlot, stealCrop, giftHarvest,
   collectAnimal, buyAnimal, getFarmActions, getGenerosityPoints, getFarmLeaderboard,
@@ -3966,15 +3966,14 @@ function WaitlistPanel({ myId }){
   }
 
   const sendInvite=async(entry)=>{
-    // Generate invite code for this person
-    const {data:invite}=await supabase.from('invites')
-      .select('code').eq('owner_id',myId).eq('used',false).limit(1).single()
-    if(!invite){alert('Sem convites disponíveis.');return}
-    const link=`https://orgute.org?convite=${invite.code}`
-    navigator.clipboard.writeText(link)
-    await markInvited(entry.id)
-    setList(p=>p.map(e=>e.id===entry.id?{...e,invited_at:new Date().toISOString()}:e))
-    setCopied(entry.id+'inv'); setTimeout(()=>setCopied(null),2000)
+    try{
+      const code=await createInviteCode(myId)
+      const link=`https://orkut-revival-app.vercel.app?convite=${code}`
+      await navigator.clipboard.writeText(link)
+      await markInvited(entry.id)
+      setList(p=>p.map(e=>e.id===entry.id?{...e,invited_at:new Date().toISOString()}:e))
+      setCopied(entry.id+'inv'); setTimeout(()=>setCopied(null),2000)
+    }catch(e){ alert('Erro: '+e.message) }
   }
 
   const pending=list.filter(e=>!e.invited_at).length
