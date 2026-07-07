@@ -1175,6 +1175,10 @@ function ProfilePage({ myId, userId, setPage, toast }){
               {label}
             </div>
           ))}
+          <div onClick={()=>setPage({name:'fazendinha',userId:targetId})} style={{
+            padding:'3px 10px',fontSize:13,cursor:'pointer',color:'#5a8a3c',fontWeight:600}}>
+            🌾 fazendinha
+          </div>
         </div>
       </div>}
 
