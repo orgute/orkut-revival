@@ -710,15 +710,11 @@ function FarmSidebarWidget({ myId, setPage }){
       </div>
       {/* Stats row */}
       <div style={{display:'flex',justifyContent:'space-between',
-        fontSize:11,fontFamily:F_UI,color:MUTED,marginBottom:6}}>
+        fontSize:11,fontFamily:F_UI,color:MUTED}}>
         <span>💰 {farm.coins}</span>
         <span>⭐ nível {farm.level}</span>
-        <span>🌾 {planted} plantado{planted!==1?'s':''}</span>
+        <span>🌾 {planted}</span>
       </div>
-      <button style={{...btnBl,width:'100%',fontSize:11,padding:'5px'}}
-        onClick={()=>setPage('fazendinha')}>
-        abrir fazenda →
-      </button>
     </RightPanel>
   )
 }
@@ -3479,11 +3475,11 @@ function FazendinhaPage({ myId, setPage, userId }){
   }
 
   const plotColor = (plot) => {
-    if (plot.state === 'empty') return '#c8b89a'
-    if (plot.state === 'planted') return '#8ba865'
-    if (plot.state === 'weed') return '#5a7a2a'
-    if (plot.state === 'withered') return '#6b4a2a'
-    return '#f5d060' // ready — golden
+    if (plot.state === 'empty') return '#3d1f08'
+    if (plot.state === 'planted') return '#2d5a18'
+    if (plot.state === 'weed') return '#1a4010'
+    if (plot.state === 'withered') return '#2a1005'
+    return '#2d5a18' // ready — stays green, glow handles it
   }
 
   const coinsBal = isOwn ? farm?.coins : myFarm?.coins
@@ -3551,51 +3547,51 @@ function FazendinhaPage({ myId, setPage, userId }){
         <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
           marginBottom:8,overflow:'hidden'}}>
 
-          {/* Farm background */}
+          {/* Farm — OG Colheita Feliz style */}
           <div style={{
-            background:'linear-gradient(180deg,#87ceeb 0%,#87ceeb 30%,#5a8a3c 30%,#6aaa3c 100%)',
-            padding:'12px 12px 0',position:'relative',minHeight:320,
+            background:'linear-gradient(180deg,#a8d878 0%,#7cbd4a 60%,#5a9a2a 100%)',
+            padding:'10px 10px 0',position:'relative',minHeight:300,
+            borderRadius:'3px 3px 0 0',
           }}>
-            {/* Farmhouse corner */}
-            <div style={{position:'absolute',top:8,right:12,fontSize:28,filter:'drop-shadow(1px 1px 2px rgba(0,0,0,.3))'}}>🏡</div>
-            {/* Trees */}
-            <div style={{position:'absolute',top:6,left:10,fontSize:22}}>🌳</div>
-            <div style={{position:'absolute',top:8,left:38,fontSize:18}}>🌳</div>
+            {/* Decorative elements */}
+            <div style={{position:'absolute',top:6,left:8,fontSize:26,
+              filter:'drop-shadow(1px 2px 2px rgba(0,0,0,.3))'}}>🌳</div>
+            <div style={{position:'absolute',top:8,left:36,fontSize:20}}>🌳</div>
+            <div style={{position:'absolute',top:4,right:10,fontSize:24,
+              filter:'drop-shadow(1px 2px 2px rgba(0,0,0,.3))'}}>🏡</div>
+            <div style={{position:'absolute',top:10,right:42,fontSize:16}}>🌻</div>
 
-            {/* Fence border */}
-            <div style={{
-              background:'#8B4513',height:8,borderRadius:4,
-              margin:'0 0 8px',opacity:0.7,
-              boxShadow:'0 2px 4px rgba(0,0,0,.2)'
-            }}/>
+            {/* Wooden fence top */}
+            <div style={{display:'flex',gap:3,marginBottom:6,marginTop:28,paddingLeft:4}}>
+              {Array.from({length:12}).map((_,i)=>(
+                <div key={i} style={{width:12,height:18,background:'#c8882a',
+                  borderRadius:'2px 2px 0 0',flexShrink:0,
+                  boxShadow:'inset -2px 0 3px rgba(0,0,0,.2)',
+                  borderBottom:'3px solid #a06820'}}/>
+              ))}
+            </div>
 
-            {/* Coin animation container */}
+            {/* Coin animation */}
             {coinAnim&&<div style={{
-              position:'absolute',top:'40%',left:'50%',
+              position:'absolute',top:'35%',left:'50%',
               transform:'translateX(-50%)',
-              fontSize:16,fontWeight:700,color:'#f5d060',
+              fontSize:18,fontWeight:700,color:'#f5d060',
               fontFamily:F_UI,pointerEvents:'none',
               animation:'coinFloat 1.2s ease-out forwards',
-              textShadow:'0 1px 4px rgba(0,0,0,.6)',
+              textShadow:'0 1px 6px rgba(0,0,0,.8)',
               zIndex:10,
-            }}>💰 +{coinAnim}</div>}
+            }}>+{coinAnim} 💰</div>}
 
-            {/* 3D perspective grid */}
-            <div style={{
-              perspective:'600px',
-              perspectiveOrigin:'50% 0%',
-            }}>
+            {/* Plot grid — dark soil look */}
             <div style={{
               display:'grid',
               gridTemplateColumns:'repeat(4,1fr)',
-              gap:4,
+              gap:3,
               padding:'4px',
-              background:'rgba(139,90,43,.15)',
-              borderRadius:4,
-              boxShadow:'inset 0 2px 8px rgba(0,0,0,.2)',
-              transform:'rotateX(28deg)',
-              transformOrigin:'top center',
-              transformStyle:'preserve-3d',
+              background:'#5a3010',
+              borderRadius:'2px',
+              boxShadow:'0 4px 12px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.1)',
+              border:'3px solid #8B5020',
             }}>
             {plots.map(plot=>(
               <div key={plot.id} onClick={()=>handlePlotClick(plot)}
@@ -3685,32 +3681,27 @@ function FazendinhaPage({ myId, setPage, userId }){
                 </div>}
                 {plot.state==='empty'&&<div style={{
                   width:'100%',height:'100%',position:'relative',overflow:'hidden',
-                  background:'linear-gradient(170deg,#9a6b3a 0%,#7a4f28 50%,#6b3e1a 100%)',
+                  background:'linear-gradient(160deg,#4a2510 0%,#3a1a08 60%,#2d1205 100%)',
                 }}>
-                  {/* Deep furrow lines — horizontal like plowed soil */}
+                  {/* OG-style furrows */}
+                  {[0,1,2,3,4,5].map(i=>(
+                    <div key={i} style={{position:'absolute',
+                      top:`${8+i*16}%`,left:0,right:0,
+                      height:3,
+                      background:'linear-gradient(90deg,transparent,rgba(120,60,0,.5),transparent)',
+                    }}/>
+                  ))}
+                  {/* Highlight ridges */}
                   {[0,1,2,3,4].map(i=>(
                     <div key={i} style={{position:'absolute',
-                      top:`${15+i*17}%`,left:'4%',right:'4%',
-                      height:2,background:'rgba(0,0,0,.25)',borderRadius:1}}/>
+                      top:`${14+i*16}%`,left:'5%',right:'5%',
+                      height:1,background:'rgba(180,100,30,.3)',
+                    }}/>
                   ))}
-                  {/* Lighter soil highlights between furrows */}
-                  {[0,1,2,3].map(i=>(
-                    <div key={i} style={{position:'absolute',
-                      top:`${22+i*17}%`,left:'8%',right:'8%',
-                      height:3,background:'rgba(200,150,80,.2)',borderRadius:1}}/>
-                  ))}
-                  {/* Stones */}
-                  <div style={{position:'absolute',bottom:'12%',left:'15%',
-                    width:6,height:4,background:'#c8a870',borderRadius:3,opacity:.7}}/>
-                  <div style={{position:'absolute',top:'18%',right:'18%',
-                    width:5,height:3,background:'#b89060',borderRadius:2,opacity:.6}}/>
-                  <div style={{position:'absolute',bottom:'30%',right:'25%',
-                    width:4,height:3,background:'#c0a060',borderRadius:2,opacity:.5}}/>
                 </div>}
               </div>
             ))}
-          </div>{/* end grid inner */}
-          </div>{/* end perspective wrapper */}
+          </div>{/* end plot grid */}
         </div>{/* end farm background */}
 
         {/* Bottom toolbar */}
