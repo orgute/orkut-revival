@@ -3277,6 +3277,9 @@ function FazendinhaPage({ myId, setPage, userId }){
     ])
     setPlots(p); setAnimals(a); setActions(acts)
     setGenPoints(g.total_earned); setPopularity(g.total_earned*10); setLoading(false)
+    // Warn if withered plots
+    const withered=(await getPlots(f.id)).filter(p=>p.state==='withered')
+    if(withered.length>0) showToast(`⚠️ ${withered.length} planta(s) murcharam! Use limpar.`)
   }
 
   useEffect(() => { load() }, [userId])
@@ -3293,6 +3296,7 @@ function FazendinhaPage({ myId, setPage, userId }){
           await supabase.from('plots').update({state:'weed'}).eq('id',plot.id)
         }
       }
+      // Wither check handled in checkReadyPlots
       setPlots(await getPlots(farm.id))
     }, 30000)
     return () => clearInterval(t)
@@ -3321,9 +3325,10 @@ function FazendinhaPage({ myId, setPage, userId }){
         await supabase.from('plots').update({ready_at:newReady}).eq('id',plot.id)
         showToast('💧 Regado! +20% velocidade'); load()
       } else if (activeTool === 'clean') {
-        if (plot.state !== 'weed') { showToast('Nada para limpar aqui!'); return }
+        if (plot.state !== 'weed' && plot.state !== 'withered') { showToast('Nada para limpar aqui!'); return }
         await supabase.from('plots').update({state:'empty',crop_type:null,planted_at:null,ready_at:null}).eq('id',plot.id)
-        showToast('🪣 Praga removida!'); load()
+        const msg = plot.state==='withered'?'🪣 Planta murcha removida!':'🪣 Praga removida!'
+        showToast(msg); load()
       } else if (plot.state === 'empty') {
         setSelectedPlot(plot); setTab('market')
       } else if (plot.state === 'ready') {
@@ -3381,6 +3386,7 @@ function FazendinhaPage({ myId, setPage, userId }){
     if (plot.state === 'empty') return '#c8b89a'
     if (plot.state === 'planted') return '#8ba865'
     if (plot.state === 'weed') return '#5a7a2a'
+    if (plot.state === 'withered') return '#6b4a2a'
     return '#f5d060' // ready — golden
   }
 
@@ -3556,6 +3562,15 @@ function FazendinhaPage({ myId, setPage, userId }){
                     </div>
                   )
                 })()}
+                {plot.state==='withered'&&<div style={{
+                  width:'100%',height:'100%',display:'flex',flexDirection:'column',
+                  alignItems:'center',justifyContent:'center',gap:2}}>
+                  <span style={{fontSize:32}}>🥀</span>
+                  <span style={{fontSize:9,color:'#fff',fontFamily:F_UI,fontWeight:700,
+                    background:'rgba(80,40,0,.7)',borderRadius:8,padding:'1px 6px'}}>
+                    murcha!
+                  </span>
+                </div>}
                 {plot.state==='weed'&&<div style={{
                   width:'100%',height:'100%',display:'flex',flexDirection:'column',
                   alignItems:'center',justifyContent:'center',gap:2}}>
@@ -3599,7 +3614,7 @@ function FazendinhaPage({ myId, setPage, userId }){
             </button>
           ))}
           <div style={{marginLeft:8,fontSize:11,color:'rgba(255,255,255,.7)',fontFamily:F_UI}}>
-            {activeTool?`modo: ${activeTool}`:'selecione uma ação'}
+            {activeTool==='clean'?'toque em 🌿 pragas ou 🥀 murchas':activeTool?`modo: ${activeTool}`:'selecione uma ação'}
           </div>
         </div>}
         </div>{/* end farm card */}

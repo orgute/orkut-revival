@@ -718,8 +718,21 @@ export async function getAnimals(farmId){
   return data||[]
 }
 export async function checkReadyPlots(farmId){
+  const now = new Date().toISOString()
+  // Mark planted plots as ready
   await supabase.from('plots').update({state:'ready'})
-    .eq('farm_id',farmId).eq('state','planted').lte('ready_at',new Date().toISOString())
+    .eq('farm_id',farmId).eq('state','planted').lte('ready_at',now)
+  // Wither ready plots that have been sitting too long (growHours * 1.5 after ready_at)
+  const {data:readyPlots} = await supabase.from('plots').select('id,crop_type,ready_at')
+    .eq('farm_id',farmId).eq('state','ready')
+  for(const p of readyPlots||[]){
+    const crop = CROPS[p.crop_type]
+    if(!crop) continue
+    const witherAt = new Date(new Date(p.ready_at).getTime() + crop.growHours*3600000*1.5)
+    if(Date.now() > witherAt){
+      await supabase.from('plots').update({state:'withered'}).eq('id',p.id)
+    }
+  }
 }
 export async function plantCrop(plotId,cropType,userId){
   const crop=CROPS[cropType]; if(!crop) return
