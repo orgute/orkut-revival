@@ -387,7 +387,7 @@ function AuthScreen({ onAuth }){
         <span style={{color:PINK,cursor:'pointer'}} onClick={async()=>{
           if(!form.email){alert('Digite seu e-mail primeiro.');return}
           const {error}=await supabase.auth.resetPasswordForEmail(form.email,{
-            redirectTo:'https://orkut-revival-app.vercel.app'
+            redirectTo:'https://orkut-revival-app.vercel.app/reset-password.html'
           })
           if(error) alert('Erro: '+error.message)
           else alert('E-mail de redefinição enviado! Verifique sua caixa de entrada.')
@@ -4099,7 +4099,7 @@ export default function App(){
     }
     const onKey=(e)=>{
       if(e.ctrlKey&&e.shiftKey&&e.key==='A') setPage('__admin')
-      if(e.ctrlKey&&e.shiftKey&&e.key==='W') setPage('__waitlist')
+      if(e.ctrlKey&&e.shiftKey&&e.key==='L') setPage('__waitlist')
     }
     window.addEventListener('keydown',onKey)
     return()=>{ subscription.unsubscribe(); window.removeEventListener('keydown',onKey) }
