@@ -3969,6 +3969,15 @@ function WaitlistPanel({ myId }){
     try{
       const code=await createInviteCode(myId)
       const link=`https://orkut-revival-app.vercel.app?convite=${code}`
+      // Send invite email via Edge Function
+      await fetch('https://uakmvwwgtjrwdymfwtrf.supabase.co/functions/v1/send-invite',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVha212d3dndGpyd2R5bWZ3dHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDcyMzYsImV4cCI6MjA5NTcyMzIzNn0.K_y8XXzh7N-M-aks5WLXn3_FWzxrsBEZ12-Y82_24po'
+        },
+        body:JSON.stringify({name:entry.name, email:entry.email, inviteLink:link})
+      })
       await navigator.clipboard.writeText(link)
       await markInvited(entry.id)
       setList(p=>p.map(e=>e.id===entry.id?{...e,invited_at:new Date().toISOString()}:e))
