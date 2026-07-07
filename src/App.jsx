@@ -3580,8 +3580,26 @@ function FazendinhaPage({ myId, setPage, userId }){
                     praga!
                   </span>
                 </div>}
-                {plot.state==='empty'&&<div style={{fontSize:18,color:'rgba(255,255,255,.5)',
-                  userSelect:'none'}}>＋</div>}
+                {plot.state==='empty'&&<div style={{
+                  width:'100%',height:'100%',position:'relative',overflow:'hidden',
+                  background:'linear-gradient(160deg,#a0784a 0%,#8B6240 40%,#7a5535 100%)',
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                }}>
+                  {/* Soil texture lines */}
+                  <div style={{position:'absolute',inset:0,opacity:.25,
+                    backgroundImage:'repeating-linear-gradient(45deg,#5a3a1a 0px,transparent 1px,transparent 5px)',
+                    backgroundSize:'6px 6px'}}/>
+                  {/* Small stones */}
+                  <div style={{position:'absolute',bottom:4,left:6,width:5,height:3,
+                    background:'#c8a87a',borderRadius:2,opacity:.6}}/>
+                  <div style={{position:'absolute',top:6,right:5,width:4,height:3,
+                    background:'#c8a87a',borderRadius:2,opacity:.5}}/>
+                  <div style={{position:'absolute',bottom:7,right:8,width:3,height:2,
+                    background:'#b89060',borderRadius:1,opacity:.5}}/>
+                  {/* Plant here hint */}
+                  <span style={{fontSize:11,color:'rgba(255,255,255,.4)',
+                    fontWeight:700,userSelect:'none',zIndex:1}}>+</span>
+                </div>}
               </div>
             ))}
           </div>{/* end plot grid */}
