@@ -318,11 +318,11 @@ function GuestbookTab(){
 }
 
 function AuthScreen({ onAuth }){
-  const [authTab,setAuthTab]=useState(()=>{
+  const [authTab,setAuthTab]=useState('login')
+  const [mode,setMode]=useState(()=>{
     const params=new URLSearchParams(window.location.search)
     return params.get('convite')?'signup':'login'
   })
-  const [mode,setMode]=useState('login')
   const [form,setForm]=useState(()=>{
     const params=new URLSearchParams(window.location.search)
     const invite=params.get('convite')||''
