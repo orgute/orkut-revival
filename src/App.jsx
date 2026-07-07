@@ -3214,6 +3214,19 @@ function AdminCleanup({ setToast }){
   )
 }
 
+/* ── FARM CSS ── */
+const FarmStyle=()=><style>{`
+  @keyframes coinFloat {
+    0%   { opacity:1; transform:translateX(-50%) translateY(0); }
+    100% { opacity:0; transform:translateX(-50%) translateY(-60px); }
+  }
+  @keyframes weedPop {
+    0%   { transform:scale(0) rotate(-20deg); }
+    60%  { transform:scale(1.2) rotate(5deg); }
+    100% { transform:scale(1) rotate(0deg); }
+  }
+`}</style>
+
 /* ── CROP ANIMATOR — 2-frame sprite ── */
 function CropAnim({ f1, f2, sz, speed, id }){
   const [frame,setFrame]=useState(0)
@@ -3242,8 +3255,11 @@ function FazendinhaPage({ myId, setPage, userId }){
   const [animals, setAnimals] = useState([])
   const [actions, setActions] = useState([])
   const [genPoints, setGenPoints] = useState(0)
+  const [popularity, setPopularity] = useState(0)
   const [tab, setTab] = useState('farm') // farm | market | leaderboard
   const [selectedPlot, setSelectedPlot] = useState(null)
+  const [activeTool, setActiveTool] = useState('harvest') // plant|water|harvest|clean
+  const [coinAnim, setCoinAnim] = useState(null)
   const [toast, setToast] = useState('')
   const [loading, setLoading] = useState(true)
   const [myFarm, setMyFarm] = useState(null)
@@ -3260,28 +3276,59 @@ function FazendinhaPage({ myId, setPage, userId }){
       getFarmActions(f.id), getGenerosityPoints(isOwn ? myId : userId)
     ])
     setPlots(p); setAnimals(a); setActions(acts)
-    setGenPoints(g.total_earned); setLoading(false)
+    setGenPoints(g.total_earned); setPopularity(g.total_earned*10); setLoading(false)
   }
 
   useEffect(() => { load() }, [userId])
 
-  // Timer to refresh ready plots every 30s
+  // Timer to refresh ready plots every 30s + random weed spawn
   useEffect(() => {
     const t = setInterval(async () => {
       if (!farm) return
       await checkReadyPlots(farm.id)
-      const p = await getPlots(farm.id); setPlots(p)
+      // 8% chance per refresh that a planted plot gets a weed
+      const p = await getPlots(farm.id)
+      for (const plot of p) {
+        if (plot.state === 'planted' && Math.random() < 0.08) {
+          await supabase.from('plots').update({state:'weed'}).eq('id',plot.id)
+        }
+      }
+      setPlots(await getPlots(farm.id))
     }, 30000)
     return () => clearInterval(t)
   }, [farm])
 
+  const triggerCoin = (val) => {
+    setCoinAnim(val)
+    setTimeout(() => setCoinAnim(null), 1200)
+  }
+
   const handlePlotClick = async (plot) => {
     if (!farm) return
     if (isOwn) {
-      if (plot.state === 'empty') { setSelectedPlot(plot); setTab('market') }
-      else if (plot.state === 'ready') {
+      if (activeTool === 'plant' || (activeTool === null && plot.state === 'empty')) {
+        setSelectedPlot(plot); setTab('market')
+      } else if (activeTool === 'harvest' || (activeTool === null && plot.state === 'ready')) {
+        if (plot.state !== 'ready') { showToast('Ainda não está pronto!'); return }
         const r = await harvestOwnPlot(plot.id, myId)
-        if (r) { showToast(`+${r.crop.value} moedas 🌾`); load() }
+        if (r) { triggerCoin(r.crop.value); load() }
+      } else if (activeTool === 'water') {
+        if (plot.state !== 'planted') { showToast('Nada para regar aqui!'); return }
+        // Water speeds up grow by 20% — update ready_at
+        const crop = CROPS[plot.crop_type]
+        if (!crop) return
+        const newReady = new Date(new Date(plot.ready_at).getTime() - crop.growHours*3600000*0.2).toISOString()
+        await supabase.from('plots').update({ready_at:newReady}).eq('id',plot.id)
+        showToast('💧 Regado! +20% velocidade'); load()
+      } else if (activeTool === 'clean') {
+        if (plot.state !== 'weed') { showToast('Nada para limpar aqui!'); return }
+        await supabase.from('plots').update({state:'empty',crop_type:null,planted_at:null,ready_at:null}).eq('id',plot.id)
+        showToast('🪣 Praga removida!'); load()
+      } else if (plot.state === 'empty') {
+        setSelectedPlot(plot); setTab('market')
+      } else if (plot.state === 'ready') {
+        const r = await harvestOwnPlot(plot.id, myId)
+        if (r) { triggerCoin(r.crop.value); load() }
       }
     } else {
       if (plot.state !== 'ready') return
@@ -3333,6 +3380,7 @@ function FazendinhaPage({ myId, setPage, userId }){
   const plotColor = (plot) => {
     if (plot.state === 'empty') return '#c8b89a'
     if (plot.state === 'planted') return '#8ba865'
+    if (plot.state === 'weed') return '#5a7a2a'
     return '#f5d060' // ready — golden
   }
 
@@ -3342,6 +3390,7 @@ function FazendinhaPage({ myId, setPage, userId }){
 
   return (
     <div style={{maxWidth:700,margin:'0 auto',padding:'8px'}}>
+      <FarmStyle/>
       {/* Toast */}
       {toast&&<div style={{position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',
         background:'#2a3f6f',color:WHITE,padding:'8px 20px',borderRadius:20,
@@ -3362,7 +3411,7 @@ function FazendinhaPage({ myId, setPage, userId }){
           </div>
           <div style={{display:'flex',gap:16,alignItems:'center'}}>
             {isOwn&&<span style={{fontSize:13,color:WHITE,fontFamily:F_UI}}>
-              💰 {farm?.coins} &nbsp;⭐ nível {farm?.level}
+              💰 {farm?.coins} &nbsp;⭐ nível {farm?.level} &nbsp;🌟 pop {popularity}
             </span>}
             {!isOwn&&<span style={{fontSize:13,color:WHITE,fontFamily:F_UI}}>
               💰 {coinsBal} moedas
@@ -3396,13 +3445,49 @@ function FazendinhaPage({ myId, setPage, userId }){
 
       {/* ── FARM TAB ── */}
       {tab==='farm'&&<>
-        {/* Plot grid 4x4 */}
+        {/* ── FARM VISUAL ── */}
         <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
-          padding:12,marginBottom:8}}>
-          <div style={{fontWeight:700,fontSize:12,color:MUTED,fontFamily:F_UI,marginBottom:8}}>
-            {isOwn?'Clique em um terreno vazio para plantar, dourado para colher':'Clique em terrenos dourados para agir'}
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
+          marginBottom:8,overflow:'hidden'}}>
+
+          {/* Farm background */}
+          <div style={{
+            background:'linear-gradient(180deg,#87ceeb 0%,#87ceeb 30%,#5a8a3c 30%,#6aaa3c 100%)',
+            padding:'12px 12px 0',position:'relative',minHeight:320,
+          }}>
+            {/* Farmhouse corner */}
+            <div style={{position:'absolute',top:8,right:12,fontSize:28,filter:'drop-shadow(1px 1px 2px rgba(0,0,0,.3))'}}>🏡</div>
+            {/* Trees */}
+            <div style={{position:'absolute',top:6,left:10,fontSize:22}}>🌳</div>
+            <div style={{position:'absolute',top:8,left:38,fontSize:18}}>🌳</div>
+
+            {/* Fence border */}
+            <div style={{
+              background:'#8B4513',height:8,borderRadius:4,
+              margin:'0 0 8px',opacity:0.7,
+              boxShadow:'0 2px 4px rgba(0,0,0,.2)'
+            }}/>
+
+            {/* Coin animation container */}
+            {coinAnim&&<div style={{
+              position:'absolute',top:'40%',left:'50%',
+              transform:'translateX(-50%)',
+              fontSize:16,fontWeight:700,color:'#f5d060',
+              fontFamily:F_UI,pointerEvents:'none',
+              animation:'coinFloat 1.2s ease-out forwards',
+              textShadow:'0 1px 4px rgba(0,0,0,.6)',
+              zIndex:10,
+            }}>💰 +{coinAnim}</div>}
+
+            {/* Isometric-style grid — rotateX for depth illusion */}
+            <div style={{
+              display:'grid',
+              gridTemplateColumns:'repeat(4,1fr)',
+              gap:4,
+              padding:'4px',
+              background:'rgba(139,90,43,.15)',
+              borderRadius:4,
+              boxShadow:'inset 0 2px 8px rgba(0,0,0,.2)',
+            }}>
             {plots.map(plot=>(
               <div key={plot.id} onClick={()=>handlePlotClick(plot)}
                 style={{aspectRatio:'1',borderRadius:4,background:plotColor(plot),
@@ -3471,12 +3556,53 @@ function FazendinhaPage({ myId, setPage, userId }){
                     </div>
                   )
                 })()}
+                {plot.state==='weed'&&<div style={{
+                  width:'100%',height:'100%',display:'flex',flexDirection:'column',
+                  alignItems:'center',justifyContent:'center',gap:2}}>
+                  <span style={{fontSize:32,animation:'weedPop .4s ease'}}>🌿</span>
+                  <span style={{fontSize:9,color:'#fff',fontFamily:F_UI,fontWeight:700,
+                    background:'rgba(180,0,0,.6)',borderRadius:8,padding:'1px 6px'}}>
+                    praga!
+                  </span>
+                </div>}
                 {plot.state==='empty'&&<div style={{fontSize:18,color:'rgba(255,255,255,.5)',
                   userSelect:'none'}}>＋</div>}
               </div>
             ))}
+          </div>{/* end plot grid */}
+        </div>{/* end farm background */}
+
+        {/* Bottom toolbar */}
+        {isOwn&&<div style={{
+          background:'#5a3a1a',padding:'8px 12px',
+          display:'flex',gap:6,alignItems:'center',
+          justifyContent:'center',flexWrap:'wrap',
+        }}>
+          {[
+            {icon:'🌱',label:'plantar',action:'plant'},
+            {icon:'💧',label:'regar',action:'water'},
+            {icon:'🌾',label:'colher',action:'harvest'},
+            {icon:'🪣',label:'limpar',action:'clean'},
+          ].map(t=>(
+            <button key={t.action}
+              onClick={()=>setActiveTool(activeTool===t.action?null:t.action)}
+              style={{
+                display:'flex',flexDirection:'column',alignItems:'center',gap:2,
+                background:activeTool===t.action?'#f5d060':'rgba(255,255,255,.15)',
+                border:`2px solid ${activeTool===t.action?'#c8a000':'rgba(255,255,255,.3)'}`,
+                borderRadius:6,padding:'6px 10px',cursor:'pointer',
+                color:activeTool===t.action?'#1a1a1a':WHITE,
+                transition:'all .15s',minWidth:52,
+              }}>
+              <span style={{fontSize:20}}>{t.icon}</span>
+              <span style={{fontSize:9,fontFamily:F_UI,fontWeight:700}}>{t.label}</span>
+            </button>
+          ))}
+          <div style={{marginLeft:8,fontSize:11,color:'rgba(255,255,255,.7)',fontFamily:F_UI}}>
+            {activeTool?`modo: ${activeTool}`:'selecione uma ação'}
           </div>
-        </div>
+        </div>}
+        </div>{/* end farm card */}
 
         {/* Friend action modal */}
         {!isOwn&&selectedPlot&&selectedPlot.state==='ready'&&(
