@@ -636,7 +636,7 @@ function RightPanel({ title, children, onTitleClick }){
 }
 
 /* ── FARM SIDEBAR WIDGET ── */
-function FarmSidebarWidget({ myId, setPage }){
+function FarmSidebarWidget({ myId, navId, setPage }){
   const [farm,setFarm]=useState(null)
   const [plots,setPlots]=useState([])
   const [loading,setLoading]=useState(true)
@@ -667,7 +667,7 @@ function FarmSidebarWidget({ myId, setPage }){
 
   return (
     <RightPanel title={
-      <span onClick={()=>setPage('fazendinha')} style={{cursor:'pointer'}}>
+      <span onClick={()=>setPage(navId?{name:'fazendinha',userId:navId}:'fazendinha')} style={{cursor:'pointer'}}>
         🌾 fazendinha
         {ready>0&&<span style={{marginLeft:6,background:PINK,color:WHITE,
           fontSize:9,borderRadius:8,padding:'1px 6px',fontWeight:700}}>
@@ -684,7 +684,7 @@ function FarmSidebarWidget({ myId, setPage }){
         background:'linear-gradient(180deg,#87ceeb 0%,#87ceeb 25%,#5a8a3c 25%,#6aaa3c 100%)',
         borderRadius:3,padding:'6px',marginBottom:8,cursor:'pointer',
         position:'relative',
-      }} onClick={()=>setPage('fazendinha')}>
+      }} onClick={()=>setPage(navId?{name:'fazendinha',userId:navId}:'fazendinha')}>
         {/* Tiny farmhouse */}
         <div style={{position:'absolute',top:2,right:4,fontSize:12}}>🏡</div>
         <div style={{
@@ -779,7 +779,7 @@ function RightSidebar({ myId, viewId, setPage }){
             ))}
           </div>}
       </RightPanel>
-      <FarmSidebarWidget myId={isOwnSidebar?myId:targetSidebarId} setPage={setPage}/>
+      <FarmSidebarWidget myId={isOwnSidebar?myId:targetSidebarId} navId={isOwnSidebar?null:targetSidebarId} setPage={setPage}/>
     </aside>
   )
 }
@@ -3623,18 +3623,6 @@ function FazendinhaPage({ myId, setPage, userId }){
                       alignItems:'center',justifyContent:'center',
                       position:'relative',overflow:'hidden',
                     }}>
-                      <style>{`
-                        @keyframes ${animId} {
-                          0%,49%  { content: '${s.f1}'; transform: scale(1)   rotate(-2deg); }
-                          50%,100%{ content: '${s.f2}'; transform: scale(1.08) rotate(2deg);  }
-                        }
-                        .${animId} {
-                          animation: ${animId} ${s.speed}s steps(1) infinite;
-                          display:inline-block;
-                          font-size:${s.sz}px;
-                          line-height:1;
-                        }
-                      `}</style>
                       <CropAnim f1={s.f1} f2={s.f2} sz={s.sz} speed={s.speed} id={animId}/>
                       <div style={{position:'absolute',bottom:2,left:0,right:0,
                         textAlign:'center',fontSize:8,color:'rgba(255,255,255,.9)',
@@ -4184,6 +4172,7 @@ export default function App(){
       <OFadeLogo size={40}/>
     </div>
   )
+  if(resetMode)return null // already rendered above
   if(!session)return <AuthScreen onAuth={()=>supabase.auth.getSession().then(({data:{session}})=>setSession(session))}/>
 
   const myId=session.user.id
