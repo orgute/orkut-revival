@@ -328,6 +328,7 @@ function AuthScreen({ onAuth }){
     const invite=params.get('convite')||''
     return {email:'',password:'',name:'',invite}
   })
+  const inviteFromUrl=!!new URLSearchParams(window.location.search).get('convite')
   const [err,setErr]=useState('')
   const [loading,setLoading]=useState(false)
   const [signupDone,setSignupDone]=useState(false)
@@ -425,7 +426,7 @@ function AuthScreen({ onAuth }){
     </div>
     :<div>
       {[['nome:','name','text'],['e-mail:','email','email'],
-        ['senha:','password','password'],['convite:','invite','text']].map(([l,k,t])=>(
+        ['senha:','password','password'],...(inviteFromUrl?[]:[['convite:','invite','text']])].map(([l,k,t])=>(
         <div key={k} style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
           <label style={{fontSize:12,fontFamily:F_UI,color:TEXT,width:68,textAlign:'right'}}>{l}</label>
           <input style={ri} type={t} value={form[k]} onChange={e=>f(k,e.target.value)}/>
