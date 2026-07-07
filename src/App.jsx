@@ -779,7 +779,7 @@ function RightSidebar({ myId, viewId, setPage }){
             ))}
           </div>}
       </RightPanel>
-      {isOwnSidebar&&<FarmSidebarWidget myId={myId} setPage={setPage}/>}
+      <FarmSidebarWidget myId={isOwnSidebar?myId:targetSidebarId} setPage={setPage}/>
     </aside>
   )
 }
@@ -4086,6 +4086,9 @@ export default function App(){
   const [newPwdConfirm,setNewPwdConfirm]=useState('')
 
   useEffect(()=>{
+    // Check if this is a password recovery redirect
+    const params=new URLSearchParams(window.location.hash.replace('#','?'))
+    if(params.get('type')==='recovery') setResetMode(true)
     supabase.auth.getSession().then(({data:{session}})=>setSession(session))
     const {data:{subscription}}=supabase.auth.onAuthStateChange((event,s)=>{
       setSession(s)
