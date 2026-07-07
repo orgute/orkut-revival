@@ -667,7 +667,10 @@ function FarmSidebarWidget({ myId, navId, setPage }){
       setFarm(f)
       await checkReadyPlots(f.id)
       getPlots(f.id).then(p=>{ setPlots(p); setLoading(false) })
-    })
+    }).catch(()=>setLoading(false))
+    // Timeout fallback — never show infinite loading
+    const t=setTimeout(()=>setLoading(false),5000)
+    return()=>clearTimeout(t)
   },[myId])
 
   const ready=plots.filter(p=>p.state==='ready').length
@@ -683,7 +686,14 @@ function FarmSidebarWidget({ myId, navId, setPage }){
     return '#c8b89a'
   }
 
-  if(loading||!farm) return null
+  if(loading) return null
+  if(!farm) return (
+    <RightPanel title="🌾 fazendinha">
+      <div style={{fontSize:11,color:MUTED,fontFamily:F_UI,padding:'4px 0',fontStyle:'italic'}}>
+        ainda não tem fazenda
+      </div>
+    </RightPanel>
+  )
 
   return (
     <RightPanel title={
