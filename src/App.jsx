@@ -3709,7 +3709,7 @@ function FazendinhaPage({ myId, setPage, userId }){
             {icon:'🌱',label:'plantar',action:'plant'},
             {icon:'💧',label:'regar',action:'water'},
             {icon:'🌾',label:'colher',action:'harvest'},
-            {icon:'🪣',label:'limpar',action:'clean'},
+            {icon:'✕',label:'limpar',action:'clean'},
           ].map(t=>(
             <button key={t.action}
               onClick={()=>setActiveTool(activeTool===t.action?null:t.action)}
