@@ -318,9 +318,16 @@ function GuestbookTab(){
 }
 
 function AuthScreen({ onAuth }){
-  const [authTab,setAuthTab]=useState('login')
+  const [authTab,setAuthTab]=useState(()=>{
+    const params=new URLSearchParams(window.location.search)
+    return params.get('convite')?'signup':'login'
+  })
   const [mode,setMode]=useState('login')
-  const [form,setForm]=useState({email:'',password:'',name:'',invite:''})
+  const [form,setForm]=useState(()=>{
+    const params=new URLSearchParams(window.location.search)
+    const invite=params.get('convite')||''
+    return {email:'',password:'',name:'',invite}
+  })
   const [err,setErr]=useState('')
   const [loading,setLoading]=useState(false)
   const [signupDone,setSignupDone]=useState(false)
