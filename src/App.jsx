@@ -377,7 +377,14 @@ function AuthScreen({ onAuth }){
       </div>
       {err&&<div style={{paddingLeft:76,fontSize:11,color:'#c0392b',fontFamily:F_UI,marginBottom:6}}>{err}</div>}
       <div style={{paddingLeft:76,fontSize:11,fontFamily:F_UI,marginBottom:16}}>
-        <span style={{color:PINK,cursor:'pointer'}} onClick={()=>supabase.auth.resetPasswordForEmail(form.email)}>
+        <span style={{color:PINK,cursor:'pointer'}} onClick={async()=>{
+          if(!form.email){alert('Digite seu e-mail primeiro.');return}
+          const {error}=await supabase.auth.resetPasswordForEmail(form.email,{
+            redirectTo:'https://orkut-revival-app.vercel.app'
+          })
+          if(error) alert('Erro: '+error.message)
+          else alert('E-mail de redefinição enviado! Verifique sua caixa de entrada.')
+        }}>
           Esqueceu sua senha?
         </span>
       </div>
@@ -3573,7 +3580,11 @@ function FazendinhaPage({ myId, setPage, userId }){
               zIndex:10,
             }}>💰 +{coinAnim}</div>}
 
-            {/* Isometric-style grid — rotateX for depth illusion */}
+            {/* 3D perspective grid */}
+            <div style={{
+              perspective:'600px',
+              perspectiveOrigin:'50% 0%',
+            }}>
             <div style={{
               display:'grid',
               gridTemplateColumns:'repeat(4,1fr)',
@@ -3582,6 +3593,9 @@ function FazendinhaPage({ myId, setPage, userId }){
               background:'rgba(139,90,43,.15)',
               borderRadius:4,
               boxShadow:'inset 0 2px 8px rgba(0,0,0,.2)',
+              transform:'rotateX(28deg)',
+              transformOrigin:'top center',
+              transformStyle:'preserve-3d',
             }}>
             {plots.map(plot=>(
               <div key={plot.id} onClick={()=>handlePlotClick(plot)}
@@ -3695,7 +3709,8 @@ function FazendinhaPage({ myId, setPage, userId }){
                 </div>}
               </div>
             ))}
-          </div>{/* end plot grid */}
+          </div>{/* end grid inner */}
+          </div>{/* end perspective wrapper */}
         </div>{/* end farm background */}
 
         {/* Bottom toolbar */}
