@@ -1678,7 +1678,6 @@ function ProfilePage({ myId, userId, setPage, toast }){
       {/* Right — hidden on mobile */}
       {!mob&&<RightSidebar myId={myId} viewId={targetId} setPage={setPage}/>}
       {mob&&!isOwn&&<div style={{marginTop:8}}>
-        <FarmSidebarWidget myId={targetId} setPage={setPage} viewOnly={true}/>
         <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
           marginBottom:8,overflow:'hidden'}}>
           {[['📝 recados',{name:'scrapbook',userId:targetId}],
@@ -3610,10 +3609,10 @@ function FazendinhaPage({ myId, setPage, userId }){
                   const pct=Math.min(elapsed/total,1)
                   // Two-frame definitions: [frame1, frame2, fontSize, label]
                   const stages=[
-                    {f1:'🌱',f2:'🪴',sz:28,label:'semente',speed:1.2},
-                    {f1:'🌿',f2:'☘️', sz:32,label:'brotando',speed:1.0},
-                    {f1:'🌾',f2:'🎋',sz:36,label:'crescendo',speed:0.8},
-                    {f1:crop?.emoji||'🌾',f2:crop?.emoji||'🌾',sz:40,label:'quase!',speed:0.6},
+                    {f1:'🌱',f2:'🌱',sz:28,label:'semente',speed:1.2},
+                    {f1:'🌿',f2:'🌿',sz:34,label:'brotando',speed:1.0},
+                    {f1:'🌾',f2:'🌾',sz:38,label:'crescendo',speed:0.8},
+                    {f1:crop?.emoji||'🌾',f2:crop?.emoji||'🌾',sz:42,label:'quase!',speed:0.5},
                   ]
                   const s=pct<0.25?stages[0]:pct<0.5?stages[1]:pct<0.75?stages[2]:stages[3]
                   const animId=`crop-${plot.id}`
@@ -4081,7 +4080,16 @@ export default function App(){
     const {data:{subscription}}=supabase.auth.onAuthStateChange((event,s)=>{
       setSession(s)
       if(event==='PASSWORD_RECOVERY') setResetMode(true)
+      // Implicit flow: hash is cleared before event fires, check localStorage
+      if(event==='SIGNED_IN'){
+        const recovering=sessionStorage.getItem('supabase_recovery')
+        if(recovering){ setResetMode(true); sessionStorage.removeItem('supabase_recovery') }
+      }
     })
+    // Store recovery flag before Supabase clears the hash
+    if(window.location.hash.includes('type=recovery')){
+      sessionStorage.setItem('supabase_recovery','1')
+    }
     const onKey=(e)=>{
       if(e.ctrlKey&&e.shiftKey&&e.key==='A') setPage('__admin')
       if(e.ctrlKey&&e.shiftKey&&e.key==='W') setPage('__waitlist')
