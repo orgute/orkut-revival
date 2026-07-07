@@ -628,6 +628,94 @@ function RightPanel({ title, children, onTitleClick }){
   )
 }
 
+/* ── FARM SIDEBAR WIDGET ── */
+function FarmSidebarWidget({ myId, setPage }){
+  const [farm,setFarm]=useState(null)
+  const [plots,setPlots]=useState([])
+  const [loading,setLoading]=useState(true)
+
+  useEffect(()=>{
+    getFarm(myId).then(async f=>{
+      if(!f){ setLoading(false); return }
+      setFarm(f)
+      await checkReadyPlots(f.id)
+      getPlots(f.id).then(p=>{ setPlots(p); setLoading(false) })
+    })
+  },[myId])
+
+  const ready=plots.filter(p=>p.state==='ready').length
+  const withered=plots.filter(p=>p.state==='withered').length
+  const planted=plots.filter(p=>p.state==='planted').length
+
+  const plotColor=(p)=>{
+    if(p.state==='empty') return '#7a4f28'
+    if(p.state==='planted') return '#8ba865'
+    if(p.state==='ready') return '#f5d060'
+    if(p.state==='weed') return '#5a7a2a'
+    if(p.state==='withered') return '#6b4a2a'
+    return '#c8b89a'
+  }
+
+  if(loading||!farm) return null
+
+  return (
+    <RightPanel title={
+      <span onClick={()=>setPage('fazendinha')} style={{cursor:'pointer'}}>
+        🌾 fazendinha
+        {ready>0&&<span style={{marginLeft:6,background:PINK,color:WHITE,
+          fontSize:9,borderRadius:8,padding:'1px 6px',fontWeight:700}}>
+          {ready} pronto{ready>1?'s':''}!
+        </span>}
+        {withered>0&&<span style={{marginLeft:4,background:'#8B4513',color:WHITE,
+          fontSize:9,borderRadius:8,padding:'1px 6px',fontWeight:700}}>
+          {withered} 🥀
+        </span>}
+      </span>
+    }>
+      {/* Mini farm grid 4x4 */}
+      <div style={{
+        background:'linear-gradient(180deg,#87ceeb 0%,#87ceeb 25%,#5a8a3c 25%,#6aaa3c 100%)',
+        borderRadius:3,padding:'6px',marginBottom:8,cursor:'pointer',
+        position:'relative',
+      }} onClick={()=>setPage('fazendinha')}>
+        {/* Tiny farmhouse */}
+        <div style={{position:'absolute',top:2,right:4,fontSize:12}}>🏡</div>
+        <div style={{
+          display:'grid',gridTemplateColumns:'repeat(4,1fr)',
+          gap:2,marginTop:10,
+        }}>
+          {plots.slice(0,16).map(p=>(
+            <div key={p.id} style={{
+              aspectRatio:'1',borderRadius:2,
+              background:plotColor(p),
+              display:'flex',alignItems:'center',justifyContent:'center',
+              fontSize:10,
+            }}>
+              {p.state==='ready'&&<span style={{fontSize:9}}>
+                {CROPS[p.crop_type]?.emoji||'✨'}
+              </span>}
+              {p.state==='planted'&&<span style={{fontSize:8}}>🌱</span>}
+              {p.state==='weed'&&<span style={{fontSize:8}}>🌿</span>}
+              {p.state==='withered'&&<span style={{fontSize:8}}>🥀</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Stats row */}
+      <div style={{display:'flex',justifyContent:'space-between',
+        fontSize:11,fontFamily:F_UI,color:MUTED,marginBottom:6}}>
+        <span>💰 {farm.coins}</span>
+        <span>⭐ nível {farm.level}</span>
+        <span>🌾 {planted} plantado{planted!==1?'s':''}</span>
+      </div>
+      <button style={{...btnBl,width:'100%',fontSize:11,padding:'5px'}}
+        onClick={()=>setPage('fazendinha')}>
+        abrir fazenda →
+      </button>
+    </RightPanel>
+  )
+}
+
 /* ── RIGHT SIDEBAR ── */
 function RightSidebar({ myId, viewId, setPage }){
   const isOwnSidebar = !viewId || viewId===myId
@@ -688,6 +776,7 @@ function RightSidebar({ myId, viewId, setPage }){
             ))}
           </div>}
       </RightPanel>
+      {isOwnSidebar&&<FarmSidebarWidget myId={myId} setPage={setPage}/>}
     </aside>
   )
 }
@@ -3582,23 +3671,27 @@ function FazendinhaPage({ myId, setPage, userId }){
                 </div>}
                 {plot.state==='empty'&&<div style={{
                   width:'100%',height:'100%',position:'relative',overflow:'hidden',
-                  background:'linear-gradient(160deg,#a0784a 0%,#8B6240 40%,#7a5535 100%)',
-                  display:'flex',alignItems:'center',justifyContent:'center',
+                  background:'linear-gradient(170deg,#9a6b3a 0%,#7a4f28 50%,#6b3e1a 100%)',
                 }}>
-                  {/* Soil texture lines */}
-                  <div style={{position:'absolute',inset:0,opacity:.25,
-                    backgroundImage:'repeating-linear-gradient(45deg,#5a3a1a 0px,transparent 1px,transparent 5px)',
-                    backgroundSize:'6px 6px'}}/>
-                  {/* Small stones */}
-                  <div style={{position:'absolute',bottom:4,left:6,width:5,height:3,
-                    background:'#c8a87a',borderRadius:2,opacity:.6}}/>
-                  <div style={{position:'absolute',top:6,right:5,width:4,height:3,
-                    background:'#c8a87a',borderRadius:2,opacity:.5}}/>
-                  <div style={{position:'absolute',bottom:7,right:8,width:3,height:2,
-                    background:'#b89060',borderRadius:1,opacity:.5}}/>
-                  {/* Plant here hint */}
-                  <span style={{fontSize:11,color:'rgba(255,255,255,.4)',
-                    fontWeight:700,userSelect:'none',zIndex:1}}>+</span>
+                  {/* Deep furrow lines — horizontal like plowed soil */}
+                  {[0,1,2,3,4].map(i=>(
+                    <div key={i} style={{position:'absolute',
+                      top:`${15+i*17}%`,left:'4%',right:'4%',
+                      height:2,background:'rgba(0,0,0,.25)',borderRadius:1}}/>
+                  ))}
+                  {/* Lighter soil highlights between furrows */}
+                  {[0,1,2,3].map(i=>(
+                    <div key={i} style={{position:'absolute',
+                      top:`${22+i*17}%`,left:'8%',right:'8%',
+                      height:3,background:'rgba(200,150,80,.2)',borderRadius:1}}/>
+                  ))}
+                  {/* Stones */}
+                  <div style={{position:'absolute',bottom:'12%',left:'15%',
+                    width:6,height:4,background:'#c8a870',borderRadius:3,opacity:.7}}/>
+                  <div style={{position:'absolute',top:'18%',right:'18%',
+                    width:5,height:3,background:'#b89060',borderRadius:2,opacity:.6}}/>
+                  <div style={{position:'absolute',bottom:'30%',right:'25%',
+                    width:4,height:3,background:'#c0a060',borderRadius:2,opacity:.5}}/>
                 </div>}
               </div>
             ))}
@@ -3623,9 +3716,9 @@ function FazendinhaPage({ myId, setPage, userId }){
                 display:'flex',flexDirection:'column',alignItems:'center',gap:2,
                 background:activeTool===t.action?'#f5d060':'rgba(255,255,255,.15)',
                 border:`2px solid ${activeTool===t.action?'#c8a000':'rgba(255,255,255,.3)'}`,
-                borderRadius:6,padding:'6px 10px',cursor:'pointer',
+                borderRadius:5,padding:'4px 8px',cursor:'pointer',
                 color:activeTool===t.action?'#1a1a1a':WHITE,
-                transition:'all .15s',minWidth:52,
+                transition:'all .15s',minWidth:44,
               }}>
               <span style={{fontSize:20}}>{t.icon}</span>
               <span style={{fontSize:9,fontFamily:F_UI,fontWeight:700}}>{t.label}</span>
