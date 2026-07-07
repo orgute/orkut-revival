@@ -4099,7 +4099,7 @@ export default function App(){
     }
     const onKey=(e)=>{
       if(e.ctrlKey&&e.shiftKey&&e.key==='A') setPage('__admin')
-      if(e.ctrlKey&&e.shiftKey&&e.key==='L') setPage('__waitlist')
+      if(e.ctrlKey&&e.shiftKey&&(e.key==='L'||e.key==='l')) setPage('__waitlist')
     }
     window.addEventListener('keydown',onKey)
     return()=>{ subscription.unsubscribe(); window.removeEventListener('keydown',onKey) }
@@ -4208,6 +4208,7 @@ export default function App(){
       case 'friends':     return <FriendsPage myId={myId} setPage={navTo} toast={setToast}/>
       case 'communities': return <CommunitiesPage myId={myId} toast={setToast} page={page}/>
       case '__admin':     return <AdminCleanup setToast={setToast}/>
+      case '__waitlist':  return <WaitlistPanel myId={myId}/>
       case 'fotosfeed':   return <FotosFeed myId={myId} setPage={navTo}/>
       case 'inbox':       return <InboxPage myId={myId} setPage={navTo}/>
       case 'taggedphotos': return <TaggedPhotosPage myId={myId} setPage={navTo}/>
