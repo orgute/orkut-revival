@@ -356,7 +356,11 @@ function AuthScreen({ onAuth }){
       const {data,error}=await supabase.auth.signUp({
         email:form.email,password:form.password,options:{data:{name:form.name.trim()}}
       })
-      if(error) throw new Error(error.message)
+      if(error){
+        if(error.message.includes('already registered')||error.message.includes('already exists')||error.message.includes('User already'))
+          throw new Error('Este e-mail já possui uma conta. Esqueceu sua senha?')
+        throw new Error(error.message)
+      }
       if(data?.user) await useInviteCode(form.invite,data.user.id)
       setSignupDone(true)
     }catch(e){setErr(e.message)}
@@ -383,7 +387,11 @@ function AuthScreen({ onAuth }){
         <input type="checkbox" id="rem" checked={remember} onChange={e=>setRemember(e.target.checked)}/>
         <label htmlFor="rem" style={{fontSize:11,fontFamily:F_UI,color:MUTED,cursor:'pointer'}}>lembrar senha</label>
       </div>
-      {err&&<div style={{paddingLeft:76,fontSize:11,color:'#c0392b',fontFamily:F_UI,marginBottom:6}}>{err}</div>}
+      {err&&<div style={{paddingLeft:76,fontSize:11,color:'#c0392b',fontFamily:F_UI,marginBottom:6}}>
+        {err}
+        {err.includes('Esqueceu')?<span style={{marginLeft:6,color:PINK,cursor:'pointer',textDecoration:'underline'}}
+          onClick={()=>setMode('login')}>Entrar ou redefinir senha →</span>:null}
+      </div>}
       <div style={{paddingLeft:76,fontSize:11,fontFamily:F_UI,marginBottom:16}}>
         <span style={{color:PINK,cursor:'pointer'}} onClick={async()=>{
           if(!form.email){alert('Digite seu e-mail primeiro.');return}
@@ -432,7 +440,11 @@ function AuthScreen({ onAuth }){
           <input style={ri} type={t} value={form[k]} onChange={e=>f(k,e.target.value)}/>
         </div>
       ))}
-      {err&&<div style={{paddingLeft:76,fontSize:11,color:'#c0392b',fontFamily:F_UI,marginBottom:6}}>{err}</div>}
+      {err&&<div style={{paddingLeft:76,fontSize:11,color:'#c0392b',fontFamily:F_UI,marginBottom:6}}>
+        {err}
+        {err.includes('Esqueceu')?<span style={{marginLeft:6,color:PINK,cursor:'pointer',textDecoration:'underline'}}
+          onClick={()=>setMode('login')}>Entrar ou redefinir senha →</span>:null}
+      </div>}
       <div style={{paddingLeft:76,display:'flex',gap:8}}>
         <button style={{...btnBl,padding:'3px 14px',fontSize:12}} onClick={doSignup} disabled={loading}>
           {loading?'…':'cadastrar'}
