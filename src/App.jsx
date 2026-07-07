@@ -1678,6 +1678,7 @@ function ProfilePage({ myId, userId, setPage, toast }){
       {/* Right — hidden on mobile */}
       {!mob&&<RightSidebar myId={myId} viewId={targetId} setPage={setPage}/>}
       {mob&&!isOwn&&<div style={{marginTop:8}}>
+        <FarmSidebarWidget myId={targetId} setPage={setPage} viewOnly={true}/>
         <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
           marginBottom:8,overflow:'hidden'}}>
           {[['📝 recados',{name:'scrapbook',userId:targetId}],
@@ -3756,11 +3757,13 @@ function FazendinhaPage({ myId, setPage, userId }){
           </div>
         )}
 
-        {/* Animals */}
-        {animals.length>0&&<div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
-          padding:12,marginBottom:8}}>
-          <div style={{fontWeight:700,fontSize:12,color:MUTED,fontFamily:F_UI,marginBottom:8}}>Animais</div>
-          <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+        {/* Animals — on grass like OG */}
+        {animals.length>0&&<div style={{background:'#6aaa3c',border:`1px solid #4a8a2a`,
+          borderRadius:'0 0 3px 3px',padding:'8px 10px',marginBottom:8,
+          borderTop:'2px solid #3a7a1a'}}>
+          <div style={{fontWeight:700,fontSize:11,color:'#1a3a0a',fontFamily:F_UI,
+            marginBottom:6}}>🐾 Animais</div>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
             {animals.map(a=>{
               const cat=ANIMALS[a.animal_type]
               const readyTime=new Date(a.last_collected).getTime()+cat.produceHours*3600000
@@ -3768,9 +3771,10 @@ function FazendinhaPage({ myId, setPage, userId }){
               return (
                 <div key={a.id} onClick={()=>isOwn&&handleCollect(a)}
                   style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4,
-                    padding:'10px 14px',border:`1px solid ${ready?'#f5d060':BRD}`,borderRadius:8,
-                    cursor:isOwn?'pointer':'default',background:ready?'#fffbea':WHITE,
-                    boxShadow:ready?'0 0 8px rgba(245,208,96,.5)':'none'}}>
+                    padding:'8px 12px',border:`2px solid ${ready?'#f5d060':'rgba(0,0,0,.2)'}`,
+                    borderRadius:8,cursor:isOwn?'pointer':'default',
+                    background:ready?'rgba(255,240,180,.95)':'rgba(255,255,255,.85)',
+                    boxShadow:ready?'0 0 10px rgba(245,208,96,.7)':'0 1px 3px rgba(0,0,0,.2)'}}>
                   <div style={{fontSize:28}}>{cat.emoji}</div>
                   <div style={{fontSize:11,fontFamily:F_UI,fontWeight:700,color:TEXT}}>{cat.name}</div>
                   {(()=>{
@@ -4077,10 +4081,16 @@ export default function App(){
   const [pendingReqs,setPendingReqs]=useState(0)
   const [newRecados,setNewRecados]=useState(0)
   const [toast,setToast]=useState('')
+  const [resetMode,setResetMode]=useState(false)
+  const [newPwd,setNewPwd]=useState('')
+  const [newPwdConfirm,setNewPwdConfirm]=useState('')
 
   useEffect(()=>{
     supabase.auth.getSession().then(({data:{session}})=>setSession(session))
-    const {data:{subscription}}=supabase.auth.onAuthStateChange((_,s)=>setSession(s))
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((event,s)=>{
+      setSession(s)
+      if(event==='PASSWORD_RECOVERY') setResetMode(true)
+    })
     const onKey=(e)=>{
       if(e.ctrlKey&&e.shiftKey&&e.key==='A') setPage('__admin')
       if(e.ctrlKey&&e.shiftKey&&e.key==='W') setPage('__waitlist')
@@ -4088,6 +4098,36 @@ export default function App(){
     window.addEventListener('keydown',onKey)
     return()=>{ subscription.unsubscribe(); window.removeEventListener('keydown',onKey) }
   },[])
+
+  // Password reset screen
+  if(resetMode) return (
+    <div style={{minHeight:'100vh',background:BG,display:'flex',
+      alignItems:'center',justifyContent:'center',padding:24}}>
+      <div style={{background:WHITE,border:`1px solid ${BRD}`,borderRadius:3,
+        padding:32,width:'100%',maxWidth:360,boxShadow:'0 2px 20px rgba(0,0,0,.1)'}}>
+        <div style={{fontSize:36,fontFamily:"'EB Garamond',serif",color:PINK,marginBottom:4}}>Oi</div>
+        <div style={{fontWeight:700,fontSize:16,color:TEXT,fontFamily:F_UI,marginBottom:20}}>
+          criar nova senha
+        </div>
+        <input type="password" placeholder="nova senha (mín. 6 caracteres)"
+          value={newPwd} onChange={e=>setNewPwd(e.target.value)}
+          style={{...inp,marginBottom:10,fontSize:13,width:'100%'}}/>
+        <input type="password" placeholder="confirmar nova senha"
+          value={newPwdConfirm} onChange={e=>setNewPwdConfirm(e.target.value)}
+          style={{...inp,marginBottom:16,fontSize:13,width:'100%'}}/>
+        <button style={{...btnPk,width:'100%',padding:'10px',fontSize:13,fontWeight:700}}
+          onClick={async()=>{
+            if(newPwd.length<6){alert('Senha deve ter pelo menos 6 caracteres.');return}
+            if(newPwd!==newPwdConfirm){alert('As senhas não coincidem.');return}
+            const {error}=await supabase.auth.updateUser({password:newPwd})
+            if(error) alert('Erro: '+error.message)
+            else{ setResetMode(false); setNewPwd(''); setNewPwdConfirm('') }
+          }}>
+          salvar nova senha
+        </button>
+      </div>
+    </div>
+  )
 
   // Global chat listener — pops up incoming messages
   const [incomingChat,setIncomingChat]=useState(null)
